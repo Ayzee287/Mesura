@@ -1,12 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- x64 only (D008). CET compatibility keeps the SDK default: CETCompat is never set to false (D010). -->
+  <!-- x64 only (D008). CET compatibility keeps the SDK default: CETCompat is never set to false (D010).
+       Single-file publishing is set here, not on the command line, so that building and publishing restore
+       the same packages and the lock files never change between them (a changed lock file marks the build
+       as uncommitted, and a fixture then can't name its commit). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>FpsUtility.Cli</RootNamespace>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
   <!-- The snapshot's app.commit must name the commit that produced the binary. A build from a working
