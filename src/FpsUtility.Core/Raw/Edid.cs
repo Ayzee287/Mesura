@@ -19,15 +19,16 @@ public sealed record EdidData
 public sealed record MonitorEdid(string MonitorDevicePath, Reading<EdidPayload> Edid);
 
 /// <summary>
-/// EDID bytes exactly as the platform stores them, except the serial fields, which are zeroed at
-/// collection (architecture §13). The block count is never taken from the buffer length (§4.4 rule 2).
+/// EDID bytes exactly as the platform stores them, except the unit identifiers and any content the
+/// scrubber doesn't understand, which are zeroed at collection (architecture §13, <c>Privacy.EdidScrubber</c>).
+/// The block count is never taken from the buffer length (§4.4 rule 2).
 /// </summary>
 /// <param name="Bytes">The whole stored buffer, base64 in JSON.</param>
 /// <param name="ChecksumValidBeforeScrub">
 /// Per 128-byte block, in buffer order: whether its checksum was valid as stored. A block the scrub
 /// changed gets a recomputed checksum, so this is the only record of the original's validity.
 /// </param>
-/// <param name="FieldsScrubbed">How many serial fields were zeroed.</param>
+/// <param name="FieldsScrubbed">How many fields held data and were zeroed.</param>
 /// <param name="OverridePresent">Whether an INF EDID override is installed for this monitor; if so, Windows uses its blocks instead of these.</param>
 public sealed record EdidPayload(
     byte[] Bytes,

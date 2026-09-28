@@ -13,8 +13,13 @@ namespace FpsUtility.Core.Raw;
 /// </remarks>
 public sealed record RawSnapshot
 {
-    /// <summary>Bumped on any breaking change to this model or its JSON (architecture §4.3).</summary>
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>
+    /// Bumped on any breaking change to this model or its JSON, including a field whose meaning changes
+    /// under the same name (architecture §4.3). Version 2 (Milestone 1.5): <c>physicalDisks[].model</c> is the
+    /// hardware model, no longer the editable friendly name; disks gained <c>location</c>; storage gained
+    /// <c>disks</c>; Steam libraries gained <c>listedByLibraryFolders</c> and <c>isInstallFolder</c>.
+    /// </summary>
+    public const int CurrentSchemaVersion = 2;
 
     [JsonConstructor]
     public RawSnapshot(int schemaVersion, DateTimeOffset capturedAtUtc, AppInfo app, OsInfo os, bool elevated, SnapshotSources sources)

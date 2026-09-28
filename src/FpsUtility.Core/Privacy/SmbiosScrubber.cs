@@ -24,16 +24,27 @@ namespace FpsUtility.Core.Privacy;
 /// <item>Type 11 OEM strings: overwrites every string (free-form vendor text).</item>
 /// <item>Type 17 Memory device: keeps device and bank locator, manufacturer, part number (D004),
 /// firmware version. Overwrites the serial number and asset tag.</item>
-/// <item>Type 22 Portable battery: keeps location, manufacturer, manufacture date, device name, SBDS
-/// version, SBDS chemistry. Overwrites the serial number; zeroes the SBDS serial number (word at 0x10).</item>
+/// <item>Type 22 Portable battery: keeps location, manufacturer, device name, SBDS version, SBDS
+/// chemistry. Overwrites the serial number and the manufacture date; zeroes the SBDS serial number (word
+/// at 0x10) and SBDS manufacture date (word at 0x12). A manufacture date narrows one unit down, as an EDID
+/// manufacture week does.</item>
 /// <item>Type 39 Power supply: keeps location, device name, manufacturer, model part number, revision.
 /// Overwrites the serial number and asset tag.</item>
 /// </list>
 /// <para>
-/// Other structure types are left as they are. A string is overwritten in place with <c>*</c>
-/// characters of the same length, so the structure stays walkable. Bytes that can't be walked (a
-/// malformed structure, or data after the end-of-table structure) are zeroed, and the offset where
-/// that starts is reported.
+/// Types whose layout DSP0134 defines and which hold no identifier are kept as they are: 0 BIOS, 7 cache,
+/// 8 port connector, 9 system slots, 10 on-board devices, 13 BIOS language, 16 physical memory array, 19
+/// and 20 memory mapped addresses, 21 pointing device, 32 boot information, 41 on-board devices extended,
+/// 44 processor additional information, 127 end of table. <b>Every other type is default-denied</b>: its
+/// formatted bytes after the 4-byte header are zeroed and all its strings overwritten, which keeps the
+/// table walkable. That covers OEM types (128–255), inactive structures (126), management controller host
+/// interfaces (42, which can hold MAC addresses), system configuration options (12, free text), TPM
+/// devices (43), firmware inventory (45), string properties (46) and any type a later DSP0134 adds.
+/// </para>
+/// <para>
+/// A string is overwritten in place with <c>*</c> characters of the same length, so the structure stays
+/// walkable. Bytes that can't be walked (a malformed structure, or data after the end-of-table structure)
+/// are zeroed, and the offset where that starts is reported.
 /// </para>
 /// </remarks>
 public static class SmbiosScrubber
@@ -53,9 +64,12 @@ public static class SmbiosScrubber
         [4] = new([0x04, 0x07, 0x10, 0x22], [0x20, 0x21], []),
         [11] = new([], [], []),
         [17] = new([0x10, 0x11, 0x17, 0x1A, 0x2B], [0x18, 0x19], []),
-        [22] = new([0x04, 0x05, 0x06, 0x08, 0x0E, 0x14], [0x07], [(0x10, 2)]),
+        [22] = new([0x04, 0x05, 0x08, 0x0E, 0x14], [0x06, 0x07], [(0x10, 2), (0x12, 2)]),
         [39] = new([0x05, 0x06, 0x07, 0x0A, 0x0B], [0x08, 0x09], []),
     };
+
+    /// <summary>Types kept as they are: DSP0134 layouts that hold no identifier.</summary>
+    private static readonly HashSet<byte> KeptTypes = [0, 7, 8, 9, 10, 13, 16, 19, 20, 21, 32, 41, 44, EndOfTableType];
 
     /// <param name="Table">The scrubbed table, the same length as the input.</param>
     /// <param name="FieldsScrubbed">How many strings and binary fields held data and were overwritten.</param>
@@ -79,6 +93,10 @@ public static class SmbiosScrubber
             if (Rules.TryGetValue(structure[0], out var rule))
             {
                 scrubbed += ScrubStructure(structure, formattedLength, rule);
+            }
+            else if (!KeptTypes.Contains(structure[0]))
+            {
+                scrubbed += DenyStructure(structure, formattedLength);
             }
 
             offset = stringsEnd;
@@ -152,6 +170,25 @@ public static class SmbiosScrubber
                     count++;
                 }
             }
+        }
+
+        return count;
+    }
+
+    /// <summary>A default-denied structure: formatted bytes after the header zeroed, every string overwritten.</summary>
+    private static int DenyStructure(Span<byte> structure, int formattedLength)
+    {
+        var count = 0;
+        var fields = structure[HeaderLength..formattedLength];
+        if (fields.ContainsAnyExcept((byte)0))
+        {
+            fields.Clear();
+            count++;
+        }
+
+        foreach (var (start, length) in LocateStrings(structure, formattedLength))
+        {
+            count += Redact(structure.Slice(start, length)) ? 1 : 0;
         }
 
         return count;

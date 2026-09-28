@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "capturedAtUtc": "2026-09-28T12:00:00.123+00:00",
   "app": {
     "name": "FpsUtility",
@@ -365,33 +365,10 @@
       "data": {
         "physicalDisks": [
           {
-            "deviceId": "0",
-            "model": {
-              "value": "TEST NVME 1TB"
-            },
-            "mediaType": {
-              "value": "ssd",
-              "native": 4
-            },
-            "busType": {
-              "value": "nvme",
-              "native": 17
-            },
-            "health": {
-              "value": "healthy",
-              "native": 0
-            },
-            "operationalStatus": {
-              "value": [
-                2
-              ]
-            },
-            "sizeBytes": {
-              "value": 1000204886016
-            }
-          },
-          {
             "deviceId": "1",
+            "location": {
+              "value": "Integrated : Adapter 0 : Port 1 : Target 0 : LUN 0"
+            },
             "model": {
               "value": "TEST HDD 2TB"
             },
@@ -415,6 +392,58 @@
             },
             "sizeBytes": {
               "value": 2000398934016
+            }
+          },
+          {
+            "deviceId": "0",
+            "location": {
+              "value": "PCI Slot 2 : Bus 1 : Device 0 : Function 0 : Adapter 0"
+            },
+            "model": {
+              "value": "TEST NVME 1TB"
+            },
+            "mediaType": {
+              "value": "ssd",
+              "native": 4
+            },
+            "busType": {
+              "value": "nvme",
+              "native": 17
+            },
+            "health": {
+              "value": "healthy",
+              "native": 0
+            },
+            "operationalStatus": {
+              "value": [
+                2
+              ]
+            },
+            "sizeBytes": {
+              "value": 1000204886016
+            }
+          }
+        ],
+        "disks": [
+          {
+            "number": 1,
+            "busType": {
+              "value": "sata",
+              "native": 11
+            },
+            "location": {
+              "missing": "notPresent",
+              "detail": "WMI returned no Location"
+            }
+          },
+          {
+            "number": 0,
+            "busType": {
+              "value": "nvme",
+              "native": 17
+            },
+            "location": {
+              "value": "PCI Slot 2 : Bus 1 : Device 0 : Function 0 : Adapter 0"
             }
           }
         ],
@@ -495,13 +524,15 @@
         "libraryFolders": {
           "value": {
             "path": "C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf",
-            "text": "\u0022libraryfolders\u0022\n{\n}\n"
+            "text": "\u0022libraryfolders\u0022\n{\n\t\u00221\u0022\n\t{\n\t\t\u0022path\u0022\t\t\u0022D:\\\\SteamLibrary\u0022\n\t\t\u0022label\u0022\t\t\u0022redacted\u0022\n\t\t\u0022contentid\u0022\t\t\u0022redacted\u0022\n\t}\n}\n"
           }
         },
         "libraries": {
           "value": [
             {
               "path": "C:\\Program Files (x86)\\Steam",
+              "listedByLibraryFolders": false,
+              "isInstallFolder": true,
               "manifests": {
                 "value": [
                   {
@@ -517,6 +548,8 @@
             },
             {
               "path": "D:\\SteamLibrary",
+              "listedByLibraryFolders": true,
+              "isInstallFolder": false,
               "manifests": {
                 "missing": "notPresent",
                 "detail": "DirectoryNotFoundException"

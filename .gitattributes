@@ -2,4 +2,4 @@
 * text=auto
 
 # Golden files are compared byte for byte; the snapshot format uses LF (architecture §4.4).
-tests/**/Fixtures/*.json text eol=lf
+tests/**/Fixtures/**/*.json text eol=lf

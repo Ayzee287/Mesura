@@ -27,7 +27,7 @@ internal static class SteamCollector
         }
 
         var scrubber = new SteamTextScrubber(profile);
-        var installPath = Path.GetFullPath(steamPath);
+        var installPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(steamPath));
         var foldersPath = Path.Combine(installPath, "steamapps", "libraryfolders.vdf");
         var foldersText = ReadText(foldersPath);
 
@@ -61,13 +61,60 @@ internal static class SteamCollector
             return Reading.Missing<IReadOnlyList<SteamLibrary>>(MissingReason.ParseFailed, profile.Redact($"libraryfolders.vdf lists a library path that is not absolute: {relative}"));
         }
 
-        // Steam's own folder is always a library; current Steam also lists it, older Steam doesn't.
-        var libraryPaths = new[] { installPath }
-            .Concat(listed.Select(path => Path.GetFullPath(path)))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<(string Path, bool Listed, bool IsInstallFolder)> folders;
+        try
+        {
+            folders = LibraryFolders(installPath, listed);
+        }
+        catch (Exception ex) when (ex is ArgumentException or PathTooLongException or NotSupportedException)
+        {
+            // A listed path Windows can't use (a NUL character, too long): the list is unusable, the rest of the source is not.
+            return Reading.Missing<IReadOnlyList<SteamLibrary>>(MissingReason.ParseFailed, $"libraryfolders.vdf lists a library path Windows can't use: {ex.GetType().Name}");
+        }
 
         return Reading.Known<IReadOnlyList<SteamLibrary>>(
-            [.. libraryPaths.Select(path => new SteamLibrary(profile.Redact(path), ReadManifests(path, profile, scrubber)))]);
+            [.. folders.Select(folder => new SteamLibrary(
+                profile.Redact(folder.Path),
+                folder.Listed,
+                folder.IsInstallFolder,
+                ReadManifests(folder.Path, profile, scrubber)))]);
+    }
+
+    /// <summary>
+    /// The folders to read as libraries: each folder <c>libraryfolders.vdf</c> names, and Steam's install folder
+    /// (older Steam doesn't list it), each once, with why it is included. A folder is identified by its full
+    /// path without a trailing separator, compared case-insensitively as Windows compares paths; that merges
+    /// spellings that differ only in separator direction, a trailing separator, a doubled separator or letter
+    /// case. Junctions and symbolic links are not resolved, so two such spellings of one folder stay two
+    /// entries. (<see cref="Path.GetFullPath(string)"/> does ask the file system for the long form of an 8.3
+    /// short name that exists; it changes nothing.) The kept spelling is the first one met, install folder first.
+    /// </summary>
+    internal static IReadOnlyList<(string Path, bool Listed, bool IsInstallFolder)> LibraryFolders(string installPath, IEnumerable<string> listed)
+    {
+        var folders = new List<(string Path, bool Listed, bool IsInstallFolder)>();
+
+        void Add(string path, bool isListed, bool isInstall)
+        {
+            var canonical = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+            var index = folders.FindIndex(folder => string.Equals(folder.Path, canonical, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                folders.Add((canonical, isListed, isInstall));
+            }
+            else
+            {
+                var existing = folders[index];
+                folders[index] = (existing.Path, existing.Listed || isListed, existing.IsInstallFolder || isInstall);
+            }
+        }
+
+        Add(installPath, isListed: false, isInstall: true);
+        foreach (var path in listed)
+        {
+            Add(path, isListed: true, isInstall: false);
+        }
+
+        return folders;
     }
 
     private static Reading<IReadOnlyList<SteamFile>> ReadManifests(string libraryPath, UserProfileRedactor profile, SteamTextScrubber scrubber)

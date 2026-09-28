@@ -30,4 +30,11 @@ public enum MissingReason
 
     /// <summary>The source answered with a value or structure the collector could not decode.</summary>
     ParseFailed,
+
+    /// <summary>
+    /// The source answered, and the collector deliberately didn't keep the value, because in this case it
+    /// holds something private (for example a virtual disk's location, which is its image file's path; §13).
+    /// Added in schema 2.
+    /// </summary>
+    Withheld,
 }

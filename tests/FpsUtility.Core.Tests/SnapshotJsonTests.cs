@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using FpsUtility.Core.Raw;
 using FpsUtility.Core.Raw.Serialization;
 
@@ -157,14 +158,110 @@ public sealed class SnapshotJsonTests
     }
 
     [Theory]
-    [InlineData("\"schemaVersion\": 1", "\"schemaVersion\": 2")] // a schema this build doesn't read
+    [InlineData("\"schemaVersion\": 2", "\"schemaVersion\": 1")] // Milestone 1's schema: its disk "model" meant something else
+    [InlineData("\"schemaVersion\": 2", "\"schemaVersion\": 3")] // a schema this build doesn't know
     [InlineData("\"elevated\": false,", "\"elevated\": false, \"extra\": 1,")] // an unknown property
     [InlineData("\"status\": \"ok\"", "\"status\": 0")] // an enum as an integer
     [InlineData("\"value\": \"TEST MONITOR\"", "\"value\": \"TEST MONITOR\", \"missing\": \"notPresent\", \"detail\": \"x\"")] // known and missing at once
     [InlineData("\"reason\": \"timedOut\",", "")] // an unavailable source without a reason
     [InlineData("\"value\": false", "\"native\": 255")] // a reading with neither value nor missing (would read as a known false)
     [InlineData("\"elevated\": false,", "\"elevated\": false, \"elevated\": true,")] // a duplicated property
-    public void Reading_rejects_json_that_breaks_the_contract(string find, string replace)
+    [InlineData("\"listedByLibraryFolders\": false,", "")] // a v2 field missing
+    public void Reading_rejects_json_that_breaks_the_contract(string find, string replace) => AssertRejected(find, replace);
+
+    /// <summary>
+    /// The enum reader accepts exactly one defined member's camelCase name. It must never turn malformed input
+    /// into a different valid member (the old reader read "vga, sVideo" as compositeVideo, bitwise 1 | 2).
+    /// </summary>
+    [Theory]
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \"DisplayPort\"")] // other casing
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \" displayPort\"")] // padding
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \"vga, sVideo\"")] // comma-joined names
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \"udi, internal\"")] // comma-joined names that OR to an undefined value
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \"displayPort2\"")] // a member a later version might add
+    [InlineData("\"value\": \"displayPort\"", "\"value\": \"\"")] // empty
+    [InlineData("\"value\": \"displayPort\"", "\"value\": null")] // null where the model has none
+    [InlineData("\"value\": \"displayPort\"", "\"value\": 10")] // a number
+    [InlineData("\"reason\": \"timedOut\"", "\"reason\": \"timedOut, parseFailed\"")] // a source's reason
+    [InlineData("\"reason\": \"timedOut\"", "\"reason\": null")] // an unavailable source's reason
+    [InlineData("\"missing\": \"parseFailed\"", "\"missing\": \"implausible, parseFailed\"")] // a reading's reason
+    [InlineData("\"status\": \"ok\"", "\"status\": \"OK\"")]
+    public void Reading_rejects_an_enum_that_is_not_exactly_one_member(string find, string replace) => AssertRejected(find, replace);
+
+    [Fact]
+    public void Every_enum_member_round_trips_by_its_camel_case_name()
+    {
+        AssertRoundTrips<ConnectionKind>();
+        AssertRoundTrips<MissingReason>();
+        AssertRoundTrips<SourceStatus>();
+        AssertRoundTrips<MediaKind>();
+        AssertRoundTrips<BusKind>();
+        AssertRoundTrips<HealthState>();
+        AssertRoundTrips<MachineArchitecture>();
+        AssertRoundTrips<OsProductType>();
+        AssertRoundTrips<SessionType>();
+        AssertRoundTrips<OsPlatform>();
+    }
+
+    [Fact]
+    public void Writing_an_undefined_enum_value_fails_instead_of_inventing_a_name()
+    {
+        var converter = new CamelCaseEnumConverter<ConnectionKind>();
+        using var stream = new MemoryStream();
+        using var writer = new Utf8JsonWriter(stream);
+
+        Assert.Throws<JsonException>(() => converter.Write(writer, (ConnectionKind)999, JsonSerializerOptions.Default));
+    }
+
+    /// <summary>
+    /// A null list element, a missing list or a malformed element is a malformed snapshot. The reader reports it
+    /// as a <see cref="SnapshotFormatException"/>, never as another exception type escaping the reader (the old
+    /// reader let an <see cref="InvalidOperationException"/> out of the sort once a list had two items).
+    /// </summary>
+    [Theory]
+    [InlineData("display", "outputs", "[null]")] // a null alone in a sorted list
+    [InlineData("display", "outputs", "[null, {}]")] // a null beside another item
+    [InlineData("adapters", "adapters", "[null, null]")]
+    [InlineData("storage", "volumes", "[1]")] // a malformed element
+    [InlineData("storage", "volumes", "null")] // a null list
+    [InlineData("storage", "volumes", null)] // a missing list
+    public void Reading_rejects_malformed_list_content(string section, string list, string? replacement)
+    {
+        var json = JsonNode.Parse(SnapshotJson.Serialize(SnapshotFixture.Create()))!;
+        var data = json["sources"]![section]!["data"]!.AsObject();
+        if (replacement is null)
+        {
+            data.Remove(list);
+        }
+        else
+        {
+            data[list] = JsonNode.Parse(replacement);
+        }
+
+        Assert.Throws<SnapshotFormatException>(() => SnapshotJson.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString())));
+    }
+
+    [Fact]
+    public void A_null_access_path_is_rejected_too()
+    {
+        var json = JsonNode.Parse(SnapshotJson.Serialize(SnapshotFixture.Create()))!;
+        json["sources"]!["storage"]!["data"]!["partitions"]![0]!["accessPaths"] = JsonNode.Parse("[null]");
+
+        Assert.Throws<SnapshotFormatException>(() => SnapshotJson.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString())));
+    }
+
+    [Fact]
+    public void An_empty_list_is_valid_data_not_an_error()
+    {
+        var json = JsonNode.Parse(SnapshotJson.Serialize(SnapshotFixture.Create()))!;
+        json["sources"]!["storage"]!["data"]!["volumes"] = new JsonArray();
+
+        var snapshot = SnapshotJson.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString()));
+
+        Assert.Empty(snapshot.Sources.Storage.Data!.Volumes);
+    }
+
+    private static void AssertRejected(string find, string replace)
     {
         var json = Encoding.UTF8.GetString(SnapshotJson.Serialize(SnapshotFixture.Create()));
         Assert.Contains(find, json, StringComparison.Ordinal);
@@ -172,6 +269,27 @@ public sealed class SnapshotJsonTests
         var broken = json.Replace(find, replace, StringComparison.Ordinal);
 
         Assert.Throws<SnapshotFormatException>(() => SnapshotJson.Deserialize(Encoding.UTF8.GetBytes(broken)));
+    }
+
+    private static void AssertRoundTrips<TEnum>()
+        where TEnum : struct, Enum
+    {
+        var converter = new CamelCaseEnumConverter<TEnum>();
+        foreach (var value in Enum.GetValues<TEnum>())
+        {
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                converter.Write(writer, value, JsonSerializerOptions.Default);
+            }
+
+            var name = Encoding.UTF8.GetString(stream.ToArray());
+            Assert.Equal($"\"{JsonNamingPolicy.CamelCase.ConvertName(value.ToString())}\"", name);
+
+            var reader = new Utf8JsonReader(stream.ToArray());
+            reader.Read();
+            Assert.Equal(value, converter.Read(ref reader, typeof(TEnum), JsonSerializerOptions.Default));
+        }
     }
 
     private static string[] Names(JsonElement element) => [.. element.EnumerateObject().Select(property => property.Name)];

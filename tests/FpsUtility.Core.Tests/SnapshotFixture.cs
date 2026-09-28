@@ -90,24 +90,27 @@ internal static class SnapshotFixture
 
         var storage = new StorageData(
             Order(
-                new PhysicalDisk("0", Reading.Known("TEST NVME 1TB"), Reading.Known(MediaKind.Ssd, 4), Reading.Known(BusKind.Nvme, 17), Reading.Known(HealthState.Healthy, 0), Reading.Known<IReadOnlyList<int>>([2]), Reading.Known(1_000_204_886_016UL)),
-                new PhysicalDisk("1", Reading.Known("TEST HDD 2TB"), Reading.Known(MediaKind.Hdd, 3), Reading.Known(BusKind.Sata, 11), Reading.Known(HealthState.Warning, 1), Reading.Known<IReadOnlyList<int>>([5, 2]), Reading.Known(2_000_398_934_016UL))),
+                new PhysicalDisk("0", Reading.Known(NvmeLocation), Reading.Known("TEST NVME 1TB"), Reading.Known(MediaKind.Ssd, 4), Reading.Known(BusKind.Nvme, 17), Reading.Known(HealthState.Healthy, 0), Reading.Known<IReadOnlyList<int>>([2]), Reading.Known(1_000_204_886_016UL)),
+                new PhysicalDisk("1", Reading.Known(SataLocation), Reading.Known("TEST HDD 2TB"), Reading.Known(MediaKind.Hdd, 3), Reading.Known(BusKind.Sata, 11), Reading.Known(HealthState.Warning, 1), Reading.Known<IReadOnlyList<int>>([5, 2]), Reading.Known(2_000_398_934_016UL))),
             Order(
-                new DiskPartition(0, 1, Reading.Known(104_857_600UL), [@"\\?\Volume{00000000-0000-0000-0000-000000000001}\"]),
-                new DiskPartition(0, 2, Reading.Known(999_000_000_000UL), [@"C:\", @"\\?\Volume{00000000-0000-0000-0000-000000000002}\"]),
-                new DiskPartition(1, 1, Reading.Known(2_000_000_000_000UL), [@"D:\", @"\\?\Volume{00000000-0000-0000-0000-000000000003}\"])),
+                new OsDisk(0, Reading.Known(BusKind.Nvme, 17), Reading.Known(NvmeLocation)),
+                new OsDisk(1, Reading.Known(BusKind.Sata, 11), Reading.Missing<string>(MissingReason.NotPresent, "WMI returned no Location"))),
+            Order(
+                new DiskPartition(0, 1, Reading.Known(104_857_600UL), Order(@"\\?\Volume{00000000-0000-0000-0000-000000000001}\")),
+                new DiskPartition(0, 2, Reading.Known(999_000_000_000UL), Order(@"C:\", @"\\?\Volume{00000000-0000-0000-0000-000000000002}\")),
+                new DiskPartition(1, 1, Reading.Known(2_000_000_000_000UL), Order(@"D:\", @"\\?\Volume{00000000-0000-0000-0000-000000000003}\"))),
             Order(
                 new StorageVolume(@"\\?\Volume{00000000-0000-0000-0000-000000000002}\", Reading.Known("C"), Reading.Known("NTFS"), Reading.Known(999_000_000_000UL), Reading.Known(400_000_000_000UL)),
                 new StorageVolume(@"\\?\Volume{00000000-0000-0000-0000-000000000003}\", Reading.Known("D"), Reading.Known("NTFS"), Reading.Known(2_000_000_000_000UL), Reading.Known(90_000_000_000UL))));
 
         var steam = new SteamData(
             @"C:\Program Files (x86)\Steam",
-            Reading.Known(new SteamFile(@"C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf", "\"libraryfolders\"\n{\n}\n")),
+            Reading.Known(new SteamFile(@"C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf", "\"libraryfolders\"\n{\n\t\"1\"\n\t{\n\t\t\"path\"\t\t\"D:\\\\SteamLibrary\"\n\t\t\"label\"\t\t\"redacted\"\n\t\t\"contentid\"\t\t\"redacted\"\n\t}\n}\n")),
             Reading.Known(Order(
-                new SteamLibrary(@"C:\Program Files (x86)\Steam", Reading.Known(Order(
+                new SteamLibrary(@"C:\Program Files (x86)\Steam", listedByLibraryFolders: false, isInstallFolder: true, Reading.Known(Order(
                     new SteamFile(@"C:\Program Files (x86)\Steam\steamapps\appmanifest_10.acf", "\"AppState\"\n{\n\t\"appid\"\t\t\"10\"\n}\n"),
                     new SteamFile(@"C:\Program Files (x86)\Steam\steamapps\appmanifest_20.acf", "\"AppState\"\n{\n\t\"appid\"\t\t\"20\"\n}\n")))),
-                new SteamLibrary(@"D:\SteamLibrary", Reading.Missing<IReadOnlyList<SteamFile>>(MissingReason.NotPresent, "DirectoryNotFoundException")))));
+                new SteamLibrary(@"D:\SteamLibrary", listedByLibraryFolders: true, isInstallFolder: false, Reading.Missing<IReadOnlyList<SteamFile>>(MissingReason.NotPresent, "DirectoryNotFoundException")))));
 
         return new RawSnapshot(
             RawSnapshot.CurrentSchemaVersion,
@@ -125,6 +128,9 @@ internal static class SnapshotFixture
                 SourceEntry.Ok("test.steam", 5, steam),
                 SourceEntry.Unavailable<PowerData>("test.power", 10000, MissingReason.TimedOut, "No answer within 10 s")));
     }
+
+    private const string NvmeLocation = "PCI Slot 2 : Bus 1 : Device 0 : Function 0 : Adapter 0";
+    private const string SataLocation = "Integrated : Adapter 0 : Port 1 : Target 0 : LUN 0";
 
     public static OsInfo Os(
         int build = 19045,

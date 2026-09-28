@@ -22,15 +22,17 @@ public sealed class PrivacyTests
     }
 
     [Fact]
-    public void Edid_displayid_product_serial_is_zeroed_with_both_checksums_fixed()
+    public void Edid_displayid_product_serial_and_manufacture_date_are_zeroed_with_both_checksums_fixed()
     {
         var edid = BaseBlock(extensions: 1).Concat(DisplayIdBlock()).ToArray();
 
         var result = EdidScrubber.Scrub(edid);
 
         var block = result.Bytes[128..256];
-        Assert.Equal(3, result.FieldsScrubbed);
+        Assert.Equal(4, result.FieldsScrubbed); // base serial, serial descriptor, DisplayID serial, DisplayID week and year
         Assert.Equal([0, 0, 0, 0], block[(5 + 3 + 5)..(5 + 3 + 9)]);
+        Assert.Equal([0, 0], block[(5 + 3 + 9)..(5 + 3 + 11)]);
+        Assert.Equal([0xAA, 0xBB, 0xCC, 0x01, 0x02], block[(5 + 3)..(5 + 3 + 5)]); // manufacturer and product code are model data
         Assert.Equal(0, block[1..(5 + 15 + 1)].Sum(value => value) & 0xFF); // section checksum
         Assert.Equal(0, block.Sum(value => value) & 0xFF); // block checksum
         Assert.Equal([true, true], result.ChecksumValidBeforeScrub);
@@ -93,6 +95,85 @@ public sealed class PrivacyTests
         Assert.Equal(good.Length, result.ZeroedFromOffset);
         Assert.All(result.Table[good.Length..], value => Assert.Equal(0, value));
         Assert.DoesNotContain("SN-BOARD", Encoding.ASCII.GetString(result.Table), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Smbios_types_without_a_known_layout_are_default_denied_and_the_table_stays_walkable()
+    {
+        byte[] mac = [0x00, 0x1B, 0x21, 0xAA, 0xBB, 0xCC];
+        var oem = Structure(200, [.. mac, 0x01], "OEM-BOARD-ID-77");
+        var tpm = Structure(43, [(byte)'I', (byte)'N', (byte)'T', (byte)'C', 0x02, 0x00, 0x01], "TPM Device");
+        var slot = Structure(9, [0x01, 0xA5], "PCIEX16_1");
+        var table = Concat(oem, tpm, slot, Structure(127, []));
+
+        var result = SmbiosScrubber.Scrub(table);
+        var text = Encoding.ASCII.GetString(result.Table);
+
+        Assert.Equal(-1, result.Table.AsSpan().IndexOf(mac));
+        Assert.DoesNotContain("OEM-BOARD-ID-77", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("TPM Device", text, StringComparison.Ordinal);
+        Assert.Contains("PCIEX16_1", text, StringComparison.Ordinal); // system slots: a known layout, kept
+        Assert.Equal([200, (byte)oem[1]], result.Table[0..2]); // type and length survive, so the table still walks
+        Assert.Null(result.ZeroedFromOffset);
+        Assert.Equal(table.Length, result.Table.Length);
+    }
+
+    [Fact]
+    public void Smbios_battery_manufacture_date_is_overwritten_like_its_serial()
+    {
+        var battery = Structure(
+            22,
+            [
+                0x01, // 0x04 location
+                0x02, // 0x05 manufacturer
+                0x03, // 0x06 manufacture date
+                0x04, // 0x07 serial number
+                0x05, // 0x08 device name
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x09–0x0E
+                0x00, // 0x0F
+                0x34, 0x12, // 0x10 SBDS serial number
+                0x21, 0x43, // 0x12 SBDS manufacture date
+            ],
+            "Front", "Sunwoda", "6/18/2021", "BAT-SERIAL-1", "HB4593R1ECW");
+
+        var result = SmbiosScrubber.Scrub(Concat(battery, Structure(127, [])));
+        var text = Encoding.ASCII.GetString(result.Table);
+
+        Assert.DoesNotContain("6/18/2021", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("BAT-SERIAL-1", text, StringComparison.Ordinal);
+        Assert.Contains("HB4593R1ECW", text, StringComparison.Ordinal);
+        Assert.Equal([0, 0, 0, 0], result.Table[0x10..0x14]);
+    }
+
+    [Fact]
+    public void Steam_library_content_ids_and_labels_are_redacted_and_paths_and_apps_kept()
+    {
+        // The current libraryfolders.vdf layout: one block per library with path, label, contentid, sizes and apps.
+        const string vdf = "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"C:\\\\Program Files (x86)\\\\Steam\"\n\t\t\"label\"\t\t\"\"\n\t\t\"contentid\"\t\t\"6089302862307036814\"\n\t\t\"totalsize\"\t\t\"0\"\n\t\t\"apps\"\n\t\t{\n\t\t\t\"228980\"\t\t\"123456\"\n\t\t}\n\t}\n\t\"1\"\n\t{\n\t\t\"path\"\t\t\"D:\\\\SteamLibrary\"\n\t\t\"label\"\t\t\"Ann's \\\"fast\\\" SSD\"\n\t\t\"ContentID\"\t\t\"1234567891234567891\"\n\t}\n}\n";
+        var scrubber = new SteamTextScrubber(new UserProfileRedactor(@"C:\Users\Ann"));
+
+        var scrubbed = scrubber.Scrub(vdf);
+
+        Assert.DoesNotContain("6089302862307036814", scrubbed, StringComparison.Ordinal);
+        Assert.DoesNotContain("1234567891234567891", scrubbed, StringComparison.Ordinal);
+        Assert.DoesNotContain("fast", scrubbed, StringComparison.Ordinal); // the whole label, across its escaped quotes
+        Assert.Contains("\"label\"\t\t\"\"", scrubbed, StringComparison.Ordinal); // an empty label stays empty
+        Assert.Contains("\"label\"\t\t\"redacted\"", scrubbed, StringComparison.Ordinal);
+        Assert.Contains("\"ContentID\"\t\t\"redacted\"", scrubbed, StringComparison.Ordinal); // keys are case-insensitive
+        Assert.Contains("\"228980\"\t\t\"123456\"", scrubbed, StringComparison.Ordinal);
+        Assert.Equal([@"C:\Program Files (x86)\Steam", @"D:\SteamLibrary"], FpsUtility.Core.Raw.SteamLibraryFolders.ParsePaths(scrubbed));
+    }
+
+    [Theory]
+    // Transitional layout: a top-level contentstatsid equal to library 0's contentid (public samples show this).
+    [InlineData("\"libraryfolders\"\n{\n\t\"contentstatsid\"\t\t\"-6181279185307435581\"\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"C:\\\\Steam\"\n\t\t\"contentid\"\t\t\"-6181279185307435581\"\n\t}\n}\n")]
+    // Older layout: paths as values, and a ContentStatsID as the only id.
+    [InlineData("\"LibraryFolders\"\n{\n\t\"TimeNextStatsReport\"\t\t\"1727000000\"\n\t\"ContentStatsID\"\t\t\"-6181279185307435581\"\n\t\"1\"\t\t\"D:\\\\SteamLibrary\"\n}\n")]
+    public void Steam_content_stats_id_is_redacted_in_every_layout(string vdf)
+    {
+        var scrubbed = new SteamTextScrubber(new UserProfileRedactor(@"C:\Users\Ann")).Scrub(vdf);
+
+        Assert.DoesNotContain("6181279185307435581", scrubbed, StringComparison.Ordinal);
     }
 
     [Theory]

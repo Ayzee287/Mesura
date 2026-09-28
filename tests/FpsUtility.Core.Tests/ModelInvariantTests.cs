@@ -53,12 +53,41 @@ public sealed class ModelInvariantTests
     }
 
     [Fact]
-    public void A_snapshot_is_schema_version_1_and_captured_in_utc()
+    public void A_snapshot_is_the_current_schema_version_and_captured_in_utc()
     {
         var valid = SnapshotFixture.Create();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => new RawSnapshot(2, valid.CapturedAtUtc, valid.App, valid.Os, false, valid.Sources));
-        Assert.Throws<ArgumentException>(() => new RawSnapshot(1, new DateTimeOffset(2026, 9, 28, 12, 0, 0, TimeSpan.FromHours(3)), valid.App, valid.Os, false, valid.Sources));
+        // Version 1 was Milestone 1's format; its disk "model" meant the editable friendly name (§4.4 Milestone 1.5).
+        Assert.Equal(2, RawSnapshot.CurrentSchemaVersion);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RawSnapshot(1, valid.CapturedAtUtc, valid.App, valid.Os, false, valid.Sources));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RawSnapshot(3, valid.CapturedAtUtc, valid.App, valid.Os, false, valid.Sources));
+        Assert.Throws<ArgumentException>(() => new RawSnapshot(2, new DateTimeOffset(2026, 9, 28, 12, 0, 0, TimeSpan.FromHours(3)), valid.App, valid.Os, false, valid.Sources));
+    }
+
+    [Fact]
+    public void Partition_access_paths_are_sorted_by_the_model_whatever_order_the_platform_used()
+    {
+        string[] paths = [@"\\?\Volume{00000000-0000-0000-0000-000000000009}\", @"E:\", @"C:\Mount\Games\"];
+
+        var reported = new DiskPartition(0, 1, Reading.Known(1UL), paths);
+        var reversed = new DiskPartition(0, 1, Reading.Known(1UL), [.. paths.Reverse()]);
+
+        Assert.Equal([@"C:\Mount\Games\", @"E:\", @"\\?\Volume{00000000-0000-0000-0000-000000000009}\"], reported.AccessPaths);
+        Assert.Equal(reported.AccessPaths, reversed.AccessPaths);
+    }
+
+    [Fact]
+    public void A_list_with_a_null_element_is_rejected_by_the_model()
+    {
+        Assert.Throws<ArgumentException>(() => new DiskPartition(0, 1, Reading.Known(1UL), [@"C:\", null!]));
+        Assert.Throws<ArgumentException>(() => new DisplayData([null!]));
+        Assert.Throws<ArgumentException>(() => new EdidData([null!, null!]));
+    }
+
+    [Fact]
+    public void A_steam_library_is_read_for_a_reason()
+    {
+        Assert.Throws<ArgumentException>(() => new SteamLibrary(@"D:\SteamLibrary", listedByLibraryFolders: false, isInstallFolder: false, Reading.Known<IReadOnlyList<SteamFile>>([])));
     }
 
     [Fact]
