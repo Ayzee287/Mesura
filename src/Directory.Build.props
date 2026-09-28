@@ -1,0 +1,10 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- The read-only boundary (architecture §2.3) is enforced at build time in every production
+       project. Every change to BannedSymbols.txt is reviewed. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../BannedSymbols.txt" Link="BannedSymbols.txt" />
+  </ItemGroup>
+</Project>

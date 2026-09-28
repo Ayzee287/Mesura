@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- x64 only (D008). CET compatibility keeps the SDK default: CETCompat is never set to false (D010). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>FpsUtility.Cli</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <!-- The snapshot's app.commit must name the commit that produced the binary. A build from a working
+       tree with uncommitted changes has its stamp marked ".dirty", which Program.ReadAppInfo records
+       as "no single commit" instead of claiming HEAD. -->
+  <Target Name="MarkUncommittedBuild" AfterTargets="InitializeSourceControlInformation" Condition="'$(SourceRevisionId)' != ''">
+    <Exec Command="git status --porcelain" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatusOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitStatusExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(_GitStatusExitCode)' == '0' and '$(_GitStatusOutput)' != ''">
+      <SourceRevisionId>$(SourceRevisionId).dirty</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FpsUtility.Core\FpsUtility.Core.csproj" />
+    <ProjectReference Include="..\FpsUtility.Platform.Windows\FpsUtility.Platform.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

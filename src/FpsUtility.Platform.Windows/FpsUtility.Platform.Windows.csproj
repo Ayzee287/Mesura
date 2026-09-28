@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plain net10.0-windows: no higher TFM, which would pull in the unused Windows SDK projection
+       (architecture §17.1). The 19045 floor is enforced by the startup platform check, not here. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>FpsUtility.Platform.Windows</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FpsUtility.Core\FpsUtility.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.335" PrivateAssets="all" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

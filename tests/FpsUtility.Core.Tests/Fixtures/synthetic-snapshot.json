@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-09-28T12:00:00.123+00:00",
+  "app": {
+    "name": "FpsUtility",
+    "version": "0.1.0",
+    "commit": {
+      "value": "0123456789abcdef0123456789abcdef01234567"
+    }
+  },
+  "os": {
+    "platform": "windows",
+    "edition": {
+      "value": "Professional"
+    },
+    "version": {
+      "value": "22H2"
+    },
+    "build": 19045,
+    "updateRevision": {
+      "value": 6456
+    },
+    "architecture": {
+      "value": "x64",
+      "native": 34404
+    },
+    "productType": {
+      "value": "workstation"
+    },
+    "session": {
+      "value": "local"
+    }
+  },
+  "elevated": false,
+  "sources": {
+    "display": {
+      "status": "ok",
+      "source": "test.display",
+      "durationMs": 12,
+      "data": {
+        "outputs": [
+          {
+            "adapterId": "00000000000A0001",
+            "sourceId": "0",
+            "targetId": "4353",
+            "sourceName": {
+              "value": "\\\\.\\DISPLAY1"
+            },
+            "connection": {
+              "value": "displayPort",
+              "native": 10
+            },
+            "desktopResolution": {
+              "value": {
+                "width": 2560,
+                "height": 1440
+              }
+            },
+            "signalRefresh": {
+              "value": {
+                "numerator": 60000,
+                "denominator": 1000
+              }
+            },
+            "pathRefresh": {
+              "value": {
+                "numerator": 60000,
+                "denominator": 1000
+              }
+            },
+            "monitorName": {
+              "value": "TEST MONITOR"
+            },
+            "monitorDevicePath": {
+              "value": "\\\\?\\DISPLAY#TST0001#1\u0026test\u00260\u0026UID1#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}"
+            },
+            "offeredModes": {
+              "value": [
+                {
+                  "width": 1920,
+                  "height": 1080,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 2560,
+                  "height": 1440,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 2560,
+                  "height": 1440,
+                  "refreshHz": 165,
+                  "interlaced": false
+                }
+              ]
+            }
+          },
+          {
+            "adapterId": "00000000000A0001",
+            "sourceId": "1",
+            "targetId": "4354",
+            "sourceName": {
+              "missing": "sourceFailed",
+              "detail": "DisplayConfigGetDeviceInfo(GET_SOURCE_NAME) failed: ERROR_GEN_FAILURE (31)"
+            },
+            "connection": {
+              "value": "hdmi",
+              "native": 5
+            },
+            "desktopResolution": {
+              "value": {
+                "width": 1920,
+                "height": 1080
+              }
+            },
+            "signalRefresh": {
+              "missing": "notPresent",
+              "detail": "Target mode: the path has no mode of this kind"
+            },
+            "pathRefresh": {
+              "value": {
+                "numerator": 0,
+                "denominator": 0
+              }
+            },
+            "monitorName": {
+              "missing": "notPresent",
+              "detail": "no monitor name"
+            },
+            "monitorDevicePath": {
+              "value": "\\\\?\\DISPLAY#TST0002#1\u0026test\u00260\u0026UID2#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}"
+            },
+            "offeredModes": {
+              "missing": "sourceFailed",
+              "detail": "No source name to list modes with"
+            }
+          }
+        ]
+      }
+    },
+    "edid": {
+      "status": "ok",
+      "source": "test.edid",
+      "durationMs": 3,
+      "data": {
+        "monitors": [
+          {
+            "monitorDevicePath": "\\\\?\\DISPLAY#TST0001#1\u0026test\u00260\u0026UID1#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+            "edid": {
+              "value": {
+                "bytes": "AP///////wAQIA==",
+                "checksumValidBeforeScrub": [
+                  true
+                ],
+                "fieldsScrubbed": 1,
+                "overridePresent": {
+                  "value": false
+                }
+              }
+            }
+          },
+          {
+            "monitorDevicePath": "\\\\?\\DISPLAY#TST0002#1\u0026test\u00260\u0026UID2#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+            "edid": {
+              "missing": "notPresent",
+              "detail": "The monitor\u0027s hardware key has no binary EDID value"
+            }
+          }
+        ]
+      }
+    },
+    "adapters": {
+      "status": "ok",
+      "source": "test.adapters",
+      "durationMs": 20,
+      "data": {
+        "adapters": [
+          {
+            "adapterId": "00000000000A0001",
+            "description": {
+              "value": "Test Discrete GPU"
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 4318,
+                "deviceId": 9348,
+                "subsystemVendorId": 5208,
+                "subsystemId": 16425,
+                "revisionId": 161
+              }
+            },
+            "hardwareId": {
+              "value": {
+                "vendorId": 4318,
+                "deviceId": 9348,
+                "subsystemCombined": 1076434008,
+                "revisionId": 161
+              }
+            },
+            "isIntegrated": {
+              "value": false
+            },
+            "isHardware": {
+              "value": true
+            },
+            "driverVersion": {
+              "value": "32.0.15.6094"
+            },
+            "dedicatedMemoryBytes": {
+              "value": 8589934592
+            }
+          },
+          {
+            "adapterId": "00000000000A0002",
+            "description": {
+              "value": "Test Integrated GPU"
+            },
+            "pciIds": {
+              "missing": "notSupported",
+              "detail": "DXCore property HardwareIDParts is not supported on Windows build 19045"
+            },
+            "hardwareId": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 18048,
+                "subsystemCombined": 2098402402,
+                "revisionId": 12
+              }
+            },
+            "isIntegrated": {
+              "value": true
+            },
+            "isHardware": {
+              "value": true
+            },
+            "driverVersion": {
+              "value": "31.0.101.5186"
+            },
+            "dedicatedMemoryBytes": {
+              "value": 0
+            }
+          }
+        ]
+      }
+    },
+    "smbios": {
+      "status": "ok",
+      "source": "test.smbios",
+      "durationMs": 1,
+      "data": {
+        "majorVersion": 3,
+        "minorVersion": 4,
+        "dmiRevision": 0,
+        "table": "fwQAAQAA",
+        "fieldsScrubbed": 2,
+        "zeroedFromOffset": null
+      }
+    },
+    "pcie": {
+      "status": "ok",
+      "source": "test.pcie",
+      "durationMs": 9,
+      "data": {
+        "devices": [
+          {
+            "instanceId": "PCI\\VEN_10DE\u0026DEV_2484\u0026SUBSYS_40291458\u0026REV_A1\\4\u0026test\u00260\u00260008",
+            "baseClass": {
+              "value": 3
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 4318,
+                "deviceId": 9348,
+                "subsystemVendorId": 5208,
+                "subsystemId": 16425,
+                "revisionId": 161
+              }
+            },
+            "link": {
+              "currentWidth": {
+                "value": 4
+              },
+              "maxWidth": {
+                "value": 16
+              },
+              "currentSpeedGtps": {
+                "value": 2.5,
+                "native": 1
+              },
+              "maxSpeedGtps": {
+                "value": 16.0,
+                "native": 4
+              }
+            },
+            "parent": {
+              "value": {
+                "instanceId": "PCI\\VEN_8086\u0026DEV_A70D\u0026SUBSYS_7D131462\u0026REV_01\\3\u0026test\u00260\u002608",
+                "link": {
+                  "currentWidth": {
+                    "value": 4
+                  },
+                  "maxWidth": {
+                    "value": 16
+                  },
+                  "currentSpeedGtps": {
+                    "value": 2.5,
+                    "native": 1
+                  },
+                  "maxSpeedGtps": {
+                    "value": 16.0,
+                    "native": 4
+                  }
+                }
+              }
+            }
+          },
+          {
+            "instanceId": "PCI\\VEN_8086\u0026DEV_4680\u0026SUBSYS_7D131462\u0026REV_0C\\3\u0026test\u00260\u002610",
+            "baseClass": {
+              "missing": "accessDenied",
+              "detail": "DEVPKEY_PciDevice_BaseClass: CM_Get_DevNode_PropertyW returned CR_ACCESS_DENIED (51)"
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 18048,
+                "subsystemVendorId": 5218,
+                "subsystemId": 32019,
+                "revisionId": 12
+              }
+            },
+            "link": {
+              "currentWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CR_NO_SUCH_VALUE"
+              },
+              "maxWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CR_NO_SUCH_VALUE"
+              },
+              "currentSpeedGtps": {
+                "native": 0,
+                "missing": "parseFailed",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: 0 is not a PCIe link-speed code"
+              },
+              "maxSpeedGtps": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CR_NO_SUCH_VALUE"
+              }
+            },
+            "parent": {
+              "missing": "sourceFailed",
+              "detail": "CM_Get_Parent returned CR_FAILURE (19)"
+            }
+          }
+        ]
+      }
+    },
+    "storage": {
+      "status": "ok",
+      "source": "test.storage",
+      "durationMs": 400,
+      "data": {
+        "physicalDisks": [
+          {
+            "deviceId": "0",
+            "model": {
+              "value": "TEST NVME 1TB"
+            },
+            "mediaType": {
+              "value": "ssd",
+              "native": 4
+            },
+            "busType": {
+              "value": "nvme",
+              "native": 17
+            },
+            "health": {
+              "value": "healthy",
+              "native": 0
+            },
+            "operationalStatus": {
+              "value": [
+                2
+              ]
+            },
+            "sizeBytes": {
+              "value": 1000204886016
+            }
+          },
+          {
+            "deviceId": "1",
+            "model": {
+              "value": "TEST HDD 2TB"
+            },
+            "mediaType": {
+              "value": "hdd",
+              "native": 3
+            },
+            "busType": {
+              "value": "sata",
+              "native": 11
+            },
+            "health": {
+              "value": "warning",
+              "native": 1
+            },
+            "operationalStatus": {
+              "value": [
+                5,
+                2
+              ]
+            },
+            "sizeBytes": {
+              "value": 2000398934016
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "diskNumber": 0,
+            "partitionNumber": 1,
+            "sizeBytes": {
+              "value": 104857600
+            },
+            "accessPaths": [
+              "\\\\?\\Volume{00000000-0000-0000-0000-000000000001}\\"
+            ]
+          },
+          {
+            "diskNumber": 0,
+            "partitionNumber": 2,
+            "sizeBytes": {
+              "value": 999000000000
+            },
+            "accessPaths": [
+              "C:\\",
+              "\\\\?\\Volume{00000000-0000-0000-0000-000000000002}\\"
+            ]
+          },
+          {
+            "diskNumber": 1,
+            "partitionNumber": 1,
+            "sizeBytes": {
+              "value": 2000000000000
+            },
+            "accessPaths": [
+              "D:\\",
+              "\\\\?\\Volume{00000000-0000-0000-0000-000000000003}\\"
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "path": "\\\\?\\Volume{00000000-0000-0000-0000-000000000002}\\",
+            "driveLetter": {
+              "value": "C"
+            },
+            "fileSystem": {
+              "value": "NTFS"
+            },
+            "sizeBytes": {
+              "value": 999000000000
+            },
+            "freeBytes": {
+              "value": 400000000000
+            }
+          },
+          {
+            "path": "\\\\?\\Volume{00000000-0000-0000-0000-000000000003}\\",
+            "driveLetter": {
+              "value": "D"
+            },
+            "fileSystem": {
+              "value": "NTFS"
+            },
+            "sizeBytes": {
+              "value": 2000000000000
+            },
+            "freeBytes": {
+              "value": 90000000000
+            }
+          }
+        ]
+      }
+    },
+    "steam": {
+      "status": "ok",
+      "source": "test.steam",
+      "durationMs": 5,
+      "data": {
+        "installPath": "C:\\Program Files (x86)\\Steam",
+        "libraryFolders": {
+          "value": {
+            "path": "C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf",
+            "text": "\u0022libraryfolders\u0022\n{\n}\n"
+          }
+        },
+        "libraries": {
+          "value": [
+            {
+              "path": "C:\\Program Files (x86)\\Steam",
+              "manifests": {
+                "value": [
+                  {
+                    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_10.acf",
+                    "text": "\u0022AppState\u0022\n{\n\t\u0022appid\u0022\t\t\u002210\u0022\n}\n"
+                  },
+                  {
+                    "path": "C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_20.acf",
+                    "text": "\u0022AppState\u0022\n{\n\t\u0022appid\u0022\t\t\u002220\u0022\n}\n"
+                  }
+                ]
+              }
+            },
+            {
+              "path": "D:\\SteamLibrary",
+              "manifests": {
+                "missing": "notPresent",
+                "detail": "DirectoryNotFoundException"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "power": {
+      "status": "unavailable",
+      "reason": "timedOut",
+      "detail": "No answer within 10 s",
+      "source": "test.power",
+      "durationMs": 10000
+    }
+  }
+}
