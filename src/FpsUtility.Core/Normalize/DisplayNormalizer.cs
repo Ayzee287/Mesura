@@ -26,8 +26,9 @@ internal static class DisplayNormalizer
             var edid = Edid(output, at, sources.Edid);
 
             return new DisplayFacts(
-                Id: string.Create(CultureInfo.InvariantCulture, $"display-{index + 1}"),
+                Id: DisplayId(index),
                 Gpu: Gpu(output, at, sources.Adapters),
+                SharesSourceWith: SharedSource(display.Outputs, index),
                 Connection: Evidence.Observed(output.Connection, Basis.Authoritative, $"{at}/connection"),
                 DesktopResolution: Evidence.Map(
                     Evidence.Plausible(
@@ -45,6 +46,68 @@ internal static class DisplayNormalizer
 
         return Fact.Observed<IReadOnlyList<DisplayFacts>>([.. displays], Basis.Authoritative, Outputs);
     }
+
+    /// <summary>
+    /// <see cref="Rules.DisplaySharedSource"/>: the other outputs showing this output's desktop source. A source id is
+    /// scoped to its adapter, so both ids must match. Only the outputs' display ids enter the fact, never the opaque ids.
+    /// </summary>
+    private static Fact<IReadOnlyList<string>> SharedSource(IReadOnlyList<DisplayOutput> outputs, int index)
+    {
+        var output = outputs[index];
+        var own = Pointers(index, "adapterId", "sourceId");
+        if (IsBlank(output.AdapterId) || IsBlank(output.SourceId))
+        {
+            return Fact.Missing<IReadOnlyList<string>>(FactGap.Implausible, "The output's adapter or source id is empty, so the outputs showing its source can't be established", own);
+        }
+
+        var others = Enumerable.Range(0, outputs.Count).Where(other => other != index).ToList();
+        var unplaced = others
+            .Where(other => IsBlank(outputs[other].AdapterId) || (outputs[other].AdapterId == output.AdapterId && IsBlank(outputs[other].SourceId)))
+            .ToList();
+        if (unplaced.Count > 0)
+        {
+            return Fact.Missing<IReadOnlyList<string>>(
+                FactGap.Ambiguous,
+                string.Create(CultureInfo.InvariantCulture, $"{unplaced.Count} other output(s) that may be on this adapter have no source id, so they may show this source"),
+                [.. own, .. unplaced.SelectMany(other => Pointers(other, "adapterId", "sourceId"))]);
+        }
+
+        var sharing = others
+            .Where(other => outputs[other].AdapterId == output.AdapterId && outputs[other].SourceId == output.SourceId)
+            .ToList();
+
+        // A target listed twice on one adapter is one output or two: the data can't say, so neither can the count.
+        var group = sharing.Append(index).Select(member => (outputs[member].AdapterId, outputs[member].TargetId)).ToHashSet();
+        var twice = Enumerable.Range(0, outputs.Count)
+            .Where(candidate => group.Contains((outputs[candidate].AdapterId, outputs[candidate].TargetId)))
+            .GroupBy(candidate => (outputs[candidate].AdapterId, outputs[candidate].TargetId))
+            .Where(pair => pair.Count() > 1)
+            .SelectMany(pair => pair)
+            .Order()
+            .ToList();
+        if (twice.Count > 0)
+        {
+            return Fact.Missing<IReadOnlyList<string>>(
+                FactGap.Ambiguous,
+                "An adapter and target id pair among the outputs showing this source is listed more than once, so which outputs show it can't be established",
+                [.. own, .. twice.SelectMany(duplicate => Pointers(duplicate, "adapterId", "targetId"))]);
+        }
+
+        return sharing.Count == 0
+            ? Fact.Derived<IReadOnlyList<string>>([], Basis.Authoritative, Rules.DisplaySharedSource, [.. own, Outputs])
+            : Fact.Derived<IReadOnlyList<string>>(
+                [.. sharing.Select(DisplayId)],
+                Basis.Authoritative,
+                Rules.DisplaySharedSource,
+                [.. own, .. sharing.SelectMany(other => Pointers(other, "adapterId", "sourceId"))]);
+    }
+
+    private static bool IsBlank(string id) => string.IsNullOrWhiteSpace(id);
+
+    private static IEnumerable<string> Pointers(int index, params string[] fields) =>
+        fields.Select(field => string.Create(CultureInfo.InvariantCulture, $"{Outputs}/{index}/{field}"));
+
+    private static string DisplayId(int index) => string.Create(CultureInfo.InvariantCulture, $"display-{index + 1}");
 
     /// <summary>
     /// <see cref="Rules.DisplayModes"/>: the platform's list less the entries that aren't modes, a refresh of 0 or 1 Hz

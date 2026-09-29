@@ -18,6 +18,9 @@ namespace FpsUtility.Core.Facts.Serialization;
 /// </remarks>
 public static class FactsJson
 {
+    /// <summary>The property that holds a known fact's value, and so every list of subjects (<c>/displays/value/0</c>).</summary>
+    internal const string ValueProperty = "value";
+
     private static readonly JsonSerializerOptions Options = CreateOptions();
 
     private static readonly JsonTypeInfo<NormalizedSnapshot> TypeInfo =
@@ -33,6 +36,16 @@ public static class FactsJson
         output[^1] = (byte)'\n';
         return output;
     }
+
+    /// <summary>
+    /// A fact value as the facts JSON writes it, for a check's evidence to copy (architecture §4.6): the same bytes, so
+    /// evidence can be compared with the fact it cites. <typeparamref name="T"/> is a value type of the facts model.
+    /// </summary>
+    internal static JsonElement ValueElement<T>(T value) =>
+        JsonSerializer.SerializeToElement(value, ValueTypeInfo<T>());
+
+    /// <summary>The facts' serialisation metadata for one of their value types (a rate, a size, an enum), so other writers render it identically.</summary>
+    internal static JsonTypeInfo<T> ValueTypeInfo<T>() => (JsonTypeInfo<T>)Options.GetTypeInfo(typeof(T));
 
     private static JsonSerializerOptions CreateOptions()
     {
@@ -73,7 +86,7 @@ internal sealed class FactJsonConverter<T> : JsonConverter<Fact<T>>
 
         if (fact.IsKnown)
         {
-            writer.WritePropertyName("value");
+            writer.WritePropertyName(FactsJson.ValueProperty);
             JsonSerializer.Serialize(writer, fact.Value!, TypeInfoOf<T>(options));
             writer.WritePropertyName("basis");
             JsonSerializer.Serialize(writer, fact.Basis!.Value, TypeInfoOf<Basis>(options));

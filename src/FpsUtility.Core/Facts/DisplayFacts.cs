@@ -11,6 +11,11 @@ namespace FpsUtility.Core.Facts;
 /// </summary>
 /// <param name="Id">Snapshot-scoped, in the raw snapshot's order of outputs.</param>
 /// <param name="Gpu">The <see cref="GpuFacts.Id"/> of the adapter driving the output.</param>
+/// <param name="SharesSourceWith">
+/// The other active outputs showing the same desktop source (duplicate or "clone" mode), as their <see cref="Id"/>s
+/// (<see cref="Rules.DisplaySharedSource"/>). A known empty list: the output shows its source alone. Outputs that share
+/// a source share its desktop resolution and its offered modes.
+/// </param>
 /// <param name="SignalRefresh">The vertical refresh of the signal sent to the monitor, exactly as a rational in Hz.</param>
 /// <param name="PathRefresh">The rate recorded on the path itself; it can differ from the signal's (dynamic refresh, §17.1).</param>
 /// <param name="OfferedModes">The modes the platform offers the output right now, in whole Hz as listed, less entries that aren't modes (<see cref="Rules.DisplayModes"/>).</param>
@@ -20,6 +25,7 @@ namespace FpsUtility.Core.Facts;
 public sealed record DisplayFacts(
     string Id,
     Fact<string> Gpu,
+    Fact<IReadOnlyList<string>> SharesSourceWith,
     Fact<ConnectionKind> Connection,
     Fact<PixelSize> DesktopResolution,
     Fact<RefreshRate> SignalRefresh,
@@ -61,8 +67,28 @@ public sealed record RefreshRate
     public uint Denominator { get; }
 }
 
-/// <summary>A display mode as the platform lists it; <see cref="RefreshHz"/> is whole Hz.</summary>
-public sealed record VideoMode(int Width, int Height, int RefreshHz, bool Interlaced);
+/// <summary>A display mode as the platform lists it; <see cref="RefreshHz"/> is whole Hz. Width, height and refresh are positive.</summary>
+public sealed record VideoMode
+{
+    public VideoMode(int width, int height, int refreshHz, bool interlaced)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(refreshHz);
+        Width = width;
+        Height = height;
+        RefreshHz = refreshHz;
+        Interlaced = interlaced;
+    }
+
+    public int Width { get; }
+
+    public int Height { get; }
+
+    public int RefreshHz { get; }
+
+    public bool Interlaced { get; }
+}
 
 /// <param name="ManufacturerId">The three-letter PNP manufacturer ID, e.g. <c>BOE</c>.</param>
 /// <param name="ProductCode">The manufacturer's product code.</param>

@@ -18,6 +18,16 @@ public static class Rules
     public const string DisplayMonitor = "display.monitor-from-edid";
 
     /// <summary>
+    /// A display output's shared source: the other active outputs whose adapter id and source id both equal the
+    /// output's, within one snapshot (a source id is scoped to its adapter). None is a known empty list. It is
+    /// <see cref="FactGap.Implausible"/> when the output's own adapter or source id is empty, and
+    /// <see cref="FactGap.Ambiguous"/> when another output could show this source unseen (its adapter id is empty, or its
+    /// source id is empty on the same adapter), or when an adapter and target id pair among the outputs that would share
+    /// it is listed twice (one output or two?).
+    /// </summary>
+    public const string DisplaySharedSource = "display.shared-source";
+
+    /// <summary>
     /// A display output's offered modes: the platform's list less entries that aren't modes, a refresh of 0 or 1 Hz
     /// (what platforms use for "the hardware's default") or a width or height that isn't positive.
     /// </summary>

@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "factsSchemaVersion": 1,
+  "rawSchemaVersion": 2,
+  "capturedAtUtc": "2026-09-28T12:00:00.123+00:00",
+  "unlockedConditions": [],
+  "coverage": [
+    {
+      "check": "display.refresh-below-max",
+      "status": "ran"
+    },
+    {
+      "check": "display.on-integrated-gpu",
+      "status": "ran"
+    },
+    {
+      "check": "display.link-limits-refresh",
+      "status": "notImplemented"
+    },
+    {
+      "check": "memory.below-rated-speed",
+      "status": "notImplemented"
+    },
+    {
+      "check": "memory.single-channel",
+      "status": "notImplemented"
+    },
+    {
+      "check": "gpu.pcie-link-reduced",
+      "status": "notImplemented"
+    },
+    {
+      "check": "cpu.sustained-throttling",
+      "status": "notImplemented"
+    },
+    {
+      "check": "storage.game-drives",
+      "status": "notImplemented"
+    }
+  ],
+  "results": [
+    {
+      "check": "display.refresh-below-max",
+      "findingCode": "refresh-vs-highest-offered",
+      "subject": "display-1",
+      "verdict": "problem",
+      "certainty": "likely",
+      "condition": "problem/external",
+      "evidence": [
+        {
+          "factPath": "/os/session",
+          "role": "applicability",
+          "value": "local",
+          "basis": "authoritative",
+          "from": [
+            "/os/session"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/connection",
+          "role": "applicability",
+          "value": "displayPort",
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/connection"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/desktopResolution",
+          "role": "premise",
+          "value": {
+            "width": 2560,
+            "height": 1440
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/desktopResolution"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/signalRefresh",
+          "role": "premise",
+          "value": {
+            "numerator": 60000,
+            "denominator": 1000
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/signalRefresh"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/offeredModes",
+          "role": "premise",
+          "value": [
+            {
+              "width": 1920,
+              "height": 1080,
+              "refreshHz": 60,
+              "interlaced": false
+            },
+            {
+              "width": 2560,
+              "height": 1440,
+              "refreshHz": 60,
+              "interlaced": false
+            },
+            {
+              "width": 2560,
+              "height": 1440,
+              "refreshHz": 165,
+              "interlaced": false
+            }
+          ],
+          "basis": "authoritative",
+          "rule": "display.offered-modes",
+          "from": [
+            "/sources/display/data/outputs/0/offeredModes"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/pathRefresh",
+          "role": "premise",
+          "value": {
+            "numerator": 60000,
+            "denominator": 1000
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/pathRefresh"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/gpu",
+          "role": "premise",
+          "value": "gpu-1",
+          "basis": "authoritative",
+          "rule": "display.gpu-by-adapter-id",
+          "from": [
+            "/sources/display/data/outputs/0/adapterId",
+            "/sources/adapters/data/adapters/0/adapterId"
+          ]
+        },
+        {
+          "factPath": "/displays/value/0/sharesSourceWith",
+          "role": "premise",
+          "value": [],
+          "basis": "authoritative",
+          "rule": "display.shared-source",
+          "from": [
+            "/sources/display/data/outputs/0/adapterId",
+            "/sources/display/data/outputs/0/sourceId",
+            "/sources/display/data/outputs"
+          ]
+        }
+      ],
+      "trace": [
+        {
+          "code": "local-session",
+          "kind": "applicability",
+          "values": {}
+        },
+        {
+          "code": "external-display",
+          "kind": "applicability",
+          "values": {
+            "connection": "displayPort"
+          }
+        },
+        {
+          "code": "refresh-vs-highest-offered",
+          "kind": "comparison",
+          "values": {
+            "current": {
+              "numerator": 60000,
+              "denominator": 1000
+            },
+            "highestOffered": 165,
+            "tolerancePercent": 1
+          }
+        },
+        {
+          "code": "unvalidated-condition",
+          "kind": "gate",
+          "values": {}
+        }
+      ],
+      "params": {
+        "current": {
+          "numerator": 60000,
+          "denominator": 1000
+        },
+        "highestOffered": 165,
+        "resolution": {
+          "width": 2560,
+          "height": 1440
+        },
+        "connection": "displayPort",
+        "tolerancePercent": 1
+      },
+      "missing": []
+    },
+    {
+      "check": "display.refresh-below-max",
+      "findingCode": "refresh-vs-highest-offered",
+      "subject": "display-2",
+      "verdict": "cannotDetermine",
+      "evidence": [
+        {
+          "factPath": "/os/session",
+          "role": "applicability",
+          "value": "local",
+          "basis": "authoritative",
+          "from": [
+            "/os/session"
+          ]
+        },
+        {
+          "factPath": "/displays/value/1/connection",
+          "role": "applicability",
+          "value": "hdmi",
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/1/connection"
+          ]
+        },
+        {
+          "factPath": "/displays/value/1/desktopResolution",
+          "role": "premise",
+          "value": {
+            "width": 1920,
+            "height": 1080
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/1/desktopResolution"
+          ]
+        },
+        {
+          "factPath": "/displays/value/1/signalRefresh",
+          "role": "premise",
+          "missing": "notPresent",
+          "from": [
+            "/sources/display/data/outputs/1/signalRefresh"
+          ]
+        },
+        {
+          "factPath": "/displays/value/1/offeredModes",
+          "role": "premise",
+          "missing": "sourceFailed",
+          "from": [
+            "/sources/display/data/outputs/1/offeredModes"
+          ]
+        }
+      ],
+      "trace": [
+        {
+          "code": "local-session",
+          "kind": "applicability",
+          "values": {}
+        },
+        {
+          "code": "external-display",
+          "kind": "applicability",
+          "values": {
+            "connection": "hdmi"
+          }
+        }
+      ],
+      "params": {},
+      "missing": [
+        {
+          "code": "signal-refresh-missing",
+          "facts": [
+            "/displays/value/1/signalRefresh"
+          ]
+        },
+        {
+          "code": "offered-modes-missing",
+          "facts": [
+            "/displays/value/1/offeredModes"
+          ]
+        }
+      ]
+    },
+    {
+      "check": "display.on-integrated-gpu",
+      "findingCode": "driving-gpu-kind",
+      "subject": "machine",
+      "verdict": "cannotDetermine",
+      "evidence": [
+        {
+          "factPath": "/os/session",
+          "role": "applicability",
+          "value": "local",
+          "basis": "authoritative",
+          "from": [
+            "/os/session"
+          ]
+        },
+        {
+          "factPath": "/machine/chassisType",
+          "role": "applicability",
+          "missing": "notPresent",
+          "from": [
+            "/sources/smbios/data/table"
+          ]
+        },
+        {
+          "factPath": "/power/batteryPresent",
+          "role": "applicability",
+          "missing": "timedOut",
+          "from": [
+            "/sources/power"
+          ]
+        }
+      ],
+      "trace": [
+        {
+          "code": "local-session",
+          "kind": "applicability",
+          "values": {}
+        }
+      ],
+      "params": {},
+      "missing": [
+        {
+          "code": "form-factor-undetermined",
+          "facts": [
+            "/machine/chassisType",
+            "/power/batteryPresent"
+          ]
+        }
+      ]
+    }
+  ]
+}

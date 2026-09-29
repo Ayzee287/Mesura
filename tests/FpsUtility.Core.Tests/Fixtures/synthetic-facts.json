@@ -142,6 +142,16 @@
             "/sources/adapters/data/adapters/0/adapterId"
           ]
         },
+        "sharesSourceWith": {
+          "value": [],
+          "basis": "authoritative",
+          "rule": "display.shared-source",
+          "from": [
+            "/sources/display/data/outputs/0/adapterId",
+            "/sources/display/data/outputs/0/sourceId",
+            "/sources/display/data/outputs"
+          ]
+        },
         "connection": {
           "value": "displayPort",
           "basis": "authoritative",
@@ -237,6 +247,16 @@
           "from": [
             "/sources/display/data/outputs/1/adapterId",
             "/sources/adapters/data/adapters/0/adapterId"
+          ]
+        },
+        "sharesSourceWith": {
+          "value": [],
+          "basis": "authoritative",
+          "rule": "display.shared-source",
+          "from": [
+            "/sources/display/data/outputs/1/adapterId",
+            "/sources/display/data/outputs/1/sourceId",
+            "/sources/display/data/outputs"
           ]
         },
         "connection": {
