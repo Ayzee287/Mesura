@@ -6,4 +6,9 @@
     <RootNamespace>FpsUtility.Core</RootNamespace>
   </PropertyGroup>
 
+  <!-- The Track A pipeline's failure seams (a normaliser that throws) are internal; their tests live in Core.Tests. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="FpsUtility.Core.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -26,6 +26,12 @@
     </PropertyGroup>
   </Target>
 
+  <!-- The Track A kit's operator files sit next to the exe in the publish folder, which is then the portable kit
+       (architecture §4.7). They are separate files, not bundled into the single-file exe. -->
+  <ItemGroup>
+    <None Include="TrackA\Kit\*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\FpsUtility.Core\FpsUtility.Core.csproj" />
     <ProjectReference Include="..\FpsUtility.Platform.Windows\FpsUtility.Platform.Windows.csproj" />

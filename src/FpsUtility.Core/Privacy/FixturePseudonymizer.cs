@@ -59,6 +59,36 @@ public static partial class FixturePseudonymizer
     }
 
     /// <summary>
+    /// The snapshot's own opaque ids, as identifiers for <see cref="IdentifierLeakCheck"/>: the parts
+    /// <see cref="Pseudonymize"/> replaces (an adapter LUID, the instance part of a PnP instance id or monitor path, a
+    /// volume GUID). A Track A capture checks every file it writes against them, so an id that reached a place the
+    /// stand-ins don't cover (an operator's answer, a failure detail) is still found. They exist only in memory.
+    /// </summary>
+    public static IReadOnlyList<LocalIdentifier> OpaqueIdentifiers(RawSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var found = new Dictionary<string, (string Kind, Func<int, string> Make)>(StringComparer.Ordinal);
+        Collect(JsonNode.Parse(SnapshotJson.Serialize(snapshot)), null, found);
+
+        var identifiers = new List<LocalIdentifier>();
+        foreach (var (original, (kind, _)) in found.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            var (category, value) = kind switch
+            {
+                "adapter" => ("adapter LUID", original),
+                "volume" => ("volume GUID", original),
+                _ when original.Contains('#', StringComparison.Ordinal) && original.Split('#') is { Length: >= 4 } parts => ("monitor instance id", parts[2]),
+                _ => ("PnP instance id", original[(original.LastIndexOf('\\') + 1)..]),
+            };
+
+            identifiers.Add(new LocalIdentifier(category, value));
+        }
+
+        return identifiers;
+    }
+
+    /// <summary>
     /// Walks the JSON and records each opaque id with its kind and how to build its stand-in. A reading's
     /// <c>value</c> belongs to the property that holds the reading.
     /// </summary>

@@ -23,4 +23,9 @@
     <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The committed Track A corpus (repo track-a/), re-verified by CorpusTests. -->
+  <ItemGroup>
+    <None Include="..\..\track-a\**" LinkBase="TrackA\Corpus" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

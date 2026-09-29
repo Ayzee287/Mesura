@@ -9,6 +9,7 @@ using FpsUtility.Core.Privacy;
 using FpsUtility.Core.Raw;
 using FpsUtility.Core.Raw.Serialization;
 using FpsUtility.Core.Support;
+using FpsUtility.Cli.TrackA;
 using FpsUtility.Platform.Windows;
 
 namespace FpsUtility.Cli;
@@ -23,18 +24,20 @@ namespace FpsUtility.Cli;
 /// normalised facts (Milestone 2): the validation path from raw observation to fact, with no diagnosis.</item>
 /// <item><c>check --in &lt;snapshot&gt; [--out &lt;path&gt;]</c> reads a raw snapshot file, normalises it and writes the
 /// results of the implemented checks (Milestone 3A: checks 1 and 2), with no explanations.</item>
+/// <item><c>track-a …</c>: the Track A capture kit and its acceptance gate (architecture §4.7, <see cref="TrackACli"/>).</item>
 /// </list>
 /// All parse their arguments, then read the OS facts and refuse an unsupported platform (D011) before
 /// anything is collected or read. Every message goes to stderr, so stdout is only the JSON.
 /// </summary>
 internal static partial class Program
 {
-    private const string Usage = """
+    private static readonly string Usage = $"""
         Usage:
           FpsUtility.Cli scan --json [--out <path>]
           FpsUtility.Cli capture-fixture --id <PC-NNN | PCB-NNN> --out <folder>
           FpsUtility.Cli normalize --in <snapshot.json> [--out <path>]
           FpsUtility.Cli check --in <snapshot.json> [--out <path>]
+        {TrackACli.Usage}
 
         scan             Collects a raw machine snapshot (no diagnosis) and writes it as JSON to
                          stdout, or to <path> with --out.
@@ -46,8 +49,9 @@ internal static partial class Program
         check            Reads a raw snapshot, normalises it and writes the results of the checks
                          implemented so far (1 and 2) as JSON to stdout, or to <path> with --out.
                          Verdicts and evidence only: no explanations, no recommendations.
+        {TrackACli.Help}
 
-        All read only and change nothing on this PC.
+        All read only and change nothing on this PC. None of them sends anything anywhere.
 
         Exit codes:
           0  written (sources that could not be read are marked unavailable in it; for check,
@@ -55,7 +59,9 @@ internal static partial class Program
           1  the snapshot or facts could not be produced, read or written
           2  invalid arguments
           3  unsupported platform: nothing was collected or written
-          4  capture-fixture: the privacy check found an identifier; nothing was written
+          4  capture-fixture, track-a capture: the privacy check found an identifier; nothing shareable was written
+          5  track-a verify, promote: the acceptance gate refused the session; nothing was accepted
+          6  track-a capture: a privacy-verified package was written but can't be accepted as it is (see its manifest)
         """;
 
     private static readonly UserProfileRedactor Profile = new(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
@@ -91,6 +97,7 @@ internal static partial class Program
                 CaptureFixtureCommand capture => CaptureFixture(os, capture),
                 NormalizeCommand normalize => Normalize(normalize),
                 CheckCommand check => Check(check),
+                TrackACommand trackA => TrackACli.Run(os, trackA.Request, ReadAppInfo(), Profile),
                 _ => throw new InvalidOperationException("Unknown command."),
             };
         }
@@ -235,6 +242,11 @@ internal static partial class Program
             return null;
         }
 
+        if (args[0] == "track-a")
+        {
+            return TrackACli.Parse(args[1..], out error) is { } request ? new TrackACommand(request) : null;
+        }
+
         var options = new Dictionary<string, string?>(StringComparer.Ordinal);
         for (var i = 1; i < args.Length; i++)
         {
@@ -345,7 +357,7 @@ internal static partial class Program
     }
 
     /// <summary>A folder is inside a repository when it or any parent holds a <c>.git</c> folder or file.</summary>
-    private static bool InsideGitRepository(string folder)
+    internal static bool InsideGitRepository(string folder)
     {
         for (var current = new DirectoryInfo(folder); current is not null; current = current.Parent)
         {
@@ -440,6 +452,8 @@ internal static partial class Program
     private sealed record NormalizeCommand(string InPath, string? OutPath) : Command("normalize");
 
     private sealed record CheckCommand(string InPath, string? OutPath) : Command("check");
+
+    private sealed record TrackACommand(TrackACli.Request Request) : Command("track-a");
 
     private static class ExitCode
     {

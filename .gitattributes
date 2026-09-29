@@ -3,3 +3,11 @@
 
 # Golden files are compared byte for byte; the snapshot format uses LF (architecture §4.4).
 tests/**/Fixtures/**/*.json text eol=lf
+
+# The Track A corpus is hashed byte for byte (capture-manifest.json lists each file's SHA-256), so it keeps LF.
+track-a/**/*.json text eol=lf
+track-a/**/*.md text eol=lf
+
+# The kit's operator files are for cmd.exe and Notepad.
+src/FpsUtility.Cli/TrackA/Kit/*.cmd text eol=crlf
+src/FpsUtility.Cli/TrackA/Kit/*.txt text eol=crlf

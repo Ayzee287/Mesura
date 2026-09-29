@@ -1,5 +1,5 @@
+using System.Globalization;
 using System.Text;
-using System.Text.Json;
 
 namespace FpsUtility.Core.Privacy;
 
@@ -64,44 +64,67 @@ public static class IdentifierLeakCheck
     {
         ArgumentNullException.ThrowIfNull(identifiers);
 
-        var texts = new List<string>();
-        var payloads = new List<byte[]>();
-        var reader = new Utf8JsonReader(snapshotJson);
-        string? property = null;
+        var list = identifiers.ToList();
+        var locations = FindLeakLocations(snapshotJson, list);
+        return [.. list.Select(identifier => identifier.Category).Distinct().Where(category => locations.Any(location => location.Category == category))];
+    }
 
-        while (reader.Read())
+    /// <summary>
+    /// Where each identifier occurs in a JSON document: every string, and the decoded bytes of the byte payloads, under
+    /// the same rules as <see cref="FindLeaks"/>. A location names the category and the JSON Pointer of the string or
+    /// payload that holds it, never the value, so it can be reported (a Track A capture's failure report).
+    /// </summary>
+    /// <returns>Each category once per location, in document order. Empty means clean.</returns>
+    public static IReadOnlyList<LeakLocation> FindLeakLocations(ReadOnlySpan<byte> json, IEnumerable<LocalIdentifier> identifiers)
+    {
+        ArgumentNullException.ThrowIfNull(identifiers);
+
+        var checkable = identifiers.Where(IsCheckable).ToList();
+        var found = new List<LeakLocation>();
+
+        foreach (var text in JsonStrings.Of(json))
         {
-            switch (reader.TokenType)
+            var payload = text.Property is not null && BytePayloadProperties.Contains(text.Property) ? DecodeBase64(text.Value) : null;
+            // A payload is matched as bytes and as its Latin-1 text (SMBIOS strings), never as its base64 spelling.
+            var candidate = payload is null ? text.Value : Encoding.Latin1.GetString(payload);
+
+            foreach (var identifier in checkable)
             {
-                case JsonTokenType.PropertyName:
-                    property = reader.GetString();
-                    break;
-                case JsonTokenType.String when property is not null && BytePayloadProperties.Contains(property):
-                    var payload = reader.GetBytesFromBase64();
-                    payloads.Add(payload);
-                    texts.Add(Encoding.Latin1.GetString(payload));
-                    break;
-                case JsonTokenType.String:
-                    texts.Add(reader.GetString()!);
-                    break;
+                var leaked = identifier.Kind == IdentifierKind.Binary
+                    ? payload is not null && payload.AsSpan().IndexOf(Convert.FromHexString(identifier.Value)) >= 0
+                    : ContainsToken(candidate, identifier.Value.Trim());
+
+                if (leaked && !found.Contains(new LeakLocation(identifier.Category, text.Pointer)))
+                {
+                    found.Add(new LeakLocation(identifier.Category, text.Pointer));
+                }
             }
         }
 
-        var found = new List<string>();
-        foreach (var identifier in identifiers)
+        return found;
+    }
+
+    /// <summary>
+    /// Where each text identifier (personal or hardware) occurs in plain text, by line (<c>line 12</c>). Binary
+    /// identifiers are matched only in byte payloads, so plain text never has them.
+    /// </summary>
+    public static IReadOnlyList<LeakLocation> FindLeakLocationsInText(string text, IEnumerable<LocalIdentifier> identifiers)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(identifiers);
+
+        var checkable = identifiers.Where(identifier => identifier.Kind != IdentifierKind.Binary && IsCheckable(identifier)).ToList();
+        var found = new List<LeakLocation>();
+        var lines = text.Split('\n');
+        for (var i = 0; i < lines.Length; i++)
         {
-            if (found.Contains(identifier.Category) || !IsCheckable(identifier))
+            foreach (var identifier in checkable)
             {
-                continue;
-            }
-
-            var leaked = identifier.Kind == IdentifierKind.Binary
-                ? payloads.Any(payload => payload.AsSpan().IndexOf(Convert.FromHexString(identifier.Value)) >= 0)
-                : texts.Any(text => ContainsToken(text, identifier.Value.Trim()));
-
-            if (leaked)
-            {
-                found.Add(identifier.Category);
+                var location = new LeakLocation(identifier.Category, string.Create(CultureInfo.InvariantCulture, $"line {i + 1}"));
+                if (ContainsToken(lines[i], identifier.Value.Trim()) && !found.Contains(location))
+                {
+                    found.Add(location);
+                }
             }
         }
 
@@ -139,6 +162,13 @@ public static class IdentifierLeakCheck
         "0123456789", "123456789", "1234567890", "9876543210", "ABCDEFGHIJ",
     };
 
+    /// <summary>A byte payload's bytes; a value that isn't base64 is checked as text only.</summary>
+    private static byte[]? DecodeBase64(string value)
+    {
+        var buffer = new byte[value.Length];
+        return Convert.TryFromBase64String(value, buffer, out var written) ? buffer[..written] : null;
+    }
+
     private static bool ContainsToken(string text, string value)
     {
         for (var index = text.IndexOf(value, StringComparison.OrdinalIgnoreCase); index >= 0; index = text.IndexOf(value, index + 1, StringComparison.OrdinalIgnoreCase))
@@ -155,3 +185,6 @@ public static class IdentifierLeakCheck
         return false;
     }
 }
+
+/// <summary>Where an identifier was found: its category and the JSON Pointer (or <c>line N</c>) that holds it. Never the value.</summary>
+public sealed record LeakLocation(string Category, string Pointer);
