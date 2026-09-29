@@ -1,0 +1,1085 @@
+{
+  "schemaVersion": 1,
+  "rawSchemaVersion": 2,
+  "capturedAtUtc": "2026-09-28T12:00:00.123+00:00",
+  "os": {
+    "platform": {
+      "value": "windows",
+      "basis": "authoritative",
+      "from": [
+        "/os/platform"
+      ]
+    },
+    "edition": {
+      "value": "Professional",
+      "basis": "authoritative",
+      "from": [
+        "/os/edition"
+      ]
+    },
+    "version": {
+      "value": "22H2",
+      "basis": "authoritative",
+      "from": [
+        "/os/version"
+      ]
+    },
+    "build": {
+      "value": 19045,
+      "basis": "authoritative",
+      "from": [
+        "/os/build"
+      ]
+    },
+    "updateRevision": {
+      "value": 6456,
+      "basis": "authoritative",
+      "from": [
+        "/os/updateRevision"
+      ]
+    },
+    "architecture": {
+      "value": "x64",
+      "basis": "authoritative",
+      "from": [
+        "/os/architecture"
+      ]
+    },
+    "productType": {
+      "value": "workstation",
+      "basis": "authoritative",
+      "from": [
+        "/os/productType"
+      ]
+    },
+    "session": {
+      "value": "local",
+      "basis": "authoritative",
+      "from": [
+        "/os/session"
+      ]
+    }
+  },
+  "power": {
+    "onAcPower": {
+      "missing": "timedOut",
+      "detail": "The power source is unavailable: No answer within 10 s",
+      "from": [
+        "/sources/power"
+      ]
+    },
+    "batteryPresent": {
+      "missing": "timedOut",
+      "detail": "The power source is unavailable: No answer within 10 s",
+      "from": [
+        "/sources/power"
+      ]
+    }
+  },
+  "machine": {
+    "systemManufacturer": {
+      "missing": "notPresent",
+      "detail": "The table has no type 1 structure",
+      "from": [
+        "/sources/smbios/data/table"
+      ]
+    },
+    "systemProduct": {
+      "missing": "notPresent",
+      "detail": "The table has no type 1 structure",
+      "from": [
+        "/sources/smbios/data/table"
+      ]
+    },
+    "boardManufacturer": {
+      "missing": "notPresent",
+      "detail": "The table has no type 2 structure",
+      "from": [
+        "/sources/smbios/data/table"
+      ]
+    },
+    "boardProduct": {
+      "missing": "notPresent",
+      "detail": "The table has no type 2 structure",
+      "from": [
+        "/sources/smbios/data/table"
+      ]
+    },
+    "chassisType": {
+      "missing": "notPresent",
+      "detail": "The table has no type 3 structure",
+      "from": [
+        "/sources/smbios/data/table"
+      ]
+    }
+  },
+  "processors": {
+    "value": [],
+    "basis": "declared",
+    "rule": "smbios.type4",
+    "from": [
+      "/sources/smbios/data/table"
+    ]
+  },
+  "memoryDevices": {
+    "value": [],
+    "basis": "declared",
+    "rule": "smbios.type17",
+    "from": [
+      "/sources/smbios/data/table"
+    ]
+  },
+  "displays": {
+    "value": [
+      {
+        "id": "display-1",
+        "gpu": {
+          "value": "gpu-1",
+          "basis": "authoritative",
+          "rule": "display.gpu-by-adapter-id",
+          "from": [
+            "/sources/display/data/outputs/0/adapterId",
+            "/sources/adapters/data/adapters/0/adapterId"
+          ]
+        },
+        "connection": {
+          "value": "displayPort",
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/connection"
+          ]
+        },
+        "desktopResolution": {
+          "value": {
+            "width": 2560,
+            "height": 1440
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/desktopResolution"
+          ]
+        },
+        "signalRefresh": {
+          "value": {
+            "numerator": 60000,
+            "denominator": 1000
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/signalRefresh"
+          ]
+        },
+        "pathRefresh": {
+          "value": {
+            "numerator": 60000,
+            "denominator": 1000
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/pathRefresh"
+          ]
+        },
+        "offeredModes": {
+          "value": [
+            {
+              "width": 1920,
+              "height": 1080,
+              "refreshHz": 60,
+              "interlaced": false
+            },
+            {
+              "width": 2560,
+              "height": 1440,
+              "refreshHz": 60,
+              "interlaced": false
+            },
+            {
+              "width": 2560,
+              "height": 1440,
+              "refreshHz": 165,
+              "interlaced": false
+            }
+          ],
+          "basis": "authoritative",
+          "rule": "display.offered-modes",
+          "from": [
+            "/sources/display/data/outputs/0/offeredModes"
+          ]
+        },
+        "monitorName": {
+          "value": "TEST MONITOR",
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/0/monitorName"
+          ]
+        },
+        "monitor": {
+          "missing": "parseFailed",
+          "detail": "The 10 bytes are not a whole EDID base block",
+          "from": [
+            "/sources/edid/data/monitors/0/edid/value/bytes"
+          ]
+        },
+        "edidOverride": {
+          "value": false,
+          "basis": "authoritative",
+          "from": [
+            "/sources/edid/data/monitors/0/edid/value/overridePresent"
+          ]
+        }
+      },
+      {
+        "id": "display-2",
+        "gpu": {
+          "value": "gpu-1",
+          "basis": "authoritative",
+          "rule": "display.gpu-by-adapter-id",
+          "from": [
+            "/sources/display/data/outputs/1/adapterId",
+            "/sources/adapters/data/adapters/0/adapterId"
+          ]
+        },
+        "connection": {
+          "value": "hdmi",
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/1/connection"
+          ]
+        },
+        "desktopResolution": {
+          "value": {
+            "width": 1920,
+            "height": 1080
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/display/data/outputs/1/desktopResolution"
+          ]
+        },
+        "signalRefresh": {
+          "missing": "notPresent",
+          "detail": "Target mode: the path has no mode of this kind",
+          "from": [
+            "/sources/display/data/outputs/1/signalRefresh"
+          ]
+        },
+        "pathRefresh": {
+          "missing": "notPresent",
+          "detail": "The platform left the rate unset (0/0)",
+          "from": [
+            "/sources/display/data/outputs/1/pathRefresh"
+          ]
+        },
+        "offeredModes": {
+          "missing": "sourceFailed",
+          "detail": "No source name to list modes with",
+          "from": [
+            "/sources/display/data/outputs/1/offeredModes"
+          ]
+        },
+        "monitorName": {
+          "missing": "notPresent",
+          "detail": "no monitor name",
+          "from": [
+            "/sources/display/data/outputs/1/monitorName"
+          ]
+        },
+        "monitor": {
+          "missing": "notPresent",
+          "detail": "The monitor\u0027s hardware key has no binary EDID value",
+          "from": [
+            "/sources/edid/data/monitors/1/edid"
+          ]
+        },
+        "edidOverride": {
+          "missing": "notPresent",
+          "detail": "The monitor\u0027s hardware key has no binary EDID value",
+          "from": [
+            "/sources/edid/data/monitors/1/edid"
+          ]
+        }
+      }
+    ],
+    "basis": "authoritative",
+    "from": [
+      "/sources/display/data/outputs"
+    ]
+  },
+  "gpus": {
+    "value": [
+      {
+        "id": "gpu-1",
+        "name": {
+          "value": "Test Discrete GPU",
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/description"
+          ]
+        },
+        "pciIdentity": {
+          "value": {
+            "vendorId": 4318,
+            "deviceId": 9348,
+            "revisionId": 161
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/pciIds"
+          ]
+        },
+        "pciSubsystem": {
+          "value": {
+            "vendorId": 5208,
+            "deviceId": 16425
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/pciIds"
+          ]
+        },
+        "isIntegrated": {
+          "value": false,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/isIntegrated"
+          ]
+        },
+        "isHardware": {
+          "value": true,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/isHardware"
+          ]
+        },
+        "driverVersion": {
+          "value": "32.0.15.6094",
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/driverVersion"
+          ]
+        },
+        "dedicatedMemoryBytes": {
+          "value": 8589934592,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/0/dedicatedMemoryBytes"
+          ]
+        },
+        "pciDevice": {
+          "value": "pci-1",
+          "basis": "authoritative",
+          "rule": "gpu.pci-device-by-identity",
+          "from": [
+            "/sources/adapters/data/adapters/0/pciIds",
+            "/sources/pcie/data/devices/0/pciIds"
+          ]
+        }
+      },
+      {
+        "id": "gpu-2",
+        "name": {
+          "value": "Test Integrated GPU",
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/1/description"
+          ]
+        },
+        "pciIdentity": {
+          "value": {
+            "vendorId": 32902,
+            "deviceId": 18048,
+            "revisionId": 12
+          },
+          "basis": "authoritative",
+          "rule": "pci.identity-from-hardware-id",
+          "from": [
+            "/sources/adapters/data/adapters/1/hardwareId"
+          ]
+        },
+        "pciSubsystem": {
+          "missing": "notSupported",
+          "detail": "The platform reports the subsystem only combined into one value, whose split is not documented",
+          "from": [
+            "/sources/adapters/data/adapters/1/pciIds",
+            "/sources/adapters/data/adapters/1/hardwareId"
+          ]
+        },
+        "isIntegrated": {
+          "value": true,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/1/isIntegrated"
+          ]
+        },
+        "isHardware": {
+          "value": true,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/1/isHardware"
+          ]
+        },
+        "driverVersion": {
+          "value": "31.0.101.5186",
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/1/driverVersion"
+          ]
+        },
+        "dedicatedMemoryBytes": {
+          "value": 0,
+          "basis": "authoritative",
+          "from": [
+            "/sources/adapters/data/adapters/1/dedicatedMemoryBytes"
+          ]
+        },
+        "pciDevice": {
+          "value": "pci-2",
+          "basis": "authoritative",
+          "rule": "gpu.pci-device-by-identity",
+          "from": [
+            "/sources/adapters/data/adapters/1/hardwareId",
+            "/sources/pcie/data/devices/1/pciIds"
+          ]
+        }
+      }
+    ],
+    "basis": "authoritative",
+    "from": [
+      "/sources/adapters/data/adapters"
+    ]
+  },
+  "pciDevices": {
+    "value": [
+      {
+        "id": "pci-1",
+        "class": {
+          "value": "display",
+          "basis": "authoritative",
+          "from": [
+            "/sources/pcie/data/devices/0/baseClass"
+          ]
+        },
+        "pciIdentity": {
+          "value": {
+            "vendorId": 4318,
+            "deviceId": 9348,
+            "revisionId": 161
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/pcie/data/devices/0/pciIds"
+          ]
+        },
+        "pciSubsystem": {
+          "value": {
+            "vendorId": 5208,
+            "deviceId": 16425
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/pcie/data/devices/0/pciIds"
+          ]
+        },
+        "link": {
+          "currentWidth": {
+            "value": 4,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/link/currentWidth"
+            ]
+          },
+          "maxWidth": {
+            "value": 16,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/link/maxWidth"
+            ]
+          },
+          "currentSpeedGtps": {
+            "value": 2.5,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/link/currentSpeedGtps"
+            ]
+          },
+          "maxSpeedGtps": {
+            "value": 16.0,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/link/maxSpeedGtps"
+            ]
+          }
+        },
+        "upstreamLink": {
+          "currentWidth": {
+            "value": 4,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/parent/value/link/currentWidth"
+            ]
+          },
+          "maxWidth": {
+            "value": 16,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/parent/value/link/maxWidth"
+            ]
+          },
+          "currentSpeedGtps": {
+            "value": 2.5,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/parent/value/link/currentSpeedGtps"
+            ]
+          },
+          "maxSpeedGtps": {
+            "value": 16.0,
+            "basis": "authoritative",
+            "from": [
+              "/sources/pcie/data/devices/0/parent/value/link/maxSpeedGtps"
+            ]
+          }
+        }
+      },
+      {
+        "id": "pci-2",
+        "class": {
+          "missing": "accessDenied",
+          "detail": "DEVPKEY_PciDevice_BaseClass: CM_Get_DevNode_PropertyW returned CR_ACCESS_DENIED (51)",
+          "from": [
+            "/sources/pcie/data/devices/1/baseClass"
+          ]
+        },
+        "pciIdentity": {
+          "value": {
+            "vendorId": 32902,
+            "deviceId": 18048,
+            "revisionId": 12
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/pcie/data/devices/1/pciIds"
+          ]
+        },
+        "pciSubsystem": {
+          "value": {
+            "vendorId": 5218,
+            "deviceId": 32019
+          },
+          "basis": "authoritative",
+          "from": [
+            "/sources/pcie/data/devices/1/pciIds"
+          ]
+        },
+        "link": {
+          "currentWidth": {
+            "missing": "notPresent",
+            "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CR_NO_SUCH_VALUE",
+            "from": [
+              "/sources/pcie/data/devices/1/link/currentWidth"
+            ]
+          },
+          "maxWidth": {
+            "missing": "notPresent",
+            "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CR_NO_SUCH_VALUE",
+            "from": [
+              "/sources/pcie/data/devices/1/link/maxWidth"
+            ]
+          },
+          "currentSpeedGtps": {
+            "missing": "parseFailed",
+            "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: 0 is not a PCIe link-speed code",
+            "from": [
+              "/sources/pcie/data/devices/1/link/currentSpeedGtps"
+            ]
+          },
+          "maxSpeedGtps": {
+            "missing": "notPresent",
+            "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CR_NO_SUCH_VALUE",
+            "from": [
+              "/sources/pcie/data/devices/1/link/maxSpeedGtps"
+            ]
+          }
+        },
+        "upstreamLink": {
+          "currentWidth": {
+            "missing": "sourceFailed",
+            "detail": "CM_Get_Parent returned CR_FAILURE (19)",
+            "from": [
+              "/sources/pcie/data/devices/1/parent"
+            ]
+          },
+          "maxWidth": {
+            "missing": "sourceFailed",
+            "detail": "CM_Get_Parent returned CR_FAILURE (19)",
+            "from": [
+              "/sources/pcie/data/devices/1/parent"
+            ]
+          },
+          "currentSpeedGtps": {
+            "missing": "sourceFailed",
+            "detail": "CM_Get_Parent returned CR_FAILURE (19)",
+            "from": [
+              "/sources/pcie/data/devices/1/parent"
+            ]
+          },
+          "maxSpeedGtps": {
+            "missing": "sourceFailed",
+            "detail": "CM_Get_Parent returned CR_FAILURE (19)",
+            "from": [
+              "/sources/pcie/data/devices/1/parent"
+            ]
+          }
+        }
+      }
+    ],
+    "basis": "authoritative",
+    "from": [
+      "/sources/pcie/data/devices"
+    ]
+  },
+  "disks": {
+    "value": [
+      {
+        "id": "disk-1",
+        "model": {
+          "value": "TEST HDD 2TB",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/model"
+          ]
+        },
+        "mediaType": {
+          "value": "hdd",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/mediaType"
+          ]
+        },
+        "busType": {
+          "value": "sata",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/busType"
+          ]
+        },
+        "health": {
+          "value": "warning",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/health"
+          ]
+        },
+        "sizeBytes": {
+          "value": 2000398934016,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/sizeBytes"
+          ]
+        },
+        "location": {
+          "value": "Integrated : Adapter 0 : Port 1 : Target 0 : LUN 0",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/location"
+          ]
+        },
+        "partitions": {
+          "value": [
+            {
+              "number": 1,
+              "sizeBytes": {
+                "value": 2000000000000,
+                "basis": "authoritative",
+                "from": [
+                  "/sources/storage/data/partitions/2/sizeBytes"
+                ]
+              },
+              "volume": {
+                "value": "volume-2",
+                "basis": "authoritative",
+                "rule": "storage.partition-volume",
+                "from": [
+                  "/sources/storage/data/partitions/2/accessPaths",
+                  "/sources/storage/data/volumes"
+                ]
+              }
+            }
+          ],
+          "basis": "authoritative",
+          "rule": "storage.disk-partitions",
+          "from": [
+            "/sources/storage/data/physicalDisks/0/deviceId",
+            "/sources/storage/data/disks/0/number",
+            "/sources/storage/data/disks/0/busType"
+          ]
+        }
+      },
+      {
+        "id": "disk-2",
+        "model": {
+          "value": "TEST NVME 1TB",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/model"
+          ]
+        },
+        "mediaType": {
+          "value": "ssd",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/mediaType"
+          ]
+        },
+        "busType": {
+          "value": "nvme",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/busType"
+          ]
+        },
+        "health": {
+          "value": "healthy",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/health"
+          ]
+        },
+        "sizeBytes": {
+          "value": 1000204886016,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/sizeBytes"
+          ]
+        },
+        "location": {
+          "value": "PCI Slot 2 : Bus 1 : Device 0 : Function 0 : Adapter 0",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/location"
+          ]
+        },
+        "partitions": {
+          "value": [
+            {
+              "number": 1,
+              "sizeBytes": {
+                "value": 104857600,
+                "basis": "authoritative",
+                "from": [
+                  "/sources/storage/data/partitions/0/sizeBytes"
+                ]
+              },
+              "volume": {
+                "missing": "unmatched",
+                "detail": "None of the partition\u0027s access paths is a volume the snapshot lists",
+                "from": [
+                  "/sources/storage/data/partitions/0/accessPaths",
+                  "/sources/storage/data/volumes"
+                ]
+              }
+            },
+            {
+              "number": 2,
+              "sizeBytes": {
+                "value": 999000000000,
+                "basis": "authoritative",
+                "from": [
+                  "/sources/storage/data/partitions/1/sizeBytes"
+                ]
+              },
+              "volume": {
+                "value": "volume-1",
+                "basis": "authoritative",
+                "rule": "storage.partition-volume",
+                "from": [
+                  "/sources/storage/data/partitions/1/accessPaths",
+                  "/sources/storage/data/volumes"
+                ]
+              }
+            }
+          ],
+          "basis": "authoritative",
+          "rule": "storage.disk-partitions",
+          "from": [
+            "/sources/storage/data/physicalDisks/1/deviceId",
+            "/sources/storage/data/disks/1/number",
+            "/sources/storage/data/disks/1/busType",
+            "/sources/storage/data/physicalDisks/1/location",
+            "/sources/storage/data/disks/1/location"
+          ]
+        }
+      }
+    ],
+    "basis": "authoritative",
+    "from": [
+      "/sources/storage/data/physicalDisks"
+    ]
+  },
+  "volumes": {
+    "value": [
+      {
+        "id": "volume-1",
+        "driveLetter": {
+          "value": "C",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/0/driveLetter"
+          ]
+        },
+        "fileSystem": {
+          "value": "NTFS",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/0/fileSystem"
+          ]
+        },
+        "sizeBytes": {
+          "value": 999000000000,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/0/sizeBytes"
+          ]
+        },
+        "freeBytes": {
+          "value": 400000000000,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/0/freeBytes"
+          ]
+        },
+        "mountPoints": {
+          "value": [
+            "C:\\"
+          ],
+          "basis": "authoritative",
+          "rule": "storage.volume-mount-points",
+          "from": [
+            "/sources/storage/data/partitions/1/accessPaths",
+            "/sources/storage/data/volumes"
+          ]
+        },
+        "disk": {
+          "value": "disk-2",
+          "basis": "authoritative",
+          "rule": "storage.volume-disk",
+          "from": [
+            "/sources/storage/data/partitions/1/diskNumber",
+            "/sources/storage/data/physicalDisks/1/deviceId",
+            "/sources/storage/data/disks/1/number",
+            "/sources/storage/data/disks/1/busType",
+            "/sources/storage/data/physicalDisks/1/location",
+            "/sources/storage/data/disks/1/location"
+          ]
+        }
+      },
+      {
+        "id": "volume-2",
+        "driveLetter": {
+          "value": "D",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/1/driveLetter"
+          ]
+        },
+        "fileSystem": {
+          "value": "NTFS",
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/1/fileSystem"
+          ]
+        },
+        "sizeBytes": {
+          "value": 2000000000000,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/1/sizeBytes"
+          ]
+        },
+        "freeBytes": {
+          "value": 90000000000,
+          "basis": "authoritative",
+          "from": [
+            "/sources/storage/data/volumes/1/freeBytes"
+          ]
+        },
+        "mountPoints": {
+          "value": [
+            "D:\\"
+          ],
+          "basis": "authoritative",
+          "rule": "storage.volume-mount-points",
+          "from": [
+            "/sources/storage/data/partitions/2/accessPaths",
+            "/sources/storage/data/volumes"
+          ]
+        },
+        "disk": {
+          "value": "disk-1",
+          "basis": "authoritative",
+          "rule": "storage.volume-disk",
+          "from": [
+            "/sources/storage/data/partitions/2/diskNumber",
+            "/sources/storage/data/physicalDisks/0/deviceId",
+            "/sources/storage/data/disks/0/number",
+            "/sources/storage/data/disks/0/busType"
+          ]
+        }
+      }
+    ],
+    "basis": "authoritative",
+    "from": [
+      "/sources/storage/data/volumes"
+    ]
+  },
+  "steam": {
+    "registration": {
+      "value": "registered",
+      "basis": "authoritative",
+      "rule": "steam.registration",
+      "from": [
+        "/sources/steam"
+      ]
+    },
+    "installPath": {
+      "value": "C:\\Program Files (x86)\\Steam",
+      "basis": "declared",
+      "from": [
+        "/sources/steam/data/installPath"
+      ]
+    },
+    "libraries": {
+      "value": [
+        {
+          "id": "steam-library-1",
+          "path": {
+            "value": "C:\\Program Files (x86)\\Steam",
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/0/path"
+            ]
+          },
+          "listedBySteam": {
+            "value": false,
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/0/listedByLibraryFolders"
+            ]
+          },
+          "isInstallFolder": {
+            "value": true,
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/0/isInstallFolder"
+            ]
+          },
+          "apps": {
+            "value": [
+              {
+                "appId": {
+                  "value": 10,
+                  "basis": "declared",
+                  "rule": "steam.app-manifest",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/0/text"
+                  ]
+                },
+                "name": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022name\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/0/text"
+                  ]
+                },
+                "installDirectory": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022installdir\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/0/text"
+                  ]
+                },
+                "sizeOnDiskBytes": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022SizeOnDisk\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/0/text"
+                  ]
+                }
+              },
+              {
+                "appId": {
+                  "value": 20,
+                  "basis": "declared",
+                  "rule": "steam.app-manifest",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/1/text"
+                  ]
+                },
+                "name": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022name\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/1/text"
+                  ]
+                },
+                "installDirectory": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022installdir\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/1/text"
+                  ]
+                },
+                "sizeOnDiskBytes": {
+                  "missing": "notPresent",
+                  "detail": "The manifest has no \u0022SizeOnDisk\u0022 value",
+                  "from": [
+                    "/sources/steam/data/libraries/value/0/manifests/value/1/text"
+                  ]
+                }
+              }
+            ],
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/0/manifests"
+            ]
+          }
+        },
+        {
+          "id": "steam-library-2",
+          "path": {
+            "value": "D:\\SteamLibrary",
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/1/path"
+            ]
+          },
+          "listedBySteam": {
+            "value": true,
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/1/listedByLibraryFolders"
+            ]
+          },
+          "isInstallFolder": {
+            "value": false,
+            "basis": "declared",
+            "from": [
+              "/sources/steam/data/libraries/value/1/isInstallFolder"
+            ]
+          },
+          "apps": {
+            "missing": "notPresent",
+            "detail": "DirectoryNotFoundException",
+            "from": [
+              "/sources/steam/data/libraries/value/1/manifests"
+            ]
+          }
+        }
+      ],
+      "basis": "declared",
+      "from": [
+        "/sources/steam/data/libraries"
+      ]
+    }
+  }
+}

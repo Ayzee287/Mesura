@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using FpsUtility.Core.Facts.Serialization;
+using FpsUtility.Core.Normalize;
 using FpsUtility.Core.Privacy;
 using FpsUtility.Core.Raw;
 using FpsUtility.Core.Raw.Serialization;
@@ -14,10 +16,12 @@ namespace FpsUtility.Cli;
 /// <list type="bullet">
 /// <item><c>scan --json [--out &lt;path&gt;]</c> writes a raw snapshot to stdout or a file;</item>
 /// <item><c>capture-fixture --id PC-NNN --out &lt;folder&gt;</c> writes a pseudonymised, leak-checked
-/// fixture of a Track A PC into a folder outside git.</item>
+/// fixture of a Track A PC into a folder outside git;</item>
+/// <item><c>normalize --in &lt;snapshot&gt; [--out &lt;path&gt;]</c> reads a raw snapshot file and writes its
+/// normalised facts (Milestone 2): the validation path from raw observation to fact, with no diagnosis.</item>
 /// </list>
-/// Both parse their arguments, then read the OS facts and refuse an unsupported platform before
-/// anything is collected (D011). Every message goes to stderr, so a scan's stdout is only the snapshot.
+/// All parse their arguments, then read the OS facts and refuse an unsupported platform (D011) before
+/// anything is collected or read. Every message goes to stderr, so stdout is only the JSON.
 /// </summary>
 internal static partial class Program
 {
@@ -25,18 +29,21 @@ internal static partial class Program
         Usage:
           FpsUtility.Cli scan --json [--out <path>]
           FpsUtility.Cli capture-fixture --id <PC-NNN | PCB-NNN> --out <folder>
+          FpsUtility.Cli normalize --in <snapshot.json> [--out <path>]
 
         scan             Collects a raw machine snapshot (no diagnosis) and writes it as JSON to
                          stdout, or to <path> with --out.
         capture-fixture  Collects a snapshot, replaces its opaque device ids with stand-ins, checks it
                          holds none of this PC's identifiers, and writes it into an existing <folder>
                          outside any git repository, named <ID>-<UTC time>.json.
+        normalize        Reads a raw snapshot (from scan or capture-fixture) and writes its normalised
+                         facts as JSON to stdout, or to <path> with --out. No checks, no diagnosis.
 
-        Both read only and change nothing on this PC.
+        All read only and change nothing on this PC.
 
         Exit codes:
           0  written (sources that could not be read are marked unavailable in it)
-          1  the snapshot could not be produced or written
+          1  the snapshot or facts could not be produced, read or written
           2  invalid arguments
           3  unsupported platform: nothing was collected or written
           4  capture-fixture: the privacy check found an identifier; nothing was written
@@ -73,6 +80,7 @@ internal static partial class Program
             {
                 ScanCommand scan => Scan(os, scan),
                 CaptureFixtureCommand capture => CaptureFixture(os, capture),
+                NormalizeCommand normalize => Normalize(normalize),
                 _ => throw new InvalidOperationException("Unknown command."),
             };
         }
@@ -141,6 +149,39 @@ internal static partial class Program
         return ExitCode.Ok;
     }
 
+    /// <summary>
+    /// Milestone 2's validation path: a raw snapshot file in, its normalised facts out. Reading the file is strict
+    /// (a malformed or older-schema snapshot is refused with exit 1); normalising never touches the PC.
+    /// </summary>
+    private static int Normalize(NormalizeCommand command)
+    {
+        RawSnapshot raw;
+        try
+        {
+            raw = SnapshotJson.Deserialize(File.ReadAllBytes(command.InPath));
+        }
+        catch (Exception ex) when (ex is SnapshotFormatException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine(Profile.Redact($"The raw snapshot could not be read: {ex.Message}"));
+            return ExitCode.Failed;
+        }
+
+        var json = FactsJson.Serialize(Normalizer.Normalize(raw));
+        if (command.OutPath is null)
+        {
+            using var stdout = Console.OpenStandardOutput();
+            stdout.Write(json);
+            Console.Error.WriteLine("Facts written to stdout.");
+        }
+        else
+        {
+            LocalStore.WriteUserExport(command.OutPath, json);
+            Console.Error.WriteLine(Profile.Redact($"Facts written to {command.OutPath}."));
+        }
+
+        return ExitCode.Ok;
+    }
+
     private static Command? Parse(string[] args, out string? error)
     {
         error = null;
@@ -171,10 +212,10 @@ internal static partial class Program
                 case "--json":
                     options[name] = null;
                     break;
-                case "--out" or "--id" when i + 1 < args.Length && !string.IsNullOrWhiteSpace(args[i + 1]) && !args[i + 1].StartsWith("--", StringComparison.Ordinal):
+                case "--out" or "--id" or "--in" when i + 1 < args.Length && !string.IsNullOrWhiteSpace(args[i + 1]) && !args[i + 1].StartsWith("--", StringComparison.Ordinal):
                     options[name] = args[++i];
                     break;
-                case "--out" or "--id":
+                case "--out" or "--id" or "--in":
                     error = $"{name} needs one non-empty value.";
                     return null;
                 default:
@@ -187,6 +228,7 @@ internal static partial class Program
         {
             "scan" => ParseScan(options, out error),
             "capture-fixture" => ParseCaptureFixture(options, out error),
+            "normalize" => ParseNormalize(options, out error),
             _ => Fail($"Unknown command '{args[0]}'.", out error),
         };
     }
@@ -199,9 +241,9 @@ internal static partial class Program
             return Fail<ScanCommand>("scan needs --json: in this version the only output is the raw JSON snapshot.", out error);
         }
 
-        if (options.ContainsKey("--id"))
+        if (options.ContainsKey("--id") || options.ContainsKey("--in"))
         {
-            return Fail<ScanCommand>("scan takes no --id.", out error);
+            return Fail<ScanCommand>("scan takes no --id or --in.", out error);
         }
 
         return new ScanCommand(options.GetValueOrDefault("--out"));
@@ -213,9 +255,9 @@ internal static partial class Program
         var id = options.GetValueOrDefault("--id");
         var folder = options.GetValueOrDefault("--out");
 
-        if (options.ContainsKey("--json"))
+        if (options.ContainsKey("--json") || options.ContainsKey("--in"))
         {
-            return Fail<CaptureFixtureCommand>("capture-fixture always writes JSON; it takes no --json.", out error);
+            return Fail<CaptureFixtureCommand>("capture-fixture always writes JSON and collects its own snapshot; it takes no --json or --in.", out error);
         }
 
         if (id is null || !FixtureId().IsMatch(id))
@@ -235,6 +277,19 @@ internal static partial class Program
         }
 
         return new CaptureFixtureCommand(id, full);
+    }
+
+    private static NormalizeCommand? ParseNormalize(Dictionary<string, string?> options, out string? error)
+    {
+        error = null;
+        if (options.ContainsKey("--json") || options.ContainsKey("--id"))
+        {
+            return Fail<NormalizeCommand>("normalize always writes JSON and takes no --id.", out error);
+        }
+
+        return options.GetValueOrDefault("--in") is { } input
+            ? new NormalizeCommand(input, options.GetValueOrDefault("--out"))
+            : Fail<NormalizeCommand>("normalize needs --in with a raw snapshot file.", out error);
     }
 
     /// <summary>A folder is inside a repository when it or any parent holds a <c>.git</c> folder or file.</summary>
@@ -329,6 +384,8 @@ internal static partial class Program
     private sealed record ScanCommand(string? OutPath) : Command("scan");
 
     private sealed record CaptureFixtureCommand(string Id, string Folder) : Command("capture-fixture");
+
+    private sealed record NormalizeCommand(string InPath, string? OutPath) : Command("normalize");
 
     private static class ExitCode
     {
