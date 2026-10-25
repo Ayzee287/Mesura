@@ -10,6 +10,6 @@
     <!-- Supply chain (architecture §13): restore is pinned by committed lock files. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Version>0.1.0</Version>
-    <Product>FpsUtility</Product>
+    <Product>Mesura</Product>
   </PropertyGroup>
 </Project>

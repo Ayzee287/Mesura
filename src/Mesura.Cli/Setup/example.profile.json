@@ -1,0 +1,27 @@
+{
+  // An example setup profile. The easy way to make your own is the app: Profiles > Save profile... saves this PC's
+  // installed apps, applied Windows settings and app settings as <name>.profile.json and <name>.settings.json.
+  // To try this one from the command line:
+  //   mesura profile run --in example.profile.json            (preview: nothing changes)
+  //   mesura profile run --in example.profile.json --apply    (run it and record it in the history)
+  "kind": "Mesura.SetupProfile",
+  "schemaVersion": 1,
+  "name": "Example: everyday apps and the Ghost Spectre follow-up",
+  "description": "Browser, chat, music and Steam, and the Ghost Spectre Superlite follow-up settings.",
+
+  // App ids and bundle ids from 'apps list' and 'apps bundles'.
+  "bundles": [ "everyday" ],
+  "apps": [ "steam" ],
+
+  // Your app settings: a file written by Save profile (or 'config export --out my.settings.json'), next to this
+  // profile. Uncomment and name yours; leave it out to restore no app settings.
+  // "configBundle": "my.settings.json",
+
+  // Which apps' settings to import from that file; leave empty for all of them.
+  "configApps": [],
+
+  // Windows configuration: presets from 'windows presets' and operations from 'windows list'. Operations marked
+  // "needs admin" in the preview run only when Mesura runs as administrator; the rest apply either way.
+  "windowsPresets": [ "ghost-spectre-superlite" ],
+  "windows": [ "explorer.no-recent-files" ]
+}

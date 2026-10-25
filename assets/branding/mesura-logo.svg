@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="#0E1013"/>
+  <path d="M 62 164 L 62 56 L 90 56 L 128 108 L 166 56 L 194 56 L 194 164 L 166 164 L 166 100 L 134 144 L 122 144 L 90 100 L 90 164 Z" fill="#EDF0F7"/>
+  <rect x="62" y="190" width="132" height="8" rx="0" fill="#62D6B8"/>
+  <rect x="62" y="182" width="8" height="24" rx="0" fill="#62D6B8"/>
+  <rect x="186" y="182" width="8" height="24" rx="0" fill="#62D6B8"/>
+</svg>

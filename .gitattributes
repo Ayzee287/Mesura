@@ -9,5 +9,5 @@ track-a/**/*.json text eol=lf
 track-a/**/*.md text eol=lf
 
 # The kit's operator files are for cmd.exe and Notepad.
-src/FpsUtility.Cli/TrackA/Kit/*.cmd text eol=crlf
-src/FpsUtility.Cli/TrackA/Kit/*.txt text eol=crlf
+src/Mesura.Cli/TrackA/Kit/*.cmd text eol=crlf
+src/Mesura.Cli/TrackA/Kit/*.txt text eol=crlf

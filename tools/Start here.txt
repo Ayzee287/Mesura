@@ -1,0 +1,32 @@
+Mesura: set up Windows and restore your environment
+
+1. Copy this whole folder to the PC, not just Mesura.exe, and not to a USB stick you will unplug.
+   A good place: %LOCALAPPDATA%\Programs\Mesura
+
+2. Start Mesura.exe from there. Windows SmartScreen may say the app is unrecognised, because the file is not code-signed
+   (check the zip's SHA-256 against SHA256SUMS.txt first, then "More info" > "Run anyway"). It asks once for administrator rights, so changes to the whole PC work (you can
+   decline, or turn the question off in Settings). Nothing changes until you confirm an Apply, Install, Undo or
+   profile run; each is recorded in Activity, where Windows changes and app settings can be undone.
+
+3. Setup is the start page: choose Recommended or Maximum performance, look at the plan, then Review and apply.
+   All settings (top right on Setup) lists every setting by category, with its risk and what is known about it.
+
+4. In Settings, choose the language (English or Russian), and switch on "Show in the Start menu" and, if you like,
+   "Start in the tray when I sign in".
+
+To restore your setup on a fresh install: on your set-up PC, Profiles > Save this PC..., check what the profile will
+hold, and save it; keep the two files it writes (the profile and its settings file) together, for example on the USB
+stick with this folder. On the new PC, Profiles > Open profile..., check the steps, Run profile, do what "What's left"
+lists, then Run again.
+
+The command line is cli\mesura.exe (run "cli\mesura.exe --help"; cli\example.profile.json is an example profile).
+The window, the tray and the command line share one history and, if you edit them, one copy of the catalogs
+(Settings > Catalogs > Copy to edit).
+
+Security settings (Defender, SmartScreen, firewall, memory integrity) are shown with what turning them off means and
+how to restore them, and Mesura opens the Windows page; you make that change yourself.
+
+Before you rely on it: nothing has been applied to a clean PC by its author, only previewed (README.md, "Limits you
+should know about"). Read the plan Setup shows before you apply it, and use Activity to undo.
+
+Licence: MIT (LICENSE). Third-party notices: THIRD-PARTY-NOTICES.md. What changed: CHANGELOG.md.

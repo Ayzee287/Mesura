@@ -1,0 +1,50 @@
+Mesura - Track A capture kit (operator's card)
+==============================================
+
+What this is: an internal engineering check of a known PC, for the owner's Track A cohort.
+It reads the PC, changes nothing, needs no install and no administrator rights, and sends
+nothing anywhere. It is not telemetry and not a benchmark.
+
+On each PC
+----------
+1. Plug in the stick and run capture.cmd (double-click). Standard user; never "Run as administrator".
+2. Type the PC's cohort id from the owner's list, e.g. PC-001. It is never taken from the machine.
+3. Choose a scenario (Enter = baseline). The kit tells you what to set up, scans, shows what it read,
+   and asks only what the software can't know. Enter answers "unknown": never guess.
+4. It verifies the whole package against this PC's own identifiers before writing anything shareable.
+   It prints where the package is: captures\PC-NNN\session-...\shareable
+
+What to hand over
+-----------------
+- shareable\ (always) and evidence\ (only if you added files). Never private\ (only there if you
+  asked for it with --keep-private).
+- Then delete the session folders from the stick before it goes to the next PC.
+
+Scenarios
+---------
+baseline               nothing to set up
+game-load              start your game first (windowed or borderless); press Enter in stable gameplay,
+                       go straight back to the game, keep playing between the two beeps
+display-high-refresh   the high-refresh monitor connected and set the way you want it recorded
+clone                  two or more monitors on "Duplicate these displays"
+motherboard-display    a desktop's monitor on the motherboard's own video port
+pci-e-idle-load        two captures (idle, then in a game) plus GPU-Z, HWiNFO and the PCIe probe:
+                       copy research\pcie-spike\pcie-probe.ps1 next to this file first (it isn't
+                       part of the kit); the kit prints the exact commands
+steam-storage          nothing to set up; Steam may stay closed
+
+Evidence file names (anything else in evidence\ is ignored and not recorded: delete or rename it before handing over):
+  gpu-z-idle.png  hwinfo-idle.png  hwinfo-idle-2.png  hwinfo-idle-rootport.png  devmgr-idle.png
+  pcie-probe-idle-<time>.json   gpu-z-load.png  hwinfo-load.png  pcie-probe-load-<time>.json
+  (game is accepted for load; a suffix is a number or gpu/bridge/switch/rootport/port, never a name)
+The probe's output always holds this PC's device ids: it goes only to the owner's research folder, never into git.
+Keep usernames, the computer name and serial numbers out of every screenshot.
+
+If it stops
+-----------
+code 3   this Windows isn't supported (below Windows 10 22H2, Windows Server, or Arm): nothing
+         captured; write it in the PC's note
+code 4   the privacy check found something: no shareable package; see privacy-failure.json
+code 6   a package was written but can't be accepted (the reasons are printed)
+no text at all, on Windows 10 22H2: usually the .NET runtime's CET check on a PC without recent
+         Windows updates. Note the build capture.cmd printed, update Windows, run again.

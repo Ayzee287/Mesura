@@ -1,0 +1,670 @@
+{
+  "schemaVersion": 2,
+  "capturedAtUtc": "2026-09-28T22:30:14.372+00:00",
+  "app": {
+    "name": "FpsUtility",
+    "version": "0.1.0",
+    "commit": {
+      "value": "1d554021b14fbc9a61808e4703c5a5d482319e81"
+    }
+  },
+  "os": {
+    "platform": "windows",
+    "edition": {
+      "value": "Professional"
+    },
+    "version": {
+      "value": "25H2"
+    },
+    "build": 26200,
+    "updateRevision": {
+      "value": 9457
+    },
+    "architecture": {
+      "value": "x64",
+      "native": 34404
+    },
+    "productType": {
+      "value": "workstation"
+    },
+    "session": {
+      "value": "local"
+    }
+  },
+  "elevated": false,
+  "sources": {
+    "display": {
+      "status": "ok",
+      "source": "win32.QueryDisplayConfig, win32.DisplayConfigGetDeviceInfo, win32.EnumDisplaySettingsExW",
+      "durationMs": 49,
+      "data": {
+        "outputs": [
+          {
+            "adapterId": "adapter-1",
+            "sourceId": "0",
+            "targetId": "8388688",
+            "sourceName": {
+              "value": "\\\\.\\DISPLAY1"
+            },
+            "connection": {
+              "value": "internal",
+              "native": 2147483648
+            },
+            "desktopResolution": {
+              "value": {
+                "width": 2160,
+                "height": 1440
+              }
+            },
+            "signalRefresh": {
+              "value": {
+                "numerator": 20602000,
+                "denominator": 343360
+              }
+            },
+            "pathRefresh": {
+              "value": {
+                "numerator": 20602000,
+                "denominator": 343360
+              }
+            },
+            "monitorName": {
+              "missing": "notPresent",
+              "detail": "DisplayConfigGetDeviceInfo(GET_TARGET_NAME) returned no monitor name"
+            },
+            "monitorDevicePath": {
+              "value": "\\\\?\\DISPLAY#ACM0001#instance-6#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}"
+            },
+            "offeredModes": {
+              "value": [
+                {
+                  "width": 640,
+                  "height": 480,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 800,
+                  "height": 600,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1024,
+                  "height": 768,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1152,
+                  "height": 864,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 600,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 720,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 768,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 800,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 960,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1280,
+                  "height": 1024,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1360,
+                  "height": 768,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1366,
+                  "height": 768,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1400,
+                  "height": 1050,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1440,
+                  "height": 900,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1600,
+                  "height": 900,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1600,
+                  "height": 1200,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1680,
+                  "height": 1050,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1792,
+                  "height": 1344,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1856,
+                  "height": 1392,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1920,
+                  "height": 1080,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1920,
+                  "height": 1200,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 1920,
+                  "height": 1440,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 2048,
+                  "height": 1152,
+                  "refreshHz": 60,
+                  "interlaced": false
+                },
+                {
+                  "width": 2160,
+                  "height": 1440,
+                  "refreshHz": 60,
+                  "interlaced": false
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "edid": {
+      "status": "ok",
+      "source": "win32.QueryDisplayConfig, win32.CM_Open_DevNode_Key (CM_REGISTRY_HARDWARE) value EDID",
+      "durationMs": 34,
+      "data": {
+        "monitors": [
+          {
+            "monitorDevicePath": "\\\\?\\DISPLAY#ACM0001#instance-6#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+            "edid": {
+              "value": {
+                "bytes": "AP///////wAEbQEAAAAAAAAAAQSlHhR4Aocgo1VMmycPUFQAAAABAQEBAQEBAQEBAQEBAQEBelBwoICgKFAwIDoAKMUQAAAaAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAL8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                "checksumValidBeforeScrub": [
+                  true,
+                  true
+                ],
+                "fieldsScrubbed": 4,
+                "overridePresent": {
+                  "value": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "adapters": {
+      "status": "ok",
+      "source": "win32.DXCoreCreateAdapterFactory (adapters with DXCORE_ADAPTER_ATTRIBUTE_D3D11_GRAPHICS)",
+      "durationMs": 66,
+      "data": {
+        "adapters": [
+          {
+            "adapterId": "adapter-2",
+            "description": {
+              "value": "Microsoft Basic Render Driver"
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 5140,
+                "deviceId": 140,
+                "subsystemVendorId": 0,
+                "subsystemId": 0,
+                "revisionId": 0
+              }
+            },
+            "hardwareId": {
+              "value": {
+                "vendorId": 5140,
+                "deviceId": 140,
+                "subsystemCombined": 0,
+                "revisionId": 0
+              }
+            },
+            "isIntegrated": {
+              "value": false
+            },
+            "isHardware": {
+              "value": false
+            },
+            "driverVersion": {
+              "value": "10.0.26100.9278"
+            },
+            "dedicatedMemoryBytes": {
+              "value": 0
+            }
+          },
+          {
+            "adapterId": "adapter-1",
+            "description": {
+              "value": "Intel(R) Iris(R) Xe Graphics"
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 39497,
+                "subsystemVendorId": 4660,
+                "subsystemId": 22136,
+                "revisionId": 1
+              }
+            },
+            "hardwareId": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 39497,
+                "subsystemCombined": 1450709556,
+                "revisionId": 1
+              }
+            },
+            "isIntegrated": {
+              "value": true
+            },
+            "isHardware": {
+              "value": true
+            },
+            "driverVersion": {
+              "value": "32.0.101.7088"
+            },
+            "dedicatedMemoryBytes": {
+              "value": 134217728
+            }
+          }
+        ]
+      }
+    },
+    "smbios": {
+      "status": "ok",
+      "source": "win32.GetSystemFirmwareTable(\u0027RSMB\u0027)",
+      "durationMs": 34,
+      "data": {
+        "majorVersion": 3,
+        "minorVersion": 3,
+        "dmiRevision": 0,
+        "table": "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ZXIxLUNoYW5uZWxDLURJTU0wAEJBTksgMgAqKioqKioqKioqAAARXBYADgD+/wAAAAAAAAIAAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAENvbnRyb2xsZXIxLUNoYW5uZWxELURJTU0wAEJBTksgMwAqKioqKioqKioqAAATHxcAAAAAAP///wAOAAIAAAAAAAAAAAAAAAAAAAAAAAAUIxgAAAAAAP//fwAPABcA////AAAAAAAAAAAAAAAAAAAAAAAAFCMZAAAAAAD//38AEwAXAP///wAAAAAAAAAAAAAAAAAAAAAAABUHGgAIAQEAABYaGwABAgMEBQY+HNgdAAEAAAAAAAADAAAARmFrZQBBY21lLUJhdHQAKioqKioqKioqACoqKioAU1lOQkFUMDFYWFgtMjJUACoqKioqKioqKioqKioAACsfHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqKioqKioqKioqAADbah0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKioqKgAqKioqACoqKioAKioqKgAA3RoeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqACoqKioqKioqKioqKioqKgAA3RofAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqKioqKioqKioqKioqKioqKioqACoqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKioqACoqKioqKioqKioqKgAA3S8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioAKioqKioqKioAKioqKioqKioqKioqKioqKioqKioqKioAKioqKioqKioqKioqKioqKioqACoqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqAADdUiEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKgAqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqACoqKioqKioqKioqKioqKioqACoqKioqKioqKioqKioAKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKgAA3QwiAAAAAAAAAAAAKioqKioqKioqKioqKioqKioqAADdWSMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACoqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqKgAqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqKgAqKioqKioqKgAqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioAKioqKioqKioAKioqKioqKioqKioqKioqKioqKioqKioqACoqKioqKioqKioqKgAqKioqKioqKioqKioqACoqKioqKioqKioqACoqKioqKioqKioqKioqKioqKgAqKioqKioqKioqKioqKioqACoqKioqKioqKioqKioqKioqKioqKioAAH8E//4AAA==",
+        "fieldsScrubbed": 84,
+        "zeroedFromOffset": null
+      }
+    },
+    "pcie": {
+      "status": "ok",
+      "source": "win32.CM_Get_Device_ID_ListW, win32.CM_Get_DevNode_PropertyW (DEVPKEY_PciDevice_*, DEVPKEY_Device_HardwareIds)",
+      "durationMs": 52,
+      "data": {
+        "devices": [
+          {
+            "instanceId": "PCI\\VEN_144D\u0026DEV_A809\u0026SUBSYS_A801144D\u0026REV_00\\instance-2",
+            "baseClass": {
+              "value": 1
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 5197,
+                "deviceId": 43017,
+                "subsystemVendorId": 5197,
+                "subsystemId": 43009,
+                "revisionId": 0
+              }
+            },
+            "link": {
+              "currentWidth": {
+                "value": 4
+              },
+              "maxWidth": {
+                "value": 4
+              },
+              "currentSpeedGtps": {
+                "value": 8.0,
+                "native": 3
+              },
+              "maxSpeedGtps": {
+                "value": 8.0,
+                "native": 3
+              }
+            },
+            "parent": {
+              "value": {
+                "instanceId": "PCI\\VEN_8086\u0026DEV_A0B0\u0026SUBSYS_56781234\u0026REV_20\\instance-5",
+                "link": {
+                  "currentWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "currentSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "instanceId": "PCI\\VEN_8086\u0026DEV_9A14\u0026SUBSYS_56781234\u0026REV_01\\instance-3",
+            "baseClass": {
+              "missing": "notPresent",
+              "detail": "DEVPKEY_PciDevice_BaseClass: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 39444,
+                "subsystemVendorId": 4660,
+                "subsystemId": 22136,
+                "revisionId": 1
+              }
+            },
+            "link": {
+              "currentWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "maxWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "currentSpeedGtps": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "maxSpeedGtps": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              }
+            },
+            "parent": {
+              "value": {
+                "instanceId": "ACPI\\PNP0A08\\instance-1",
+                "link": {
+                  "currentWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "currentSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "instanceId": "PCI\\VEN_8086\u0026DEV_9A49\u0026SUBSYS_56781234\u0026REV_01\\instance-4",
+            "baseClass": {
+              "value": 3
+            },
+            "pciIds": {
+              "value": {
+                "vendorId": 32902,
+                "deviceId": 39497,
+                "subsystemVendorId": 4660,
+                "subsystemId": 22136,
+                "revisionId": 1
+              }
+            },
+            "link": {
+              "currentWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "maxWidth": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "currentSpeedGtps": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              },
+              "maxSpeedGtps": {
+                "missing": "notPresent",
+                "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+              }
+            },
+            "parent": {
+              "value": {
+                "instanceId": "ACPI\\PNP0A08\\instance-1",
+                "link": {
+                  "currentWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxWidth": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkWidth: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "currentSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_CurrentLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  },
+                  "maxSpeedGtps": {
+                    "missing": "notPresent",
+                    "detail": "DEVPKEY_PciDevice_MaxLinkSpeed: CM_Get_DevNode_PropertyW returned CR_NO_SUCH_VALUE (37)"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "storage": {
+      "status": "ok",
+      "source": "wmi.root\\Microsoft\\Windows\\Storage (MSFT_PhysicalDisk, MSFT_Disk, MSFT_Partition, MSFT_Volume)",
+      "durationMs": 418,
+      "data": {
+        "physicalDisks": [
+          {
+            "deviceId": "0",
+            "location": {
+              "value": "PCI Slot 8 : Bus 1 : Device 0 : Function 0 : Adapter 0"
+            },
+            "model": {
+              "value": "ACMEDISK MZV512XXXX-00000"
+            },
+            "mediaType": {
+              "value": "ssd",
+              "native": 4
+            },
+            "busType": {
+              "value": "nvme",
+              "native": 17
+            },
+            "health": {
+              "value": "healthy",
+              "native": 0
+            },
+            "operationalStatus": {
+              "value": [
+                2
+              ]
+            },
+            "sizeBytes": {
+              "value": 512110190592
+            }
+          }
+        ],
+        "disks": [
+          {
+            "number": 0,
+            "busType": {
+              "value": "nvme",
+              "native": 17
+            },
+            "location": {
+              "value": "PCI Slot 8 : Bus 1 : Device 0 : Function 0 : Adapter 0"
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "diskNumber": 0,
+            "partitionNumber": 1,
+            "sizeBytes": {
+              "value": 209715200
+            },
+            "accessPaths": [
+              "\\\\?\\Volume{volume-2}\\"
+            ]
+          },
+          {
+            "diskNumber": 0,
+            "partitionNumber": 2,
+            "sizeBytes": {
+              "value": 16777216
+            },
+            "accessPaths": []
+          },
+          {
+            "diskNumber": 0,
+            "partitionNumber": 3,
+            "sizeBytes": {
+              "value": 510946967552
+            },
+            "accessPaths": [
+              "C:\\",
+              "\\\\?\\Volume{volume-3}\\"
+            ]
+          },
+          {
+            "diskNumber": 0,
+            "partitionNumber": 4,
+            "sizeBytes": {
+              "value": 934281216
+            },
+            "accessPaths": [
+              "\\\\?\\Volume{volume-1}\\"
+            ]
+          }
+        ],
+        "volumes": [
+          {
+            "path": "\\\\?\\Volume{volume-1}\\",
+            "driveLetter": {
+              "missing": "notPresent",
+              "detail": "The volume has no drive letter"
+            },
+            "fileSystem": {
+              "value": "NTFS"
+            },
+            "sizeBytes": {
+              "value": 934277120
+            },
+            "freeBytes": {
+              "value": 120389632
+            }
+          },
+          {
+            "path": "\\\\?\\Volume{volume-3}\\",
+            "driveLetter": {
+              "value": "C"
+            },
+            "fileSystem": {
+              "value": "NTFS"
+            },
+            "sizeBytes": {
+              "value": 510946963456
+            },
+            "freeBytes": {
+              "value": 444697030656
+            }
+          }
+        ]
+      }
+    },
+    "steam": {
+      "status": "unavailable",
+      "reason": "notPresent",
+      "detail": "Steam is not installed for this user: HKCU\\Software\\Valve\\Steam\\SteamPath is not set",
+      "source": "registry HKCU\\Software\\Valve\\Steam\\SteamPath; files steamapps\\libraryfolders.vdf, steamapps\\appmanifest_*.acf",
+      "durationMs": 15
+    },
+    "power": {
+      "status": "ok",
+      "source": "win32.GetSystemPowerStatus",
+      "durationMs": 12,
+      "data": {
+        "acPower": {
+          "value": false,
+          "native": 0
+        },
+        "batteryPresent": {
+          "value": true,
+          "native": 1
+        }
+      }
+    }
+  }
+}

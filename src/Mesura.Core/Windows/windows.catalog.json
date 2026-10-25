@@ -1,0 +1,1156 @@
+{
+  // Mesura's Windows configuration operations (architecture section 4.9, vault D023, D024, D028). To change the catalog without
+  // a rebuild, put an edited copy in %LOCALAPPDATA%\Mesura (the app, the tray and the CLI all read it there). Risk classes follow the 2026-09-29 reassessment's risk model (section 8):
+  // userPreference (R1), systemConfiguration (R2), undocumented (R3), manual, observe (R0).
+  // Each "source" says where the setting was taken from; values were read back on PC-000 (Windows 11 26200) where
+  // noted. Every applied change records its exact previous value, and 'mesura windows revert' restores it.
+  // A registry setting may carry "absentMatches" (the value is Windows' default, so a missing value already counts as
+  // done) or "clearBits" (a bit field: only those bits are cleared, every other bit is kept). An operation may carry
+  // "requires": noBattery and/or noModernStandby, for changes that only make sense on a desktop, and proEdition for a machine policy
+  // Windows Home ignores. "valueBasis" says how the stored value is known to be right: documented (Microsoft documents it), verified
+  // (checked read-only on a Windows build: name present in the implementing components and the Settings toggle reads the state the
+  // value gives; docs/value-verification-2026-10.md) or community (community sources only); a profile's automatic selection holds
+  // only documented and verified entries.
+  // The 2026-10-22 catalog audit (repo docs/windows-catalog-audit.md) records why each entry and preset is what it is.
+  // Each operation has an "impact" (performance, network, privacy, interface, system or power: what it is about, never
+  // how much it helps) and a one-line "summary" for the app's lists. "benefit" (preference, documented, unverified,
+  // measured) says what is known about its effect; without it, a user preference claims nothing, an undocumented knob is
+  // unverified and documented configuration is documented. "tcp" sets a global TCP/IP setting through netsh
+  // (autotuninglevel, rss or rsc only; schema 3, 2026-10-24 quality pass). A preset's "tier" says where the app offers it: "primary"
+  // (the two outcomes on Optimize), "specialized" (shown when it applies, such as on a Ghost Spectre image) or
+  // "collection" (a quick selection in All settings); its "optional" entries are offered unticked beside it.
+  // Translations of names and texts live in the app (Mesura.App\Localization), not here.
+  // Schema 2 marks the audited catalog with these fields: a build before it refuses this file rather than misread it,
+  // and this build sets aside an edited copy of schema 1 and uses its built-in catalog instead (it says so).
+  "kind": "Mesura.WindowsCatalog",
+  "schemaVersion": 3,
+  "operations": [
+    {
+      "id": "taskbar.hide-task-view", "name": "Hide the Task View button", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Removes the Task View button from the taskbar.",
+      "description": "Removes the Task View button from the taskbar. Task View stays available with Win+Tab.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "source": "Settings > Personalization > Taskbar; SapphireOS playbook registry.yml L447; present on PC-000",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "ShowTaskViewButton", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "taskbar.search-icon-only", "name": "Taskbar search as an icon", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Shows taskbar search as an icon instead of a box.",
+      "description": "Shows search as an icon instead of a search box (the value is 0 hidden, 1 icon, 2 box, 3 icon and label on Windows 11 22H2 and later).",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "limitations": "Can't run together with 'Hide taskbar search' (the same value). A search policy an organisation sets (SearchOnTaskbarMode) overrides it.",
+      "source": "Settings > Personalization > Taskbar (backing value SearchboxTaskbarMode); SapphireOS playbook registry.yml L226; present on PC-000",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search", "name": "SearchboxTaskbarMode", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "taskbar.hide-search", "name": "Hide taskbar search", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Removes search from the taskbar; Start still searches.",
+      "description": "Removes search from the taskbar entirely. Typing after pressing Start still searches.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "limitations": "Can't run together with 'Taskbar search as an icon' (the same value).",
+      "source": "Settings > Personalization > Taskbar; present on PC-000 (honoured on 26200: no search button)",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search", "name": "SearchboxTaskbarMode", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "taskbar.align-left", "name": "Align the taskbar to the left", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Puts Start and the taskbar icons on the left.",
+      "description": "Puts the Start button and taskbar icons on the left, as in Windows 10.",
+      "risk": "userPreference", "activation": "immediate", "minBuild": 22000,
+      "source": "Settings > Personalization > Taskbar > Taskbar behaviours; present on PC-000",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "TaskbarAl", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "taskbar.hide-widgets", "name": "Widgets button on the taskbar", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Whether the Widgets button is on the taskbar.",
+      "description": "The Widgets (news and weather) button. Guided: Mesura shows the stored value and opens Taskbar settings, where you turn the button off. Current Windows 11 refuses this value from any program but Settings, so Mesura doesn't write it.",
+      "risk": "observe", "minBuild": 22000,
+      "source": "Settings > Personalization > Taskbar (backing value TaskbarDa). The User Choice Protection Driver (UCPD.sys, delivered with 2024 updates; running on PC-000) denies the write to programs Microsoft didn't sign, so the earlier write-based operation failed there (catalog audit 2026-10-22). To turn Widgets off for every user, use 'Turn off Widgets (policy)'.",
+      "observe": {
+        "reads": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "TaskbarDa", "type": "dword", "value": "0" } ],
+        "openUri": "ms-settings:taskbar"
+      }
+    },
+    {
+      "id": "taskbar.widgets-policy-off", "name": "Turn off Widgets (policy)", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Turns Widgets off for every user with a policy.",
+      "description": "Turns off Widgets for every user through the documented Windows 11 policy.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "signOut", "minBuild": 22000, "requires": [ "proEdition" ],
+      "limitations": "A Group Policy value: it applies to every user, and Windows treats the setting as managed by your organisation. Windows 10's News and interests uses a different policy, not covered here. Microsoft lists the policy for Pro, Enterprise, Education and IoT Enterprise, so on Home the operation doesn't apply.",
+      "source": "Group Policy 'Allow widgets' (Dsh; Microsoft's privacy connections doc and the NewsAndInterests CSP); SapphireOS playbook registry.yml L51",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Dsh", "name": "AllowNewsAndInterests", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "taskbar.hide-chat", "name": "Hide the Chat (Teams) button", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Removes the Chat (Teams) button from the taskbar.",
+      "description": "Removes the Chat button that early Windows 11 builds put on the taskbar.",
+      "risk": "userPreference", "activation": "explorerRestart", "minBuild": 22000, "maxBuild": 22621,
+      "limitations": "Windows 11 23H2 replaced Chat with the Teams app (from build 22631); later builds have no button, so it doesn't apply there.",
+      "source": "Settings > Personalization > Taskbar (backing value TaskbarMn); present on PC-000",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "TaskbarMn", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "taskbar.end-task", "name": "Add 'End task' to taskbar menus", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Adds End task to the taskbar's right-click menu.",
+      "description": "Adds End task to a taskbar app's right-click menu, to close a hung game or app without Task Manager.",
+      "risk": "userPreference", "activation": "immediate", "minBuild": 22631,
+      "limitations": "End task closes the app at once; anything unsaved in it is lost.",
+      "source": "Settings > System > For developers > End task (System > Advanced on 24H2 and later); SapphireOS playbook registry.yml L613",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings", "name": "TaskbarEndTask", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "start.no-recent-items", "name": "Don't show recently opened files in Start", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Start stops listing recently opened files.",
+      "description": "Stops Start, Jump Lists and File Explorer listing the files you opened recently.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "limitations": "Tracking which apps you start is a separate operation (Turn off app-launch tracking).",
+      "source": "Settings > Personalization > Start > 'Show recently opened items in Start, Jump Lists and File Explorer' (backing value Start_TrackDocs, listed in Microsoft's privacy connections doc); SapphireOS playbook registry.yml L448. Until 2026-10-22 this operation also wrote Start_TrackProgs, which is now its own operation.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "Start_TrackDocs", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "search.no-web-results", "name": "No web results in Start search", "category": "Taskbar and Start",
+      "impact": "privacy", "summary": "Start search stays on this PC, without Bing results.",
+      "description": "Asks Start search to stay on this PC: no Bing results or web suggestions.",
+      "risk": "undocumented", "activation": "explorerRestart",
+      "limitations": "Advanced: a community value with no Settings toggle on Windows 11, and Microsoft doesn't document it; current builds may ignore it (not verified on 24H2/25H2). Never in a preset.",
+      "source": "Community value BingSearchEnabled; SapphireOS playbook registry.yml L225. Microsoft documents only the ConnectedSearchUseWeb policy, which Windows Pro ignores. Reclassified undocumented in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search", "name": "BingSearchEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "search.no-box-suggestions", "name": "No search-box suggestions (policy)", "category": "Taskbar and Start",
+      "impact": "privacy", "summary": "No web suggestions in the search box (policy).",
+      "description": "Turns off the recent-search suggestions in the File Explorer search box for this user (the documented effect). It is widely reported to also remove web results from Start search; that isn't documented.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "signOut",
+      "limitations": "A per-user Group Policy value: writing it needs an elevated Mesura.",
+      "source": "Group Policy 'Turn off display of recent search entries in the File Explorer search box' (ADMX_WindowsExplorer, Windows 10 2004 with KB5005101 and later); SapphireOS playbook registry.yml L107",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Policies\\Microsoft\\Windows\\Explorer", "name": "DisableSearchBoxSuggestions", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "copilot.off", "name": "Turn off Copilot (policy)", "category": "Taskbar and Start",
+      "impact": "system", "summary": "Turns Copilot off with a policy.",
+      "description": "Turns off the built-in Windows Copilot sidebar for this user, on the builds that have the sidebar.",
+      "risk": "userPreference", "activation": "signOut", "maxBuild": 22631,
+      "limitations": "Microsoft deprecated this policy: Windows 11 24H2 and later ship Copilot as an app, which ignores it (uninstall the app in Settings > Apps instead), so it doesn't apply there. Writing it needs an elevated Mesura.",
+      "source": "Group Policy 'Turn off Windows Copilot' (WindowsAI CSP, deprecated); SapphireOS playbook registry.yml L289",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Policies\\Microsoft\\Windows\\WindowsCopilot", "name": "TurnOffWindowsCopilot", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "taskbar.hide-copilot-button", "name": "Hide the Copilot button", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "Removes the Copilot button from the taskbar.",
+      "description": "Removes the Copilot button from the taskbar on the builds that show one.",
+      "risk": "userPreference", "activation": "explorerRestart", "maxBuild": 22631,
+      "limitations": "The button existed on Windows 10 22H2 (Copilot preview) and Windows 11 22H2 and 23H2; 24H2 and later ship Copilot as an app, with no button, so it doesn't apply there.",
+      "source": "Settings > Personalization > Taskbar (backing value ShowCopilotButton); build range corrected in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "ShowCopilotButton", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "start.no-recommendations", "name": "No tips and app recommendations in Start", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "No tips, app suggestions or promotions in Start.",
+      "description": "Turns off 'Show recommendations for tips, shortcuts, new apps, and more' in Start.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "explorerRestart", "minBuild": 22621,
+      "source": "Settings > Personalization > Start (backing value Start_IrisRecommendations; the policy alternative 'Remove Recommended from Start' would mark Start as managed). Microsoft doesn't document the value. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the name is referenced by the Settings, Start and taskbar components, and the Settings toggle 'Show recommendations for tips, shortcuts, new apps, and more' reads Off with the value at 0. The On state and the effect on Start were not exercised. Microsoft's documented alternative (HideRecommendedSection) hides the whole section, which is different.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "Start_IrisRecommendations", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "start.no-account-notifications", "name": "No account prompts in Start", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "No Microsoft account prompts in Start.",
+      "description": "Stops Start showing Microsoft account prompts and badges (sign in, back up this PC, and similar).",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "explorerRestart", "minBuild": 22621,
+      "source": "Settings > Personalization > Start > Show account-related notifications (backing value). Microsoft doesn't document the value. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the name is referenced by the Start menu host (StartDocked) and the Settings components, and the toggle 'Show account-related notifications' reads Off with the value at 0. The On state was not exercised.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "Start_AccountNotifications", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "search.no-highlights", "name": "No search highlights", "category": "Taskbar and Start",
+      "impact": "interface", "summary": "No trending content or illustrations in search.",
+      "description": "Stops Start search and the search box showing Bing 'search highlights': daily illustrations, trending searches and promoted content.",
+      "risk": "userPreference", "valueBasis": "community", "activation": "explorerRestart",
+      "source": "Settings > Privacy & security > Search permissions > Show search highlights (backing value; the machine-wide form is the 'Allow search highlights' policy, Search CSP, which lists Windows 10 20H2-21H2 with KB5011543 and Windows 11; 22H2 shares 21H2's servicing); adamx overview L54; set on PC-000. Windows 10 22H2 coverage added in the 2026-10-22 audit (not verified on a Windows 10 PC). Microsoft documents the setting, not this stored value. Checked 2026-10-25 (build 26200): the name is in the search components, but the Settings toggle wasn't found on that build, so the value couldn't be matched to a toggle and stays community-only, outside the main profiles.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings", "name": "IsDynamicSearchBoxEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "notifications.off", "name": "Turn off app notifications", "category": "Notifications",
+      "impact": "interface", "summary": "Turns off notifications from apps.",
+      "description": "Turns off notification banners and the notification centre entries for apps (Settings > System > Notifications).",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "immediate",
+      "limitations": "Alarms, reminders, calls and security notices from apps are silenced too. Windows 11 already turns on Do not disturb while a full-screen game runs, which is the lighter alternative.",
+      "source": "Settings > System > Notifications (backing value); present on PC-000. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the Settings switch 'Notifications' reads Off with the value at 0. The On state was not exercised.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications", "name": "ToastEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "notifications.no-sound", "name": "Silence notification sounds", "category": "Notifications",
+      "impact": "interface", "summary": "Notifications arrive without a sound.",
+      "description": "Keeps notifications but stops them playing a sound.",
+      "risk": "userPreference", "activation": "immediate",
+      "source": "Settings > System > Notifications; SapphireOS playbook registry.yml L414 (the catalog uses the normal path; the playbook's doubled backslashes may not resolve)",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings", "name": "NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "notifications.no-tips-and-suggestions", "name": "No tips, suggestions and promoted apps", "category": "Notifications",
+      "impact": "interface", "summary": "No Windows tips, suggestions or promoted apps.",
+      "description": "Stops Windows' tips notifications, suggested content in Settings and the welcome experience after updates.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "signOut",
+      "limitations": "SubscribedContent-338388 and SystemPaneSuggestionsEnabled are Windows 10's Start suggestions; Windows 11 ignores them. Windows 10's silent installation of suggested apps (SilentInstalledAppsEnabled) is not part of it: that name isn't found in the Windows components of the build checked.",
+      "source": "Settings > System > Notifications > Additional settings and Settings > Privacy & security > General (backing values); SapphireOS playbook registry.yml L111 and ContentDeliveryManager group; present on PC-000. Microsoft documents the settings, not these stored values. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: each of the eight value names and the subscription numbers is present in the content-delivery components (ContentDeliveryManager, Windows.Services.TargetedContent) or the Settings and Start components, and the toggles 'Get tips and suggestions when using Windows' and 'Recommendations and offers in Settings' read Off with the values at 0. The On state was not exercised; which of the values only a Windows 10 build reads wasn't checked.",
+      "registry": [
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338389Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338388Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-310093Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338393Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-353694Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-353696Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SystemPaneSuggestionsEnabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SoftLandingEnabled", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "notifications.no-sync-provider-ads", "name": "No OneDrive/sync-provider notices in Explorer", "category": "Notifications",
+      "impact": "interface", "summary": "No OneDrive and sync-provider notices in File Explorer.",
+      "description": "Stops File Explorer showing sync-provider notifications (OneDrive promotions) above the file list.",
+      "risk": "userPreference", "valueBasis": "community", "activation": "explorerRestart",
+      "source": "File Explorer > Options > View 'Show sync provider notifications'; SapphireOS playbook registry.yml L394. Checked 2026-10-25 (build 26200): the name is present in shell32.dll, but the option's checkbox couldn't be read through UI Automation, so the value couldn't be matched to the option and stays community-only, outside the main profiles.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "ShowSyncProviderNotifications", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "notifications.no-setup-nags", "name": "No 'finish setting up your device' screens", "category": "Notifications",
+      "impact": "interface", "summary": "No 'finish setting up your device' screens.",
+      "description": "Stops the full-screen 'Let's finish setting up your device' and 'Get even more out of Windows' prompts that appear after updates.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "immediate",
+      "source": "Settings > System > Notifications > Additional settings > 'Suggest ways to get the most out of Windows' (backing value). Microsoft doesn't document the value. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the name is referenced by the Settings handlers and IrisService, and the checkbox 'Suggest ways to get the most out of Windows and finish setting up this device' reads Off with the value at 0. The On state was not exercised.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\UserProfileEngagement", "name": "ScoobeSystemSettingEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "notifications.no-feedback-prompts", "name": "No Windows feedback prompts", "category": "Notifications",
+      "impact": "privacy", "summary": "Windows stops asking for feedback.",
+      "description": "Stops Windows asking for feedback ('How likely are you to recommend Windows?') from time to time.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "If an earlier frequency left PeriodInNanoSeconds in a form Mesura doesn't write, the operation stops and changes nothing; choose Never in Settings instead.",
+      "source": "Settings > Privacy & security > Diagnostics & feedback > Feedback frequency: Never. Microsoft's privacy connections doc gives Never as NumberOfSIUFInPeriod 0 and PeriodInNanoSeconds 0; the second value was added in the 2026-10-22 audit.",
+      "registry": [
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Siuf\\Rules", "name": "NumberOfSIUFInPeriod", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Siuf\\Rules", "name": "PeriodInNanoSeconds", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "explorer.show-extensions", "name": "Show file name extensions", "category": "File Explorer",
+      "impact": "interface", "summary": "Shows file name extensions such as .exe and .txt.",
+      "description": "Shows extensions such as .exe and .pdf in File Explorer, which also makes a disguised program ('invoice.pdf.exe') visible.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "source": "File Explorer > View > Show > File name extensions; present on PC-000",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "HideFileExt", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "explorer.no-cloud-in-quick-access", "name": "No cloud files in Quick Access", "category": "File Explorer",
+      "impact": "interface", "summary": "Quick access shows files from this PC only.",
+      "description": "Stops Quick Access listing recent files from Office.com and OneDrive.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "source": "File Explorer > Options > Privacy; SapphireOS playbook registry.yml L456",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer", "name": "ShowCloudFilesInQuickAccess", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "explorer.autoplay-off", "name": "Turn off AutoPlay", "category": "File Explorer",
+      "impact": "system", "summary": "Inserting a drive or disc starts nothing by itself.",
+      "description": "Stops Windows prompting or acting when a drive, phone or card is connected.",
+      "risk": "userPreference", "activation": "immediate",
+      "source": "Settings > Bluetooth & devices > AutoPlay; SapphireOS playbook registry.yml L109",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers", "name": "DisableAutoplay", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "explorer.no-recent-files", "name": "No recently used files in Quick access and Home", "category": "File Explorer",
+      "impact": "privacy", "summary": "Quick access and Home stop listing recent files.",
+      "description": "Stops File Explorer listing the files you opened recently in Quick access and Home.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "limitations": "Files already listed stay until you clear File Explorer history (File Explorer > Options > Privacy > Clear). Overlaps 'Don't show recently opened files in Start', which also hides them on Windows 11.",
+      "source": "File Explorer > Options > Privacy > Show recently used files (backing value); set on PC-000.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer", "name": "ShowRecent", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "explorer.launch-to-this-pc", "name": "Open File Explorer to This PC", "category": "File Explorer",
+      "impact": "interface", "summary": "File Explorer opens to This PC instead of Home.",
+      "description": "New File Explorer windows open on This PC instead of Home/Quick access.",
+      "risk": "userPreference", "activation": "explorerRestart",
+      "source": "File Explorer > Options > General > Open File Explorer to (backing value LaunchTo: 1 This PC, 2 Home/Quick access (the default), 3 Downloads, 4 OneDrive on recent builds).",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "LaunchTo", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "explorer.classic-context-menu", "name": "Classic right-click menu (Windows 11)", "category": "File Explorer",
+      "impact": "interface", "summary": "Brings back the full Windows 10 right-click menu.",
+      "description": "Restores the full Windows 10 right-click menu in File Explorer and on the desktop, without the 'Show more options' step.",
+      "risk": "undocumented", "activation": "explorerRestart", "minBuild": 22000,
+      "limitations": "Advanced: a community workaround Microsoft doesn't document (it blocks the Windows 11 menu's registration for this user), so an update may stop honouring it. Kept out of presets; tick it yourself if you want it. Revert removes it.",
+      "source": "Community workaround: an empty default value under CLSID {86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32 (per-user). Classed undocumented and kept out of presets by the owner's decision (vault D027).",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32", "name": "", "type": "string", "value": "" } ]
+    },
+    {
+      "id": "lockscreen.no-spotlight-ads", "name": "No lock-screen tips and ads", "category": "Notifications",
+      "impact": "interface", "summary": "No tips, fun facts or ads on the lock screen.",
+      "description": "Stops Windows showing fun facts, tips and promotions over the lock screen.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "signOut",
+      "limitations": "This is the lock screen's 'Get fun facts, tips, tricks, and more' option, which applies to a picture or slideshow background; with Windows Spotlight as the background, its content comes with Spotlight.",
+      "source": "Settings > Personalization > Lock screen; ContentDeliveryManager lock-screen keys. Microsoft doesn't document the values. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: both names are present in the lock-screen Spotlight and content-delivery components, and the option 'Get fun facts, tips, tricks, and more on your lock screen' reads Off with RotatingLockScreenOverlayEnabled at 0. The On state was not exercised.",
+      "registry": [
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "RotatingLockScreenOverlayEnabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager", "name": "SubscribedContent-338387Enabled", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "system.verbose-status", "name": "Verbose startup and shutdown messages", "category": "System",
+      "impact": "system", "summary": "Detailed messages during startup and shutdown.",
+      "description": "Shows what Windows is doing during sign-in and shutdown ('Starting services', 'Shutting down') instead of a blank splash.",
+      "risk": "systemConfiguration", "activation": "signOut",
+      "limitations": "Ignored while the policy 'Remove Boot/Shutdown/Logon/Logoff status messages' (DisableStatusMessages) is set.",
+      "source": "Group Policy 'Display highly detailed status messages'; HKLM Policies\\System VerboseStatus (learn.microsoft.com/troubleshoot/windows-server/performance/enable-verbose-startup-shutdown-logon-logoff-status-messages).",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "name": "VerboseStatus", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "gaming.background-recording-off", "name": "Don't record games in the background", "category": "Gaming",
+      "impact": "performance", "summary": "Game Bar stops recording gameplay in the background.",
+      "description": "Makes sure Game Bar's 'Record what happened' (background recording) is off. While it is on, Game Bar records every game continuously so you can save the last moments, which uses part of the PC's resources. Windows ships with it off.",
+      "risk": "userPreference", "valueBasis": "community", "activation": "immediate",
+      "limitations": "Changes nothing on a PC where it was never turned on. Recording on request (Win+Alt+R) and screenshots keep working. The stored value is community-documented, not on Microsoft Learn.",
+      "source": "Settings > Gaming > Captures > Record what happened (backing value HistoricalCaptureEnabled; missing = off). PCWorld's Windows 10 Game Bar review measured about 58 -> 54 fps in one benchmark while recording (search result). Added in the 2026-10-22 audit; gaming.background-capture-off removes captures altogether. Preset review 2026-10-22: the stored value is documented only by the community and hasn't been confirmed by toggling the setting on a test PC, so the entry is kept out of 'Recommended for gaming PCs' until it is. Its 'missing = off' reading can't be confirmed either (no Game Bar on PC-000), so it is in no preset.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR", "name": "HistoricalCaptureEnabled", "type": "dword", "value": "0", "absentMatches": true } ]
+    },
+    {
+      "id": "gaming.background-capture-off", "name": "Turn off Game Bar captures", "category": "Gaming",
+      "impact": "performance", "summary": "Turns off Game Bar clips, recordings and screenshots.",
+      "description": "Turns off Game Bar's game capture (Game DVR) altogether: no clips, recordings or Game Bar screenshots. Background recording is off by default, so this saves resources only if it had been turned on; 'Don't record games in the background' does that without losing captures.",
+      "risk": "userPreference", "valueBasis": "community", "activation": "immediate",
+      "limitations": "Win+Alt+R recording and Game Bar screenshots stop working until it is turned back on.",
+      "source": "Settings > Gaming > Captures (community-known values GameDVR_Enabled and AppCaptureEnabled; the documented machine-wide form is the AllowGameDVR policy); reassessment section 8 (an R1 example); SapphireOS playbook registry.yml L152-153; present on PC-000",
+      "registry": [
+        { "hive": "HKCU", "path": "System\\GameConfigStore", "name": "GameDVR_Enabled", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR", "name": "AppCaptureEnabled", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "gaming.game-mode-on", "name": "Turn on Game Mode", "category": "Gaming",
+      "impact": "performance", "summary": "Keeps Game Mode on, Windows' default.",
+      "description": "Makes sure Game Mode is on, as Windows ships it: while a game runs, Windows Update doesn't install drivers or show restart notifications. Changes nothing unless something turned Game Mode off.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "immediate",
+      "source": "Settings > Gaming > Game Mode (backing value AutoGameModeEnabled; missing = on); Xbox Wire, 'Latest October 2018 Windows Update gaming features' (Game Mode suppresses Windows Update driver installs and restart notifications; any frame-rate effect depends on the game and system); reassessment validate-timers-scheduler-mmcss. Microsoft documents the setting and its default (on), not the value name. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the name is referenced by the Game Mode settings handler and the shell, and the Game Mode toggle reads On with the value at 1.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\GameBar", "name": "AutoGameModeEnabled", "type": "dword", "value": "1", "absentMatches": true } ]
+    },
+    {
+      "id": "input.pointer-precision-off", "name": "Turn off 'Enhance pointer precision'", "category": "Input",
+      "impact": "interface", "summary": "Turns off mouse acceleration.",
+      "description": "Turns off mouse acceleration, so the pointer moves in proportion to hand movement on the desktop and in games that use the Windows pointer. Games that read raw input aren't affected. A matter of feel and consistency, not frame rate.",
+      "risk": "userPreference", "activation": "signOut",
+      "limitations": "Takes effect after signing out or after toggling it once in Mouse settings. The desktop pointer feels slower at first; raise the pointer speed if needed.",
+      "source": "Control Panel > Mouse > Pointer options (SPI_SETMOUSE: two thresholds and the acceleration level); reassessment section 8 (an R1 example); SapphireOS playbook registry.yml L34-36; present on PC-000",
+      "registry": [
+        { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseSpeed", "type": "string", "value": "0" },
+        { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseThreshold1", "type": "string", "value": "0" },
+        { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseThreshold2", "type": "string", "value": "0" }
+      ]
+    },
+    {
+      "id": "input.clipboard-history", "name": "Turn on clipboard history (Win+V)", "category": "Input",
+      "impact": "interface", "summary": "Win+V keeps a history of what you copy.",
+      "description": "Keeps a history of copied text and images, opened with Win+V. The history stays on this PC; syncing it across devices is a separate setting this doesn't turn on.",
+      "risk": "userPreference", "activation": "signOut", "minBuild": 17763,
+      "limitations": "Copied text, including anything sensitive, stays in the history until you clear it or restart (pinned items stay); password managers that mark a copy as private are left out. A device policy ('Allow Clipboard History') overrides it.",
+      "source": "Settings > System > Clipboard > Clipboard history (backing value; off by default); set on PC-000.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Clipboard", "name": "EnableClipboardHistory", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "input.keyboard-repeat-fast", "name": "Fastest key repeat", "category": "Input",
+      "impact": "interface", "summary": "A held key starts repeating sooner and repeats faster.",
+      "description": "Sets the keyboard's repeat delay to its shortest and the repeat rate to its fastest, the quickest settings the Keyboard control panel offers. A held key starts repeating sooner and repeats faster. A matter of feel; it doesn't affect frame rate or in-game key presses.",
+      "risk": "userPreference", "activation": "signOut",
+      "limitations": "Takes effect after signing out, or at once if you move either slider in Control Panel > Keyboard. The repeat rate is already at its fastest on most PCs, so usually only the delay changes. Revert restores your exact previous values.",
+      "source": "Control Panel > Keyboard > Speed (RepeatDelay and RepeatRate sliders; HKCU\\Control Panel\\Keyboard KeyboardDelay 0-3 and KeyboardSpeed 0-31). A commercial tweak utility offers 'Lower Keyboard Repeat Delay' and 'Increase Keyboard Repeat Rate'. Read on PC-000 (delay 1, speed 31). Added in the 2026-10-25 tweak-utility audit.",
+      "registry": [
+        { "hive": "HKCU", "path": "Control Panel\\Keyboard", "name": "KeyboardDelay", "type": "string", "value": "0" },
+        { "hive": "HKCU", "path": "Control Panel\\Keyboard", "name": "KeyboardSpeed", "type": "string", "value": "31" }
+      ]
+    },
+    {
+      "id": "input.accessibility-shortcuts-off", "name": "Turn off the Sticky Keys and other accessibility shortcuts", "category": "Input",
+      "impact": "interface", "summary": "Shift pressed five times no longer opens Sticky Keys mid-game.",
+      "description": "Stops pressing Shift five times (Sticky Keys), holding right Shift (Filter Keys), holding Num Lock (Toggle Keys) or Left Alt+Left Shift+Num Lock (Mouse Keys) from opening a prompt in the middle of a game. The features themselves stay available in Settings.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "signOut",
+      "limitations": "Only each shortcut's bit is cleared: whether a feature is on, and its other options, are kept as they are. Revert restores your exact previous values.",
+      "source": "Settings > Accessibility > Keyboard and Mouse; STICKYKEYS, FILTERKEYS, TOGGLEKEYS and MOUSEKEYS (Microsoft Learn, winuser.h): bit 0x4 (..._HOTKEYACTIVE) turns the shortcut on; a Microsoft Windows Embedded team post (archived, 2007) gives the StickyKeys Flags value 510 by default and 506 with the shortcut off, the other three keys follow the same structures, and PC-000 reads 126/62/62 (the defaults) and 26. Where a value is missing, Windows' default (510, 126, 62, 62) minus that bit is written. Changed from whole-value writes in the 2026-10-22 audit, which would have reset other bits (PC-000's Sticky Keys value 26 already had the shortcut off).",
+      "registry": [
+        { "hive": "HKCU", "path": "Control Panel\\Accessibility\\StickyKeys", "name": "Flags", "type": "string", "value": "506", "clearBits": 4 },
+        { "hive": "HKCU", "path": "Control Panel\\Accessibility\\Keyboard Response", "name": "Flags", "type": "string", "value": "122", "clearBits": 4 },
+        { "hive": "HKCU", "path": "Control Panel\\Accessibility\\ToggleKeys", "name": "Flags", "type": "string", "value": "58", "clearBits": 4 },
+        { "hive": "HKCU", "path": "Control Panel\\Accessibility\\MouseKeys", "name": "Flags", "type": "string", "value": "58", "clearBits": 4 }
+      ]
+    },
+    {
+      "id": "privacy.no-advertising-id", "name": "Turn off the advertising ID", "category": "Privacy",
+      "impact": "privacy", "summary": "Apps can't use your advertising ID.",
+      "description": "Stops apps using an advertising ID for personalised ads.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "immediate",
+      "source": "Settings > Privacy & security > General (the per-user value the toggle uses; the machine-wide form is the DisabledByGroupPolicy policy). Microsoft's privacy doc gives the same value name and data under HKLM, not the per-user key the Settings toggle uses. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the Settings toggle 'Advertising ID' reads Off with the per-user value at 0. The On state was not exercised. The documented policy form is deliberately not used: it would lock the toggle in Settings.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo", "name": "Enabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "privacy.no-tailored-experiences", "name": "Turn off tailored experiences", "category": "Privacy",
+      "impact": "privacy", "summary": "No tips and offers based on your diagnostic data.",
+      "description": "Stops Microsoft using diagnostic data for personalised tips and offers.",
+      "risk": "userPreference", "valueBasis": "verified", "activation": "immediate",
+      "source": "Settings > Privacy & security > General ('Personalized offers' on this build; 'Tailored experiences' in Diagnostics & feedback on earlier ones); SapphireOS playbook registry.yml L140 (the documented policy form is DisableTailoredExperiencesWithDiagnosticData, user scope, Pro and up). Microsoft documents the setting and the policy, not the per-user value. Verified read-only 2026-10-25 on Windows 11 25H2 (build 26200), docs/value-verification-2026-10.md: the name is referenced by the diagnostics settings handler, the telemetry service and the content components, and the Settings toggle reads Off with the value at 0; which Settings page owns the toggle on other builds wasn't checked. The On state was not exercised. The policy form is deliberately not used: it would lock the toggle in Settings.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Privacy", "name": "TailoredExperiencesWithDiagnosticDataEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "privacy.no-language-list", "name": "Don't share the language list with websites", "category": "Privacy",
+      "impact": "privacy", "summary": "Websites can't read your Windows language list.",
+      "description": "Stops websites reading your Windows language list to choose locally relevant content.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Browsers that are open pick it up when restarted. Sites may show less localised content.",
+      "source": "Settings > Privacy & security > General > 'Let websites show me locally relevant content by accessing my language list' (value documented in Microsoft's privacy connections doc; no policy). Added in the 2026-10-22 audit. Cross-checked read-only 2026-10-25 on build 26200: the Settings toggle 'Allow websites to access my language list' reads Off with the value at 1, as the documentation says.",
+      "registry": [ { "hive": "HKCU", "path": "Control Panel\\International\\User Profile", "name": "HttpAcceptLanguageOptOut", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "privacy.no-app-launch-tracking", "name": "Turn off app-launch tracking", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows stops tracking which apps you start.",
+      "description": "Stops Windows tracking which apps you start to improve Start and search results.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "explorerRestart",
+      "limitations": "Start's 'Show most used apps' is then unavailable, and the Run dialog (Win+R) stops remembering commands.",
+      "source": "Settings > Privacy & security > General > 'Let Windows improve Start and search results by tracking app launches' (Start_TrackProgs = 0, documented in Microsoft's privacy connections doc, General section). Split from start.no-recent-items in the 2026-10-22 audit because of the Run-history side effect.",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "Start_TrackProgs", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "privacy.no-typing-personalization", "name": "Turn off typing and inking personalization", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows stops learning from your typing and handwriting.",
+      "description": "Stops Windows building a personal dictionary from what you type and write and from your contacts.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "signOut",
+      "limitations": "Typing suggestions become less personal. The contact-harvesting value (HarvestContacts) is not set: only community sources name it.",
+      "source": "Settings > Privacy & security > Inking & typing personalization (RestrictImplicitTextCollection and RestrictImplicitInkCollection are listed in Microsoft's privacy connections doc); SapphireOS playbook registry.yml L475. AcceptedPrivacyPolicy, a broader legacy consent, was dropped in the 2026-10-22 audit, and HarvestContacts (community-known only) in the 2026-10-25 profile review.",
+      "registry": [
+        { "hive": "HKCU", "path": "Software\\Microsoft\\InputPersonalization", "name": "RestrictImplicitTextCollection", "type": "dword", "value": "1" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\InputPersonalization", "name": "RestrictImplicitInkCollection", "type": "dword", "value": "1" }
+      ]
+    },
+    {
+      "id": "privacy.no-online-speech", "name": "Turn off online speech recognition", "category": "Privacy",
+      "impact": "privacy", "summary": "No cloud speech recognition.",
+      "description": "Keeps speech recognition on the device instead of sending voice to Microsoft's online service.",
+      "risk": "userPreference", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Voice typing (Win+H) and some dictation features stop working until this is turned back on.",
+      "source": "Settings > Privacy & security > Speech (value documented in Microsoft's privacy connections doc).",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Speech_OneCore\\Settings\\OnlineSpeechPrivacy", "name": "HasAccepted", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "privacy.no-activity-history", "name": "Turn off activity history", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows stops keeping your activity history.",
+      "description": "Stops Windows recording and publishing the apps, files and sites you use (activity history), for every user of this PC.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "signOut", "requires": [ "proEdition" ],
+      "limitations": "Group Policy values: the Settings page shows them as managed by your organisation. Microsoft lists them for Pro, Enterprise and Education, so on Home the operation doesn't apply. Uploading is legacy on Windows 11.",
+      "source": "Group Policy 'Enables Activity Feed', 'Allow publishing of User Activities', 'Allow upload of User Activities' (Policy CSP Privacy; Microsoft's privacy connections doc); SapphireOS playbook registry.yml L90, L100 (UploadUserActivities is from the Group Policy, not the playbook).",
+      "registry": [
+        { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableActivityFeed", "type": "dword", "value": "0" },
+        { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "PublishUserActivities", "type": "dword", "value": "0" },
+        { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "UploadUserActivities", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "privacy.no-error-reporting", "name": "Turn off Windows Error Reporting", "category": "Privacy",
+      "impact": "privacy", "benefit": "documented", "summary": "Windows stops creating and sending crash reports.",
+      "description": "Turns Windows Error Reporting off for every user of this PC, so Windows no longer creates problem reports after a program crashes or stops responding and no longer sends them to Microsoft. A privacy choice: it doesn't make anything faster.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Crash reports are how Microsoft and app makers find and fix crashes, and Windows stops offering a known solution after one. Crash dumps you configure yourself (LocalDumps) are a separate setting. A Group Policy can override it. Read on PC-000: already set.",
+      "source": "Microsoft Learn 'WER Settings': HKLM\\Software\\Microsoft\\Windows\\Windows Error Reporting\\Disabled, a DWORD, 0 = enabled (default), 1 = disabled ('Enable or disable WER'). A commercial tweak utility offers 'Disable Error Reporting' (its script isn't available). Added in the 2026-10-25 audit follow-up.",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting", "name": "Disabled", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "privacy.no-cross-device-experiences", "name": "Turn off cross-device experiences (policy)", "category": "Privacy",
+      "impact": "privacy", "benefit": "documented", "summary": "This PC can't take part in 'continue on another device' features.",
+      "description": "Stops this PC being discoverable by your other Windows devices and from taking part in cross-device experiences (continuing what you were doing on another device), for every user of this PC. A privacy choice, not a speed-up.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot", "minBuild": 19041, "requires": [ "proEdition" ],
+      "limitations": "A Group Policy value. Microsoft lists it for Pro, Enterprise and Education, so on Home the operation doesn't apply. It applies from Windows 10 2004 with the 2021 update (KB5005101) and on Windows 11. When the policy isn't set, Windows' own behaviour depends on the edition, so Mesura counts it as set only when it is 0.",
+      "source": "Microsoft Learn Policy CSP ADMX_GroupPolicy 'Continue experiences on this device' (EnableCDP): HKLM\\Software\\Policies\\Microsoft\\Windows\\System\\EnableCdp, disabled = the device isn't discoverable and can't take part in cross-device experiences; takes effect on reboot. A commercial tweak utility offers 'Disable Shared Experiences' (its script isn't available). Added in the 2026-10-25 audit follow-up.",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableCdp", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "privacy.diagnostic-data-required", "name": "Send required diagnostic data only (policy)", "category": "Privacy",
+      "impact": "privacy", "benefit": "documented", "summary": "Windows sends the required diagnostic data and not the optional kind.",
+      "description": "Sets Windows' diagnostic data to Required, the level Microsoft documents as the default: optional diagnostic data (how you use apps and features, browsing in Edge, enhanced error reports) is not sent. The data Windows needs for security, updates and reliability is still sent: Windows has no setting that stops it on Pro or Home, and this entry doesn't claim otherwise.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot", "requires": [ "proEdition" ],
+      "limitations": "A Group Policy value: Settings shows 'Send optional diagnostic data' as managed by your organisation and you can't switch it back on there while this is set. Windows Insider Preview builds need the optional data (Microsoft's Insider data settings page), so a PC in the Insider programme stops getting builds. Microsoft lists the policy for Pro, Enterprise, Education and IoT Enterprise, so on Home the operation doesn't apply. The Security level (0) exists on Enterprise, Education and Server only and equals Required elsewhere, so Mesura writes 1, never 0. Edge, Microsoft 365 and other apps have diagnostic settings of their own.",
+      "source": "Microsoft Learn Policy CSP System, AllowTelemetry (Group Policy 'Allow Diagnostic Data', HKLM\\Software\\Policies\\Microsoft\\Windows\\DataCollection\\AllowTelemetry; 1 = Required, the default; 0 = Security, Enterprise/Education/Server only; 3 = Optional); Microsoft Learn 'Configure Windows diagnostic data in your organization'; Windows Insider 'data settings'. Added in the 2026-10-25 profile review.",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection", "name": "AllowTelemetry", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "visual.minimize-animation-off", "name": "Turn off minimise and maximise animations", "category": "Appearance",
+      "impact": "interface", "summary": "Windows minimise and maximise without animation.",
+      "description": "Windows minimise, maximise and restore without the animation.",
+      "risk": "userPreference", "activation": "signOut",
+      "source": "System Properties > Performance Options 'Animate windows when minimising and maximising' (ANIMATIONINFO, SPI_SETANIMATION); SapphireOS playbook registry.yml L294",
+      "registry": [ { "hive": "HKCU", "path": "Control Panel\\Desktop\\WindowMetrics", "name": "MinAnimate", "type": "string", "value": "0" } ]
+    },
+    {
+      "id": "appearance.dark-mode", "name": "Dark mode", "category": "Appearance",
+      "impact": "interface", "summary": "Dark theme for Windows and apps.",
+      "description": "Uses the dark colour mode for Windows (taskbar, Start, notification centre) and for apps that follow the system mode.",
+      "risk": "userPreference", "activation": "signOut",
+      "limitations": "Written directly, the taskbar and apps that are already open switch after Explorer restarts or you sign out; the Settings toggle switches at once.",
+      "source": "Settings > Personalization > Colors > Choose your mode (backing values; 0 = dark); SapphireOS playbook registry.yml L377-379; set on PC-000.",
+      "registry": [
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "name": "AppsUseLightTheme", "type": "dword", "value": "0" },
+        { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "name": "SystemUsesLightTheme", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "audio.no-ducking", "name": "Don't lower other sounds during calls", "category": "Sound",
+      "impact": "interface", "summary": "Game audio isn't lowered during calls.",
+      "description": "Stops Windows turning other sounds down (by 80% by default) whenever an app opens a communications stream, such as a voice chat or a call, so game audio stays at its level.",
+      "risk": "userPreference", "activation": "signOut",
+      "limitations": "Applies to new audio sessions; restart a voice app that is already in a call, or sign out. A voice app's own attenuation setting (Discord has one) is separate.",
+      "source": "Control Panel > Sound > Communications 'When Windows detects communications activity' (backing value: 0 mute, 1 reduce by 80%, 2 reduce by 50%, 3 do nothing; the mapping is community-known); Microsoft Learn, Core Audio 'Default Ducking Experience' and 'Stream attenuation'; adamx overview L30; set on PC-000. Preset review 2026-10-22: Microsoft documents the setting, not this stored value, and it hasn't been confirmed by toggling the setting on a test PC, so the entry is kept out of 'Recommended for gaming PCs' until it is. Ducking off is also a preference (some want calls to lower other sounds).",
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Multimedia\\Audio", "name": "UserDuckingPreference", "type": "dword", "value": "3" } ]
+    },
+    {
+      "id": "system.fast-startup-off", "name": "Turn off Fast Startup", "category": "System",
+      "impact": "system", "summary": "Shut down turns the PC fully off.",
+      "description": "Makes Shut down a full shutdown. Fast Startup keeps the kernel session across shutdowns, which can hold stale driver state and lock dual-boot partitions. A reliability choice, not a performance one.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Cold boots take a little longer. Does nothing while hibernation is off (Fast Startup needs it), and the policy 'Require use of fast startup' overrides it.",
+      "source": "Control Panel > Power Options > 'Turn on fast startup' (backing value); Microsoft Learn 'Distinguishing fast startup from wake-from-hibernation'; present on PC-000",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power", "name": "HiberbootEnabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "power.high-performance", "name": "High performance power plan", "category": "Power",
+      "impact": "power", "summary": "High performance plan: full processor speed, more power and heat.",
+      "description": "Makes the built-in High performance plan active. On current Windows its defaults keep the processor at 100% minimum state with a maximum-performance energy preference and turn PCI Express link power saving off. No reputable measurement shows a frame-rate gain on current processors.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "requires": [ "noBattery", "noModernStandby" ],
+      "limitations": "Desktops only: a plan also sets battery behaviour, so Mesura doesn't offer it on PCs with a battery, nor on Modern Standby PCs, where Windows offers only Balanced (use Settings > Power mode there). Higher idle power and heat. The Power mode slider disappears while it is active. Game Mode and vendor power profiles can still override parts of the processor policy.",
+      "source": "powercfg built-in scheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c; scheme defaults read from DefaultPowerSchemeValues on PC-000; Microsoft Learn 'Customize the Windows performance power slider'; catalog audit 2026-10-22 (removed from every preset).",
+      "powerPlan": { "scheme": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", "name": "High performance", "createIfMissing": false }
+    },
+    {
+      "id": "power.ultimate-performance", "name": "Ultimate Performance power plan", "category": "Power",
+      "impact": "power", "summary": "Ultimate Performance plan, meant for workstations.",
+      "description": "Makes the Ultimate Performance plan active, installing it from Windows' template first if Windows doesn't list it. Meant for workstations; no measured gaming gain.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "requires": [ "noBattery", "noModernStandby" ],
+      "limitations": "Desktops only, as High performance, and with drives that never power down. The install keeps the template's GUID, which hasn't been tried on a stock desktop. Reverting reactivates the previous plan and removes the Ultimate Performance plan if this operation installed it.",
+      "source": "powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 (Windows' template; Microsoft Learn powercfg command-line options). No Microsoft Learn page describes the plan itself.",
+      "powerPlan": { "scheme": "e9a42b02-d5df-448d-aa00-03f14749eb61", "name": "Ultimate Performance", "createIfMissing": true }
+    },
+    {
+      "id": "power.balanced", "name": "Balanced power plan", "category": "Power",
+      "impact": "power", "summary": "Balanced plan, Windows' default.",
+      "description": "Makes Windows' default Balanced plan active again, with its Power mode slider (the supported way to favour performance on AC).",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "source": "powercfg built-in scheme 381b4222-f694-41f0-9685-ff5bb260df2e; Microsoft Learn 'Customize the Windows performance power slider'",
+      "powerPlan": { "scheme": "381b4222-f694-41f0-9685-ff5bb260df2e", "name": "Balanced", "createIfMissing": false }
+    },
+    {
+      "id": "power.usb-keep-awake", "name": "Turn off USB selective suspend (on AC)", "category": "Power",
+      "impact": "power", "summary": "Idle USB devices aren't suspended on AC power.",
+      "description": "Stops Windows suspending idle USB devices on AC power. A troubleshooting step for a USB audio interface, DAC, camera or controller that drops out or wakes slowly; not a performance setting.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Microsoft strongly recommends leaving selective suspend on; use this for a device that misbehaves. Active plan only, AC only; battery behaviour isn't touched. Slightly higher idle power, and it can keep the processor out of its deeper idle states.",
+      "source": "powercfg setting 48e6b7a6 (USB selective suspend) in subgroup 2a737441; Microsoft Learn 'USB selective suspend'. 19 of the 20 community power plans in the reassessment turn it off (section 4.4). Until 2026-10-22 this operation also turned off USB 3 link power management, now its own advanced operation.",
+      "powerSettings": [
+        { "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3", "setting": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", "name": "USB selective suspend", "ac": 0 }
+      ]
+    },
+    {
+      "id": "power.usb3-link-power-off", "name": "Turn off USB 3 link power management (on AC)", "category": "Power",
+      "impact": "power", "summary": "USB 3 links stay at full power on AC.",
+      "description": "Keeps USB 3 links out of their low-power states on AC power. A troubleshooting step for USB 3 devices that disconnect.",
+      "risk": "undocumented", "activation": "immediate",
+      "limitations": "Advanced: a hidden power setting Microsoft doesn't describe on Learn. Active plan only, AC only. Never in a preset.",
+      "source": "powercfg setting d4e98f31 (USB 3 Link Power Management) in subgroup 2a737441, resolved from powercfg /qh in the reassessment; 18 of 20 community plans set it to off; no vendor-neutral documentation found (catalog audit 2026-10-22).",
+      "powerSettings": [
+        { "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3", "setting": "d4e98f31-5ffe-4ce1-be31-1b38b384c009", "name": "USB 3 link power management", "ac": 0 }
+      ]
+    },
+    {
+      "id": "power.pcie-aspm-off", "name": "No PCI Express link power saving (on AC)", "category": "Power",
+      "impact": "power", "summary": "GPU and NVMe links stay at full power on AC.",
+      "description": "Turns off PCI Express link state power management on AC power, so the GPU and NVMe links stay in their full-power state. High performance already does this on AC.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "requires": [ "noBattery" ],
+      "limitations": "Desktops only. Active plan only, AC only. No measurement shows a frame-time benefit; it is hardware-dependent and idle power rises. Firmware may override it.",
+      "source": "powercfg setting ee12f906 (Link State Power Management) in subgroup 501a4d13 (PCI Express); Microsoft Learn 'PCI Express settings: Link State Power Management' (0 = off).",
+      "powerSettings": [ { "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20", "setting": "ee12f906-d277-404b-b6da-e5fa1a576df5", "name": "PCI Express link state power management", "ac": 0 } ]
+    },
+    {
+      "id": "power.disk-never-off", "name": "Never turn off drives (on AC)", "category": "Power",
+      "impact": "power", "summary": "Drives never power down on AC.",
+      "description": "Stops Windows powering down drives after inactivity on AC power, so a game loading from a sleeping hard drive doesn't wait for it to spin up.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Active plan only; AC only. Matters for hard drives; little or nothing changes on an SSD-only PC. A hard drive keeps spinning (noise, power).",
+      "source": "powercfg setting 6738e2c4 (Turn off hard disk after) in subgroup 0012ee47 (Hard disk); Microsoft Learn 'Disk idle timeout' (0 = never).",
+      "powerSettings": [ { "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442", "setting": "6738e2c4-e8a5-4a42-b16a-e040e769756e", "name": "Turn off hard disk after", "ac": 0 } ]
+    },
+    {
+      "id": "manual.restore-hibernation", "name": "Turn hibernation back on (laptops)", "category": "Power",
+      "impact": "power", "summary": "Keeps your open work when a laptop's battery runs out.",
+      "description": "Some trimmed images (Ghost Spectre Superlite among them) turn hibernation off. On a laptop, hibernating at critical battery is what keeps your open work when the battery runs out.",
+      "risk": "manual",
+      "source": "Microsoft Learn powercfg command-line options (/hibernate); Ghost Spectre install audit 2026-09-24 (hibernation off on PC-000).",
+      "manual": {
+        "steps": [
+          "Open Terminal (Admin) and run: powercfg /hibernate on",
+          "Run powercfg /a and check that Hibernate is listed as available.",
+          "Control Panel > Power Options > Change plan settings > Change advanced power settings > Battery > Critical battery action: Hibernate (on battery).",
+          "To undo: powercfg /hibernate off (this also turns Fast Startup off)."
+        ],
+        "links": [ "https://learn.microsoft.com/windows-hardware/design/device-experiences/powercfg-command-line-options" ]
+      }
+    },
+    {
+      "id": "updates.no-driver-updates", "name": "Don't let Windows Update replace drivers", "category": "Windows Update",
+      "impact": "system", "summary": "Windows Update stops replacing your drivers.",
+      "description": "Stops Windows Update installing drivers, so a driver you installed yourself (for example a trimmed NVCleanstall build) isn't replaced behind your back.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "You then update drivers yourself, including chipset, network and laptop drivers Windows Update would otherwise bring. A Group Policy value: Windows Update shows 'Some settings are managed by your organization'. Microsoft lists it for Pro, Enterprise and Education.",
+      "source": "Group Policy 'Do not include drivers with Windows Updates' (Policy CSP Update/ExcludeWUDriversInQualityUpdate, Windows 10 1607 and later).",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate", "name": "ExcludeWUDriversInQualityUpdate", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "updates.no-p2p-delivery", "name": "Get updates from Microsoft only (no peer sharing)", "category": "Windows Update",
+      "impact": "network", "benefit": "preference", "summary": "Updates come from Microsoft only, not from other PCs.",
+      "description": "Turns off Delivery Optimization's peer-to-peer mode, so this PC neither downloads updates from nor uploads them to other PCs. By default Windows already shares only with PCs on your local network.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot", "requires": [ "proEdition" ],
+      "limitations": "Updates and Store apps still download normally, from Microsoft's servers. A Group Policy value: the Delivery Optimization page shows it as managed. (99 would also stop Delivery Optimization's cloud traffic; 100, Bypass, is deprecated and can make downloads fail.) Microsoft lists the policy for Pro, Enterprise, Education and IoT Enterprise, so on Home the operation doesn't apply.",
+      "source": "Group Policy Delivery Optimization > Download Mode: HTTP only (DODownloadMode 0; Microsoft Learn Delivery Optimization reference: default 1, LAN).",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", "name": "DODownloadMode", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "updates.pause-status", "name": "Windows Update pause", "category": "Windows Update",
+      "impact": "system", "summary": "Whether Windows Update is paused.",
+      "description": "Shows whether Windows Update is paused, and until when: while it is paused, Windows gets no security or quality fixes. Some trimmed images (Ghost Spectre among them) ship with updates paused for decades. Guided: you resume updates in Settings.",
+      "risk": "observe",
+      "source": "Settings > Windows Update > Pause updates (stored as PauseUpdatesExpiryTime); Ghost Spectre install audit 2026-09-24 (paused until 2077 on PC-000).",
+      "observe": {
+        "reads": [ { "hive": "HKLM", "path": "SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings", "name": "PauseUpdatesExpiryTime", "type": "string", "value": "" } ],
+        "openUri": "ms-settings:windowsupdate",
+        "restore": "Settings > Windows Update > Resume updates."
+      }
+    },
+    {
+      "id": "gpu.hardware-scheduling-on", "name": "Turn on hardware-accelerated GPU scheduling", "category": "Graphics",
+      "impact": "system", "summary": "The GPU schedules its own memory; needed for DLSS Frame Generation.",
+      "description": "Lets the GPU schedule its own memory work. NVIDIA DLSS Frame Generation requires it; it is not an FPS setting: Microsoft expected no significant change, and independent tests found none on average, with some regressions.",
+      "risk": "systemConfiguration", "valueBasis": "community", "activation": "reboot", "minBuild": 19041,
+      "limitations": "Needs a GPU and driver that support it (WDDM 2.7 or later); others ignore the value. Mesura reads only the setting: a missing value means the driver's default (usually on with current Windows 11 drivers), and a GPU that can't use it still reads 'not applied'. Turning it off is a troubleshooting step for capture or VR stutter.",
+      "source": "Settings > System > Display > Graphics > Default graphics settings (backing value HwSchMode: 2 on, 1 off; not documented by Microsoft); DirectX blog 'Hardware Accelerated GPU Scheduling' (2020); reassessment validate-display-gpu-pipeline, which corrects the SapphireOS playbook's mislabel.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", "name": "HwSchMode", "type": "dword", "value": "2" } ]
+    },
+    {
+      "id": "display.graphics-defaults", "name": "Windowed-game optimizations and variable refresh rate", "category": "Graphics",
+      "impact": "performance", "summary": "Windowed-game optimisations and variable refresh rate.",
+      "description": "Windows 11's 'Optimizations for windowed games' moves DirectX 10 and 11 games in windowed and borderless mode to the flip presentation model, with lower latency and Auto HDR and variable refresh rate there; 'Variable refresh rate' lets DirectX 11 games without their own support use a G-SYNC or FreeSync display. Guided: Mesura shows the stored value and opens Graphics settings, where you turn them on.",
+      "risk": "observe",
+      "source": "support.microsoft.com 'Optimizations for windowed games in Windows 11'. Both toggles are entries in one per-user string (DirectXUserGlobalSettings, for example 'SwapEffectUpgradeEnable=1;VRROptimizeEnable=1;'), so writing it would overwrite the others: Mesura only reads it (catalog audit 2026-10-22). If a game misbehaves, turn the optimization off for that game only.",
+      "observe": {
+        "reads": [ { "hive": "HKCU", "path": "Software\\Microsoft\\DirectX\\UserGpuPreferences", "name": "DirectXUserGlobalSettings", "type": "string", "value": "" } ],
+        "openUri": "ms-settings:display-advancedgraphics"
+      }
+    },
+    {
+      "id": "tasks.telemetry-off", "name": "Turn off data-collection scheduled tasks", "category": "Scheduled tasks",
+      "impact": "privacy", "summary": "Turns off Windows' data-collection tasks.",
+      "description": "Turns off Windows' own scheduled tasks that collect usage data for the Customer Experience Improvement Program and feedback surveys, and the disk-diagnostic data collector. The tasks stay in place, turned off. Privacy only, and modest: the CEIP tasks do nothing without CEIP consent.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "limitations": "Not a documented Microsoft control: Microsoft's documented levers are the diagnostic-data policy and settings, and the CEIP policy for the first two tasks. Only these named tasks: Windows Update, compatibility-appraiser, Defender, restore-point, defrag/retrim and error-reporting tasks are left alone. Tasks a trimmed image already removed are left out. A feature update can turn some back on; Mesura then shows the operation as not applied again.",
+      "source": "Task Scheduler (Windows' own tasks under \\Microsoft\\Windows; descriptions read on PC-000). The research corpus's sap-08 disables tasks by substring (CEIP, compatibility appraiser and also Defender, update, restore), so Mesura names exact tasks. The 2026-10-22 audit removed the compatibility appraiser tasks (they feed feature-update safeguards; KB4525208) and the flighting usage-report task (undocumented, next to feature-rollout tasks).",
+      "tasks": [
+        { "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Autochk\\Proxy", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClient", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload", "enabled": false }
+      ]
+    },
+    {
+      "id": "services.xbox-off", "name": "Disable Xbox Live services", "category": "Services",
+      "impact": "system", "summary": "Disables Xbox Live services.",
+      "description": "Stops the Xbox Live sign-in, cloud-save and networking services from starting. They are manual services that only run when an Xbox-enabled app uses them, so this has no measurable performance effect; it is for PCs that never use Xbox features.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Breaks Xbox app and Game Pass sign-in, Xbox Live PC games and their cloud saves. Don't use it if you play Game Pass or Microsoft Store games. Xbox controllers and accessories are left alone (their service, XboxGipSvc, is no longer part of this operation).",
+      "source": "services.msc; service names as on Windows 10/11 (Microsoft's 'Guidance on disabling system services' gives their roles). XboxGipSvc was removed in the 2026-10-22 audit: it serves controllers and adapters.",
+      "services": [
+        { "name": "XblAuthManager", "start": "disabled" },
+        { "name": "XblGameSave", "start": "disabled" },
+        { "name": "XboxNetApiSvc", "start": "disabled" }
+      ]
+    },
+    {
+      "id": "services.print-off", "name": "Disable printing", "category": "Services",
+      "impact": "system", "summary": "Disables printing on a PC without a printer.",
+      "description": "Stops the Print Spooler and Fax services from starting, for a PC that never prints. Cleanup and a smaller print attack surface; no performance effect.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "No printing at all, including 'Microsoft Print to PDF', until reverted. Can't run together with 'Turn printing back on'.",
+      "source": "services.msc",
+      "services": [
+        { "name": "Spooler", "start": "disabled" },
+        { "name": "Fax", "start": "disabled" }
+      ]
+    },
+    {
+      "id": "services.print-on", "name": "Turn printing back on", "category": "Services",
+      "impact": "system", "summary": "Turns printing back on.",
+      "description": "Sets the Print Spooler to start automatically again, as Windows does by default, for images that disabled printing (Ghost Spectre Superlite does).",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Takes effect at the next start of Windows. Can't run together with 'Disable printing'.",
+      "source": "services.msc (Spooler: Automatic by default); Ghost Spectre install audit 2026-09-24 (Spooler disabled by the image). Added in the 2026-10-22 audit.",
+      "services": [ { "name": "Spooler", "start": "automatic" } ]
+    },
+    {
+      "id": "services.sens-on", "name": "Turn the System Event Notification Service back on", "category": "Services",
+      "impact": "system", "summary": "Turns the System Event Notification Service back on.",
+      "description": "Sets SENS (System Event Notification Service) to start automatically again, as Windows does by default. Ghost Spectre Superlite disables it, and services that depend on it then fail at every start (Intel's graphics service did on PC-000).",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Takes effect at the next start of Windows. Already automatic on a standard Windows.",
+      "source": "services.msc (SENS: Automatic by default); Ghost Spectre install audit 2026-09-24 and its final report (SENS disabled by the image; the Intel Graphics service failed with Service Control Manager event 7001 until SENS was restored). Added in the 2026-10-22 audit.",
+      "services": [ { "name": "SENS", "start": "automatic" } ]
+    },
+    {
+      "id": "services.search-indexing-off", "name": "Disable search indexing", "category": "Services",
+      "impact": "performance", "summary": "Disables search indexing; searching gets slower.",
+      "description": "Stops Windows Search indexing files in the background.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Start and File Explorer search still work but are slower and don't search file contents; Outlook search is affected. Settings > Privacy & security > Searching Windows can limit indexing instead.",
+      "source": "services.msc",
+      "services": [ { "name": "WSearch", "start": "disabled" } ]
+    },
+    {
+      "id": "services.telemetry-off", "name": "Disable the telemetry service (unofficial)", "category": "Services",
+      "impact": "privacy", "summary": "Disables the Connected User Experiences and Telemetry service.",
+      "description": "Stops the Connected User Experiences and Telemetry service (DiagTrack), which sends Windows' diagnostic data. Privacy; no measured performance effect. This is not a control Microsoft documents for reducing diagnostic data: the supported lever is the diagnostic-data setting and policy, which Mesura's other entries use.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Windows can start it again after a feature update (Mesura then shows the operation as not applied). Feedback Hub and some diagnostics no longer report. A Microsoft Q&A answer (about Windows Server) advises against disabling it. The Device Management WAP Push service (dmwappushservice) is left alone: Intune and other MDM management need it.",
+      "source": "services.msc; Microsoft's 'Guidance on disabling system services' (dmwappushservice is required for Intune/MDM); no Microsoft page documents DiagTrack disabling as a way to reduce diagnostic data (searched 2026-10-25). Narrowed to DiagTrack in the 2026-10-25 profile review.",
+      "services": [
+        { "name": "DiagTrack", "start": "disabled" }
+      ]
+    },
+    {
+      "id": "services.unused-extras-off", "name": "Disable the offline maps service", "category": "Services",
+      "impact": "system", "summary": "Disables the offline maps service.",
+      "description": "Stops the Downloaded Maps Manager from starting. It is an automatic, delayed-start service that is usually idle; cleanup only, with no measured performance effect.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Apps that use offline maps lose them.",
+      "source": "services.msc; Microsoft's 'Guidance on disabling system services' (MapsBroker: OK to disable). The 2026-10-22 audit removed RetailDemo (runs only in store demo mode) and PhoneSvc (breaks Phone Link calling and VoIP apps for no gain).",
+      "services": [ { "name": "MapsBroker", "start": "disabled" } ]
+    },
+    {
+      "id": "features.legacy-media-off", "name": "Remove legacy Windows Media Player", "category": "Optional features",
+      "impact": "system", "summary": "Removes the legacy Windows Media Player.",
+      "description": "Turns off the legacy Windows Media Player optional feature (the modern Media Player app is separate). Cleanup; no performance effect.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Apps that embed the legacy player control lose it. Mesura keeps the feature's files, so turning it back on works unless the image already removed them.",
+      "source": "Windows Features (optionalfeatures.exe); DISM feature WindowsMediaPlayer",
+      "features": [ { "name": "WindowsMediaPlayer", "enabled": false } ]
+    },
+    {
+      "id": "features.xps-off", "name": "Remove XPS printing services", "category": "Optional features",
+      "impact": "system", "summary": "Removes XPS printing services.",
+      "description": "Turns off the XPS document printing feature.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "No XPS printing (the Microsoft XPS Document Writer). Turning it back on needs the feature payload.",
+      "source": "Windows Features; DISM feature Printing-XPSServices-Features",
+      "features": [ { "name": "Printing-XPSServices-Features", "enabled": false } ]
+    },
+    {
+      "id": "features.recall-off", "name": "Remove Recall", "category": "Optional features",
+      "impact": "privacy", "summary": "Removes Recall, which saves snapshots of your screen.",
+      "description": "Turns off the Recall optional feature on Copilot+ PCs.",
+      "risk": "systemConfiguration", "activation": "reboot", "minBuild": 26100,
+      "limitations": "Only Copilot+ PCs carry it; elsewhere this reports not applicable.",
+      "source": "Windows Features; DISM feature Recall",
+      "features": [ { "name": "Recall", "enabled": false } ]
+    },
+    {
+      "id": "features.powershell-v2-off", "name": "Remove the Windows PowerShell 2.0 engine", "category": "Optional features",
+      "impact": "system", "summary": "Removes the old PowerShell 2.0 engine.",
+      "description": "Removes the legacy PowerShell 2.0 engine. PowerShell 5.1 and 7 are unaffected; the old engine is a known downgrade target and almost nothing needs it.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "A rare old script that explicitly requests -Version 2 would stop working. Windows 11 24H2 and later no longer include the engine (Microsoft removed it in 2025), so it doesn't apply there.",
+      "source": "Windows Features; DISM features MicrosoftWindowsPowerShellV2 (the engine) and MicrosoftWindowsPowerShellV2Root, the engine first so a revert turns both back on; KB5065506 (removal from Windows 11 24H2).",
+      "features": [
+        { "name": "MicrosoftWindowsPowerShellV2", "enabled": false },
+        { "name": "MicrosoftWindowsPowerShellV2Root", "enabled": false }
+      ]
+    },
+    {
+      "id": "repair.ncsi-active-probing", "name": "Turn the internet connectivity check back on", "category": "Restore Windows defaults",
+      "impact": "network", "summary": "Restores Windows' internet connectivity check.",
+      "description": "Turns Windows' active internet check back on if a tweak tool turned it off. Without it Windows can show 'No internet' on a working connection and miss Wi-Fi sign-in pages, and apps that ask Windows whether you are online (Outlook, Teams, Windows Update and others) may act offline. A reliability repair, not a performance setting.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "On by default: on a PC nobody tweaked, nothing changes. A Group Policy that turns off the active tests overrides it.",
+      "source": "Microsoft Learn 'NCSI troubleshooting guidance': default 1 on Windows 10 1607 and later; 'Don't disable active probing'; 'Make sure to set the value to 1'. The Registry Tweaks corpus sets it to 0. Added in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\NlaSvc\\Parameters\\Internet", "name": "EnableActiveProbing", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "repair.threaded-dpc", "name": "Turn threaded DPCs back on", "category": "Restore Windows defaults",
+      "impact": "system", "summary": "Restores threaded DPCs if a tweak tool turned them off.",
+      "description": "Turns threaded DPCs back on if a tweak tool turned them off. Microsoft documents that they then run as ordinary DPCs, each of which increases system latency and can hurt audio and video playback. This undoes a tweak; it is not a performance setting, and no frame-rate effect is claimed.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "On by default (no value is stored): on a PC nobody tweaked, nothing changes. Where the value is 0, Mesura sets it to 1 (on).",
+      "source": "Microsoft Learn 'Introduction to Threaded DPCs' (enabled by default; ThreadDpcEnable set to zero disables them; the page writes the key as SessionManager\\Kernel). The Registry Tweaks corpus sets it to 0. Added in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel", "name": "ThreadDpcEnable", "type": "dword", "value": "1", "absentMatches": true } ]
+    },
+    {
+      "id": "repair.large-system-cache", "name": "Favour programs over the file cache", "category": "Restore Windows defaults",
+      "impact": "system", "summary": "Restores Windows' default memory balance.",
+      "description": "Sets the memory manager back to favouring programs' working sets (the client default) if a tweak tool set it to favour the file cache, a file-server setting. Restoring the default isn't a performance setting, and no effect is claimed.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Already 0 on a standard Windows: nothing changes. The documentation is from Windows Server 2003; the size of the effect on Windows 10/11 is unverified.",
+      "source": "Microsoft Learn (archived) Windows Server 2003 'LargeSystemCache': 1 suits file servers and is not recommended for workstations, 0 favours processes. The Registry Tweaks corpus sets it to 1. Added in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management", "name": "LargeSystemCache", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "repair.prefetcher", "name": "Turn boot and app-launch prefetch back on", "category": "Restore Windows defaults",
+      "impact": "system", "summary": "Restores boot and app-launch prefetch.",
+      "description": "Sets the prefetcher back to prefetching for both boot and application launches (3, the client value) if a tweak tool turned it off or left it at 1, which keeps only application-launch prefetch. Restoring the default isn't a performance setting; it brings back Windows' own launch and boot prefetching.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Prefetch runs only while the SysMain service runs. The value meanings come from older Windows Embedded documentation; 3 is what current Windows clients carry (read on PC-000).",
+      "source": "Microsoft Learn (previous versions) 'EnablePrefetcher': 0 off, 1 application launch, 2 boot, 3 both. The Registry Tweaks corpus sets 0 and 'reverts' to 1. Added in the 2026-10-22 audit.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters", "name": "EnablePrefetcher", "type": "dword", "value": "3" } ]
+    },
+    {
+      "id": "system.ntfs-last-access-off", "name": "Turn off NTFS last-access time updates", "category": "System",
+      "impact": "performance", "benefit": "unverified", "summary": "NTFS stops logging last-access times on disk.",
+      "description": "Stops NTFS updating the Last Access Time stamp when folders are listed. Microsoft says this reduces the impact of logging those updates and improves the speed of file and folder access, without saying by how much; Mesura hasn't measured it. File queries stay accurate, because NTFS keeps the true value in memory.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Takes effect after a restart. Microsoft notes it can affect programs that rely on the stamp, such as backup and Remote Storage. Mesura sets only the 'updates off' bit and keeps the value's other bits, so on a PC where Windows manages the value (it reads 0x80000002 on PC-000) that setting is kept, and revert restores the exact previous value. No gain is claimed.",
+      "source": "Microsoft Learn 'fsutil behavior': disablelastaccess 1 disables updates to the Last Access Time stamp when directories are listed on an NTFS volume (HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem\\NtfsDisableLastAccessUpdate); 'Disabling the Last Access Time feature improves the speed of file and directory access'; it 'can affect programs such as Backup and Remote Storage'; a restart is required. A commercial tweak utility offers 'Configure Memory Usage Behaviors' (fsutil; its script isn't available, so which fsutil settings it changes is unknown). Added in the 2026-10-25 audit follow-up.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem", "name": "NtfsDisableLastAccessUpdate", "type": "dword", "value": "1", "setBits": 1 } ]
+    },
+    {
+      "id": "repair.mmcss-responsiveness", "name": "Restore the CPU reserved for background tasks", "category": "Restore Windows defaults",
+      "impact": "performance", "benefit": "documented", "summary": "Sets the multimedia scheduler's reserve back to the documented value of 20.",
+      "description": "The multimedia scheduler (MMCSS) keeps a share of the processor for lower-priority work so that games and audio can't starve the rest of the system. Microsoft's documentation describes 20 (percent) as the value the scheduler falls back to, and 20 is what a stock Windows 11 PC carries (read on PC-000). Some tweak packs set it to 10 to give games a little more, which is exactly what the reserve is there to prevent. This puts 20 back; it undoes a tweak, and no frame-rate gain is claimed.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Already 20 on the Windows 11 PC checked (PC-000), and a missing value leaves the scheduler at its own baseline, so on a PC nobody tweaked nothing changes. Microsoft documents that values below 10 are clamped to 20, so a tweak to 0 already did nothing; only a value of 10 is a real change this puts back. The cited page documents what 20 means and the clamp, not that 20 is the registry default on every edition and build, so Mesura restores the intended value of 20 rather than claiming a universal default; it isn't a performance setting.",
+      "source": "Microsoft Learn 'Multimedia Class Scheduler Service': HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\SystemResponsiveness, the percentage reserved for low-priority tasks, 'values below 10 and above 100 are clamped to 20'. Verified present as 20 on PC-000 (Windows 11 Pro). A commercial tweak utility offers 'Configure CPU Time for Background System Tasks' (which lowers it). Added in the 2026-10-25 tweak-utility audit.",
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile", "name": "SystemResponsiveness", "type": "dword", "value": "20", "absentMatches": true } ]
+    },
+    {
+      "id": "manual.restore-tcp-autotuning", "name": "Turn TCP receive-window auto-tuning back to normal", "category": "Restore Windows defaults",
+      "impact": "network", "benefit": "documented", "summary": "Undoes a tweak that caps download speed.",
+      "description": "Tweak packs often turn TCP receive-window auto-tuning off, which keeps the receive window small: downloads slow down on fast or distant connections. Normal is Windows' default. It does nothing for game traffic, which mostly uses UDP.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "limitations": "Normal on a PC nobody tweaked: nothing changes there. Mesura reads every TCP setting template and counts it as done only when all of them are at Normal; the change goes through netsh, the way tweak packs make it. A Group Policy that sets the level overrides it. Untested on a tweaked PC: checked read-only on PC-000. (The id still says 'manual' because profiles and history name it; it was a manual step until the 2026-10-24 quality pass.)",
+      "source": "Microsoft Learn 'TCP/IP performance known issues': slow throughput on high-latency, high-bandwidth links when window scaling is off; fix: 'netsh int tcp set global autotuninglevel=normal'. The Registry Tweaks corpus's 'APPLY ALL BCD TWEAKS' and 'AutoTuning.bat' set it to disabled. Read through MSFT_NetTCPSetting (AutoTuningLevelLocal 3 = Normal on PC-000, every template).",
+      "tcp": [ { "name": "autotuninglevel", "value": "normal" } ]
+    },
+    {
+      "id": "repair.tcp-rss", "name": "Turn receive-side scaling back on", "category": "Restore Windows defaults",
+      "impact": "network", "benefit": "documented", "summary": "Spreads network receive work over the CPU cores again.",
+      "description": "Receive-side scaling lets Windows process incoming network traffic on several CPU cores. Some tweak tools turn it off, which puts all of it on one core: on a fast wired connection that core can become the limit. On is Windows' default.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "limitations": "On by default: on a PC nobody tweaked, nothing changes. Wi-Fi adapters don't use RSS, and a wired adapter's own RSS property (in its driver settings) stays as it is. Untested on a tweaked PC: checked read-only on PC-000.",
+      "source": "Microsoft Learn 'TCP/IP performance known issues' (only CPU 0 busy at high throughput; fix: 'netsh int tcp set global rss=enabled'). A commercial tweak utility offers 'Enable Receive Side Scaling (RSS)'. Read through MSFT_NetOffloadGlobalSetting.ReceiveSideScaling (1 = Enabled on PC-000).",
+      "tcp": [ { "name": "rss", "value": "enabled" } ]
+    },
+    {
+      "id": "repair.tcp-rsc", "name": "Turn receive segment coalescing back on", "category": "Restore Windows defaults",
+      "impact": "network", "benefit": "documented", "summary": "Lets Windows handle large downloads with less CPU again.",
+      "description": "Receive segment coalescing combines a stream of incoming TCP segments so Windows handles one header instead of many, which saves CPU time on large downloads. Some tweak tools turn it off in the hope of lower latency; game traffic is mostly UDP, which it doesn't touch. On is Windows' default.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "limitations": "On by default: on a PC nobody tweaked, nothing changes. A network adapter that doesn't support RSC is unaffected. Untested on a tweaked PC: checked read-only on PC-000.",
+      "source": "Microsoft Learn 'Overview of receive segment coalescing' (coalescing reduces per-packet processing overhead). A commercial tweak utility offers 'Disable Receive Side Coalescing (RSC)'. Read through MSFT_NetOffloadGlobalSetting.ReceiveSegmentCoalescing (1 = Enabled on PC-000).",
+      "tcp": [ { "name": "rsc", "value": "enabled" } ]
+    },
+    {
+      "id": "repair.ipv6-components", "name": "Turn IPv6 back on", "category": "Restore Windows defaults",
+      "impact": "network", "benefit": "documented", "summary": "Undoes a tweak that turned IPv6 off.",
+      "description": "Some tweak tools turn IPv6 off with the DisabledComponents value. Microsoft doesn't recommend it: some Windows components may stop working, and the wrong value delays every start-up by five seconds. This clears the bits that turn IPv6 parts off; if the value also asks Windows to prefer IPv4 (the setting Microsoft recommends instead), that preference is kept.",
+      "risk": "systemConfiguration", "activation": "reboot",
+      "limitations": "Not set on a PC nobody tweaked: nothing changes there. Needs a restart. An adapter where IPv6 was unticked by hand stays unticked.",
+      "source": "Microsoft Learn 'Configure IPv6 for advanced users' (KB 929852): DisabledComponents default 0x00; 'We don't recommend that you disable IPv6'; 'Prefer IPv4 over IPv6' (0x20) recommended instead; 0xFFFFFFFF delays start-up 5 s; restart required. A commercial tweak utility offers 'Disable IPv6'. Absent on PC-000.",
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters", "name": "DisabledComponents", "type": "dword", "value": "0", "absentMatches": true, "clearBits": 4294967263 } ]
+    },
+    {
+      "id": "security.defender-status", "name": "Microsoft Defender status", "category": "Security (information)",
+      "impact": "system", "summary": "Microsoft Defender's state.",
+      "description": "Microsoft Defender Antivirus. Guided: Mesura shows the service's start type and any policy values that switch Defender off, and opens Windows Security, where you check or change protection. Ghost Spectre Superlite images don't carry Defender (and Windows Security may be missing, so the link doesn't open); Superlite + DEF images do.",
+      "risk": "observe",
+      "source": "service WinDefend; Defender policy values; Windows Security. Mesura does not script this: tamper protection blocks a registry or service write, so the reliable, reversible change is the one you make in Windows Security. The start type isn't the real-time protection state (catalog audit 2026-10-22).",
+      "observe": {
+        "service": "WinDefend",
+        "reads": [
+          { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender", "name": "DisableAntiSpyware", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection", "name": "DisableRealtimeMonitoring", "type": "dword", "value": "0" }
+        ],
+        "openUri": "windowsdefender://threat",
+        "consequence": "Real-time protection turned off in Windows Security is temporary: Windows turns it back on after a while. With Defender removed or disabled by policy and nothing else installed, the PC has no antivirus. Only run without one if you use a replacement you trust.",
+        "restore": "Windows Security > Virus & threat protection > Manage settings > Real-time protection On. Policy values (DisableAntiSpyware, DisableRealtimeMonitoring) are ignored or override the toggle; remove them with gpedit or regedit."
+      }
+    },
+    {
+      "id": "security.memory-integrity-status", "name": "Memory integrity (HVCI) status", "category": "Security (information)",
+      "impact": "system", "summary": "Memory integrity (HVCI).",
+      "description": "Memory integrity (HVCI), a Core isolation feature. Guided: Mesura shows its configured state and any policy that sets it, and opens Core isolation (on images without Windows Security, such as Ghost Spectre Superlite, the link doesn't open). Some older drivers block it; some anti-cheat (Riot Vanguard, FACEIT) may require it on. Microsoft says it can cost some performance in some gaming configurations.",
+      "risk": "observe",
+      "source": "DeviceGuard scenario and policy keys (Microsoft Learn 'Enable virtualization-based protection of code integrity'); Riot 'Vanguard security requirements'. Mesura does not script this: the change needs a restart and can be refused while an incompatible driver is loaded, so the Windows control is the reliable path. The values shown are the configuration, not the running state.",
+      "observe": {
+        "reads": [
+          { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Enabled", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Locked", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeviceGuard", "name": "EnableVirtualizationBasedSecurity", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeviceGuard", "name": "HypervisorEnforcedCodeIntegrity", "type": "dword", "value": "0" }
+        ],
+        "openUri": "windowsdefender://coreisolation",
+        "consequence": "Removes a kernel exploit mitigation, and needs a restart. Turn it off only if a driver you need requires it; check first that your games' anti-cheat doesn't require it on.",
+        "restore": "Windows Security > Device security > Core isolation details > Memory integrity On, then restart. A DeviceGuard policy, if shown, overrides the toggle."
+      }
+    },
+    {
+      "id": "security.smartscreen-status", "name": "SmartScreen status", "category": "Security (information)",
+      "impact": "system", "summary": "SmartScreen's state.",
+      "description": "SmartScreen's check of apps and files you download and run. Guided: Mesura shows the setting and the policy that overrides it, and opens its Windows Security page (on images without Windows Security, such as Ghost Spectre Superlite, the link doesn't open).",
+      "risk": "observe",
+      "source": "SmartScreen for apps and files (Explorer value) and the policy 'Configure Windows Defender SmartScreen' (EnableSmartScreen, Policy CSP SmartScreen); Windows Security. Mesura does not script this: its values live under policy and per-user keys Windows re-evaluates, so the app-and-browser-control page is the reliable, reversible control.",
+      "observe": {
+        "reads": [
+          { "hive": "HKLM", "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer", "name": "SmartScreenEnabled", "type": "string", "value": "Off" },
+          { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableSmartScreen", "type": "dword", "value": "0" }
+        ],
+        "openUri": "windowsdefender://appbrowser",
+        "consequence": "Windows stops warning about unrecognised apps and downloaded files. Turn it off only if you vet downloads yourself.",
+        "restore": "Windows Security > App & browser control > Reputation-based protection settings > turn the checks back On. If the EnableSmartScreen policy is set, the page shows it as managed: remove the policy (gpedit 'Configure Windows Defender SmartScreen' = Not configured) first."
+      }
+    },
+    {
+      "id": "security.firewall-status", "name": "Windows Firewall status", "category": "Security (information)",
+      "impact": "system", "summary": "Windows Firewall's state.",
+      "description": "Windows Defender Firewall, which is on or off per network profile while its service keeps running. Guided: Mesura shows the service and each profile's setting, and opens the firewall control panel.",
+      "risk": "observe",
+      "source": "service mpssvc; profile values under SharedAccess\\Parameters\\FirewallPolicy (read on PC-000; not documented as an interface); firewall.cpl. Mesura does not script this: turning the firewall off per profile is a security change best made and seen in the Windows control, and left to you.",
+      "observe": {
+        "service": "mpssvc",
+        "reads": [
+          { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile", "name": "EnableFirewall", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile", "name": "EnableFirewall", "type": "dword", "value": "0" },
+          { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\PublicProfile", "name": "EnableFirewall", "type": "dword", "value": "0" }
+        ],
+        "openUri": "firewall.cpl",
+        "consequence": "Incoming connections are no longer filtered on the profiles you turn off. Leave it on unless you have a specific, temporary reason.",
+        "restore": "In the firewall control panel: Turn Windows Defender Firewall on or off > On for each network profile (or Windows Security > Firewall & network protection)."
+      }
+    },
+    {
+      "id": "manual.bios-memory-profile", "name": "Enable the memory's XMP/EXPO profile", "category": "Firmware (manual)",
+      "impact": "performance", "summary": "Run your memory at its rated speed.",
+      "description": "Desktop memory rated above the standard (JEDEC) speed runs at the standard speed until its XMP (Intel) or EXPO (AMD) profile is enabled in the BIOS. Laptops and many prebuilt PCs don't offer this.",
+      "risk": "manual",
+      "limitations": "A profile runs the memory beyond the standard specification: Intel notes it may reduce stability and may affect warranty. A BIOS update or CMOS reset turns it off again.",
+      "source": "Intel 'What is Intel Extreme Memory Profile (XMP)'; board vendors' manuals; architecture section 6.5, check 4",
+      "manual": {
+        "steps": [
+          "Note the rated speed on the memory's label or box, and check Task Manager > Performance > Memory > Speed.",
+          "Restart into the BIOS/UEFI setup (usually Del or F2 at power-on).",
+          "Find the memory profile setting (XMP, EXPO, DOCP or A-XMP, often under AI Tweaker, Extreme Tweaker or OC) and select profile 1.",
+          "Save and exit. If the PC fails to start, it resets to defaults after a few attempts, or clear CMOS as the board manual says.",
+          "In Windows, check the speed again. If games or apps crash afterwards, run a memory test or turn the profile off."
+        ],
+        "links": [ "https://www.intel.com/content/www/us/en/gaming/extreme-memory-profile-xmp.html", "Your motherboard's manual (memory or overclocking chapter)" ]
+      }
+    },
+    {
+      "id": "manual.bios-resizable-bar", "name": "Enable Resizable BAR", "category": "Firmware (manual)",
+      "impact": "performance", "summary": "Let the processor reach all of the GPU's memory.",
+      "description": "Lets the CPU address all of the graphics card's memory at once. Supported cards (GeForce RTX 30 and later, Radeon RX 6000 and later, Intel Arc) gain in some games; Intel Arc needs it for its expected performance.",
+      "risk": "manual",
+      "limitations": "Needs a supporting CPU, motherboard BIOS and graphics card firmware. Turning CSM off makes a Windows installed in legacy (MBR) mode unbootable until it is converted to GPT. A few games run slower with it; NVIDIA enables it per game through its driver profiles.",
+      "source": "NVIDIA 'GeForce RTX 30 Series Resizable BAR support'; Intel Arc support article 000092416; AMD calls it Smart Access Memory; Microsoft Learn MBR2GPT.",
+      "manual": {
+        "steps": [
+          "Check whether it is already on: NVIDIA Control Panel > System Information > Resizable BAR, AMD Software > Performance > Smart Access Memory, or Intel Graphics Software.",
+          "If BitLocker or device encryption is on (manage-bde -status, or Settings > Privacy & security > Device encryption), save the recovery key and suspend protection first: switching to UEFI can trigger BitLocker recovery.",
+          "Check System Information > BIOS Mode. If it says Legacy, convert the system disk first with MBR2GPT (Microsoft Learn; with BitLocker suspended, then delete and recreate its protectors as that page says), or CSM can't be turned off.",
+          "In the BIOS/UEFI setup, turn CSM off and enable 'Above 4G Decoding' and 'Re-Size BAR Support' (names vary; usually under PCI subsystem or Advanced). Update the BIOS first if the options are missing.",
+          "Save and restart, then confirm it shows as enabled in the GPU's control panel."
+        ],
+        "links": [ "https://www.nvidia.com/en-us/geforce/news/geforce-rtx-30-series-resizable-bar-support/", "https://www.intel.com/content/www/us/en/support/articles/000092416/graphics.html", "https://learn.microsoft.com/windows/deployment/mbr-to-gpt" ]
+      }
+    },
+    {
+      "id": "manual.bios-update", "name": "Update the BIOS/UEFI firmware", "category": "Firmware (manual)",
+      "impact": "system", "summary": "Bug fixes and support for newer hardware.",
+      "description": "Firmware updates fix bugs and add support such as Resizable BAR and newer memory and CPUs. Not a performance setting.",
+      "risk": "manual",
+      "limitations": "An interrupted update can leave the board unbootable; laptops update on AC power only. An update resets BIOS settings such as XMP/EXPO and Resizable BAR, and without suspending BitLocker first it triggers BitLocker recovery (Microsoft's BitLocker recovery overview).",
+      "source": "Board and laptop makers' support pages; Windows Update > Optional updates carries firmware for many laptops. Added in the 2026-10-22 audit.",
+      "manual": {
+        "steps": [
+          "Run msinfo32 and note the BIOS Version/Date and the System Model.",
+          "On the maker's support page for that exact model, compare the latest BIOS and read its notes.",
+          "Laptops and prebuilt PCs: prefer the maker's updater or Windows Update > Advanced options > Optional updates. Desktops: use the board's own flash tool from the BIOS, as its manual says.",
+          "If BitLocker or device encryption is on, save the recovery key and suspend protection before flashing (manage-bde -protectors -disable C: -RebootCount 3, or Suspend protection in Control Panel); it resumes by itself.",
+          "Keep the PC on AC power and don't interrupt the update. Afterwards, re-check XMP/EXPO and Resizable BAR."
+        ],
+        "links": [ "Your PC's or motherboard's support page" ]
+      }
+    },
+    {
+      "id": "manual.chipset-driver", "name": "Install the current chipset driver", "category": "Drivers (manual)",
+      "impact": "system", "summary": "Power and platform drivers as the maker intends.",
+      "description": "The chipset package carries the platform and power-management drivers for your CPU and motherboard. Not a performance setting; it keeps power and scheduling behaviour as the maker intends.",
+      "risk": "manual",
+      "limitations": "On laptops and prebuilt PCs the maker's own driver page comes first; a generic package can replace a customised one.",
+      "source": "Intel Driver & Support Assistant; AMD chipset drivers download page. Added in the 2026-10-22 audit.",
+      "manual": {
+        "steps": [
+          "Laptops and prebuilt PCs: download the chipset driver from the maker's support page for your model.",
+          "Intel desktops: run Intel Driver & Support Assistant and install the chipset item it offers.",
+          "AMD desktops: download the chipset driver for your motherboard's socket and chipset from AMD's driver page.",
+          "Restart when the installer asks."
+        ],
+        "links": [ "https://www.intel.com/content/www/us/en/support/detect.html", "https://www.amd.com/en/support/download/drivers.html" ]
+      }
+    },
+    {
+      "id": "manual.startup-apps", "name": "Review the apps that start with Windows", "category": "System",
+      "impact": "performance", "summary": "Fewer apps in the background and a quicker sign-in.",
+      "description": "Apps that start at sign-in run in the background while you play. Turning off the ones you don't need makes sign-in quicker and leaves fewer background processes; no frame-rate claim.",
+      "risk": "manual",
+      "source": "Microsoft support 'Configure startup applications in Windows'; Sysinternals Autoruns for the full list. Added in the 2026-10-22 audit.",
+      "manual": {
+        "steps": [
+          "Open Settings > Apps > Startup (or Task Manager > Startup apps).",
+          "Turn off what you don't need right after sign-in: updaters, launchers you open yourself, vendor tray tools you don't use.",
+          "Keep audio, input-device and security tools you rely on. Each switch can be turned back on at any time.",
+          "Autoruns shows every autostart location; use it only to look, or with care: disabling drivers or services there can break Windows."
+        ],
+        "links": [ "https://support.microsoft.com/windows/configure-startup-applications-in-windows-115a420a-0bff-4a6f-90e0-1934c844e473", "https://learn.microsoft.com/sysinternals/downloads/autoruns" ]
+      }
+    },
+    {
+      "id": "manual.vrr-sync-setup", "name": "Set up G-SYNC/FreeSync, V-Sync and a frame cap", "category": "Drivers (manual)",
+      "impact": "performance", "summary": "No tearing and no V-Sync lag on a G-SYNC or FreeSync display.",
+      "description": "On a variable-refresh (G-SYNC or FreeSync) display, the combination that avoids tearing without adding V-Sync lag: VRR on, V-Sync on in the driver and off in the game, and a frame rate kept just under the refresh rate. Smoothness and latency, not frame rate.",
+      "risk": "manual",
+      "limitations": "Vendor guidance, not measured by Mesura. Without VRR, V-Sync off (accepting tearing) or a cap that divides the refresh rate are the usual choices. Windowed VRR can make some apps flicker.",
+      "source": "NVIDIA 'System latency optimization guide' (with G-SYNC and V-Sync on, Reflex or Ultra Low Latency caps the frame rate below refresh); AMD GPUOpen Anti-Lag 2 SDK (its limiter is optional and set by the game). Added in the 2026-10-22 audit; AMD step corrected in its review.",
+      "manual": {
+        "steps": [
+          "Check Windows runs the display at its highest refresh rate: Settings > System > Display > Advanced display.",
+          "Turn on the display's VRR in its on-screen menu, then G-SYNC (NVIDIA app or Control Panel) or FreeSync (AMD Software).",
+          "In the driver, set V-Sync on; in each game, set V-Sync off.",
+          "NVIDIA: in games that offer Reflex, turn it on (otherwise set Low Latency Mode to Ultra per game); with G-SYNC and V-Sync on, either keeps the frame rate under the refresh rate by itself.",
+          "AMD, or games without Reflex: cap the frame rate about 3 fps below the refresh rate, in the game or with AMD's frame rate target (FRTC) or Chill. Anti-Lag 2 lowers latency but doesn't cap the frame rate.",
+          "To undo, set each item back; nothing here is changed by Mesura."
+        ],
+        "links": [ "https://www.nvidia.com/en-us/geforce/guides/system-latency-optimization-guide/" ]
+      }
+    },
+    {
+      "id": "manual.gpu-driver-ddu", "name": "Clean GPU driver reinstall with DDU", "category": "Drivers (manual)",
+      "impact": "system", "summary": "Removes every trace of a broken driver before a fresh one.",
+      "description": "Display Driver Uninstaller removes every trace of a graphics driver so a fresh one installs cleanly. For a broken driver or a switch between GPU brands, not for routine updates.",
+      "risk": "manual",
+      "limitations": "Removes the driver's settings and profiles. A BitLocker-encrypted PC may ask for its recovery key when started in Safe Mode.",
+      "source": "Wagnardsoft 'DDU guide' (Safe Mode recommended; not needed for routine updates); winget Wagnardsoft.DisplayDriverUninstaller 18.1.5.3 (read 2026-10-22). Added in the 2026-10-22 audit.",
+      "manual": {
+        "steps": [
+          "Download the new driver and DDU (wagnardsoft.com, or winget install --exact --id Wagnardsoft.DisplayDriverUninstaller). Note your BitLocker recovery key if the PC uses BitLocker.",
+          "Disconnect from the internet (or use DDU's option that stops Windows Update fetching a driver).",
+          "Restart into Safe Mode, run DDU, choose the GPU and its vendor, then 'Clean and restart'.",
+          "Install the new driver, reconnect, and set your driver settings again."
+        ],
+        "links": [ "https://www.wagnardsoft.com/content/ddu-guide-tutorial" ]
+      }
+    },
+    {
+      "id": "manual.nvidia-clean-driver", "name": "Install a trimmed NVIDIA driver with NVCleanstall", "category": "Drivers (manual)",
+      "impact": "system", "summary": "Build the driver without the parts you don't use.",
+      "description": "Builds an NVIDIA driver package without the components you don't use (the NVIDIA App, telemetry, USB-C, HD audio if unused). Fewer background components; not a frame-rate change.",
+      "risk": "manual",
+      "limitations": "Without the NVIDIA App you lose its settings (G-SYNC, DLSS overrides) except through the Control Panel or Profile Inspector. A clean installation resets driver settings; Setup backs your NVIDIA profiles up first and puts them back after. Your component and tweak configuration is on Setup's NVIDIA card.",
+      "source": "TechPowerUp NVCleanstall (winget TechPowerUp.NVCleanstall 1.19.0; 'mesura apps install --id nvcleanstall'). GeForce Experience left the driver in 566.36; the NVIDIA App replaced it.",
+      "manual": {
+        "steps": [
+          "Install NVCleanstall: Setup's NVIDIA step does it (or mesura apps install --id nvcleanstall --apply).",
+          "Run it, choose the driver version, and tick the components and tweaks of your NVIDIA configuration (Setup, NVIDIA card).",
+          "Let it build the package and run the installer; choose a clean installation if you are replacing an older driver.",
+          "Restart Windows when the installer asks, then set your driver settings again."
+        ],
+        "links": [ "https://www.techpowerup.com/nvcleanstall/" ]
+      }
+    },
+    {
+      "id": "manual.nvidia-profile-inspector", "name": "Tune a game profile with NVIDIA Profile Inspector", "category": "Drivers (manual)",
+      "impact": "performance", "summary": "Change a game's driver settings the NVIDIA app doesn't show.",
+      "description": "Edits per-game NVIDIA driver profile settings that the NVIDIA App doesn't expose.",
+      "risk": "manual",
+      "limitations": "Driver-profile settings are vendor configuration (reassessment R4). For one game, edit its own profile rather than the Base Profile, which applies to every app. Setup imports the profile your NVIDIA configuration names after a driver install, and backs your own profiles up first. A clean driver install resets profiles.",
+      "source": "Orbmu2k NVIDIA Profile Inspector 3.x (winget Orbmu2k.nvidiaProfileInspector 3.0.2.3, command 'nvpi', read 2026-10-22)",
+      "manual": {
+        "steps": [
+          "Install it (winget install --exact --id Orbmu2k.nvidiaProfileInspector, or mesura apps install --id nvpi --apply) and run 'nvpi'.",
+          "Pick the game's profile, then use 'Export current profile' to keep a copy of how it was.",
+          "Change only the settings you mean to test, then 'Apply changes'.",
+          "To undo, import the exported profile or use 'Restore current profile to NVIDIA defaults'."
+        ],
+        "links": [ "https://github.com/Orbmu2k/nvidiaProfileInspector" ]
+      }
+    }
+  ],
+  "presets": [
+    {
+      "id": "recommended-gaming", "name": "Recommended", "tier": "primary",
+      "summary": "Everyday Windows with less promotion, ad profiling and nagging, and nothing you would miss.",
+      "description": "Windows as you use it every day, minus what is there to sell or to ask for: no tips, suggestions, setup prompts or lock-screen and Start promotions, no advertising ID or tailored offers, no feedback prompts, no accessibility-shortcut prompts in the middle of a game, websites can't read your language list, and Windows sends only its required diagnostic data. Game Mode stays on and two Windows defaults are put back if a tweak tool changed them (the internet connectivity check and threaded DPCs; they change nothing on an untouched PC). Every setting is either documented by Microsoft or was checked on a Windows build, nothing here removes a feature you would use, and each setting can be undone from Activity. Optimisation is not the aim and no frame-rate gain is claimed. Windows keeps sending the data it requires for security, updates and reliability, and Edge, Microsoft 365 and other apps keep their own settings. The diagnostic-data policy needs Windows Pro or higher and administrator rights.",
+      "operations": [ "input.accessibility-shortcuts-off", "notifications.no-feedback-prompts", "privacy.no-language-list", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                      "privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "notifications.no-tips-and-suggestions",
+                      "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "gaming.game-mode-on" ]
+    },
+    {
+      "id": "maximum-performance", "name": "Maximum performance", "tier": "primary",
+      "summary": "Recommended, plus fewer optional background functions and desktop power settings, with the trade-offs named.",
+      "description": "Everything in Recommended, plus a more aggressive cut of what runs or reports in the background, and desktop power settings: Windows stops creating error reports, recording activity history, taking part in cross-device features, sharing updates with other PCs, tracking app launches, learning from your typing and showing Widgets; and on AC power the High performance plan, PCI Express links and drives stay at full power. Each addition is documented by Microsoft and can be undone from Activity. What you give up is named in each entry: no automatic crash reports, no Start 'most used apps' or Run history, no 'continue on another device', more idle power, heat and fan noise. No reputable measurement shows a frame-rate gain from these on current hardware; the aim is a PC that does less on its own, not a speed claim. On a laptop the plan and PCI Express entries don't apply (they would cost battery life), on a Modern Standby PC the plan doesn't (Windows offers only Balanced there), and on Windows Home the policy entries don't apply. Offered unticked: the unofficial telemetry controls (turning off the telemetry service and Windows' data-collection tasks, which Microsoft doesn't document as a way to reduce diagnostic data), online speech recognition, all app notifications, no USB selective suspend (Microsoft recommends leaving it on; for a device that misbehaves), hardware-accelerated GPU scheduling (a restart; needed for DLSS Frame Generation) and no NTFS last-access updates (a restart; can affect backup tools). Settings known only from community sources are never part of it.",
+      "operations": [ "input.accessibility-shortcuts-off", "notifications.no-feedback-prompts", "privacy.no-language-list", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                      "privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "notifications.no-tips-and-suggestions",
+                      "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "gaming.game-mode-on",
+                      "privacy.no-error-reporting", "privacy.no-activity-history", "privacy.no-cross-device-experiences", "privacy.no-app-launch-tracking",
+                      "privacy.no-typing-personalization", "updates.no-p2p-delivery", "taskbar.widgets-policy-off",
+                      "power.high-performance", "power.pcie-aspm-off", "power.disk-never-off" ],
+      "optional": [ "services.telemetry-off", "tasks.telemetry-off", "privacy.no-online-speech", "notifications.off", "power.usb-keep-awake", "gpu.hardware-scheduling-on", "system.ntfs-last-access-off" ]
+    },
+    {
+      "id": "gaming", "name": "Gaming input and sound", "tier": "collection",
+      "summary": "Game Mode, no mouse acceleration, End task, no audio ducking.",
+      "description": "Opt-in gaming preferences: Game Mode kept on (Windows' default), no accessibility-shortcut prompts, game audio not lowered during calls, no mouse acceleration, End task on taskbar menus. Some stored values are community-documented (see each entry). No power-plan changes: High performance and USB power changes were removed on 2026-10-22 (no measured gain, and they cost laptops battery).",
+      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "audio.no-ducking", "input.pointer-precision-off", "taskbar.end-task" ]
+    },
+    {
+      "id": "quiet", "name": "Quiet Windows", "tier": "collection",
+      "summary": "No tips, promotions, notification sounds or ad tracking.",
+      "description": "No tips, suggestions or promoted apps, no sync-provider notices, no notification sounds, no search highlights; advertising ID, tailored experiences and the language list for websites off.",
+      "operations": [ "notifications.no-tips-and-suggestions", "notifications.no-sync-provider-ads", "notifications.no-sound", "lockscreen.no-spotlight-ads", "notifications.no-setup-nags", "notifications.no-feedback-prompts", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "search.no-highlights" ]
+    },
+    {
+      "id": "clean-taskbar", "name": "Clean taskbar and Start", "tier": "collection",
+      "summary": "A cleaner taskbar and Start, without recommendations.",
+      "description": "Task View and Chat off the taskbar; no recommendations, account prompts, search highlights or recently opened files in Start. How search looks on the taskbar is left to you (icon or hidden), and Widgets are left to the Widgets policy operation.",
+      "operations": [ "taskbar.hide-task-view", "taskbar.hide-chat", "start.no-recommendations", "start.no-account-notifications", "search.no-highlights", "start.no-recent-items" ]
+    },
+    {
+      "id": "network-defaults", "name": "Network defaults back", "tier": "collection",
+      "summary": "Undoes network tweaks: auto-tuning, RSS, RSC, IPv6, the connectivity check.",
+      "description": "Puts Windows' own network defaults back where a tweak tool changed them: TCP receive-window auto-tuning at Normal, receive-side scaling and receive segment coalescing on, IPv6 not turned off, and the internet connectivity check on. Each is documented by Microsoft and is Windows' default, so on a PC nobody tweaked nothing changes. Added in the 2026-10-24 quality pass after comparing network tweaks in a commercial tweak utility and the owner's corpus: none of their other network tweaks (Nagle, TCP timers and ports, MTU, adapter buffers and interrupts, BBRv2, QoS reserve) is documented, measured or safe enough for Mesura.",
+      "operations": [ "manual.restore-tcp-autotuning", "repair.tcp-rss", "repair.tcp-rsc", "repair.ipv6-components", "repair.ncsi-active-probing" ]
+    },
+    {
+      "id": "system-defaults", "name": "System defaults back", "tier": "collection",
+      "summary": "Undoes tweak-pack changes to scheduling, memory and prefetch.",
+      "description": "Puts the intended Windows values back where a tweak tool changed them: threaded DPCs on, the multimedia scheduler's reserve for background work at 20, the memory manager favouring programs over the file cache, and boot and app-launch prefetch on. Each undoes a tweak and is not a performance setting; none claims a frame-rate gain. On a PC nobody tweaked nothing changes. Not in Recommended on purpose: these are corrections for a PC a tweak tool changed, not settings every gaming PC needs, and none has a documented effect on games (the two Recommended repairs, threaded DPCs and the connectivity check, also appear here). Added in the 2026-10-25 audit follow-up to give these repairs a home beside the network ones.",
+      "operations": [ "repair.threaded-dpc", "repair.mmcss-responsiveness", "repair.large-system-cache", "repair.prefetcher" ]
+    },
+    {
+      "id": "less-data-sharing", "name": "Less data sharing", "tier": "collection",
+      "summary": "Advertising ID, activity history, crash reports and other optional data sharing off.",
+      "description": "Turns off optional data sharing with Microsoft and websites: optional diagnostic data, the advertising ID, tailored experiences, the language list sent to websites, app-launch tracking, typing and inking personalisation, online speech recognition, activity history, Windows Error Reporting and cross-device experiences. These are privacy choices, not speed-ups, and some are policies for the whole PC (Pro, Enterprise and Education). The first group overlaps Recommended and Maximum performance; this collection is the way to apply them without the rest. Windows keeps sending the diagnostic data it requires, and Edge, Microsoft 365 and other apps have settings of their own.",
+      "operations": [ "privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking", "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences" ]
+    },
+    {
+      "id": "ghost-spectre-superlite", "name": "Ghost Spectre Superlite follow-up", "tier": "specialized",
+      "summary": "What a Ghost Spectre Superlite image still leaves to do.",
+      "description": "What a Superlite image still leaves to do (checked against a 25H2 Superlite install, 2026-09-24): tips and suggestions and lock-screen tips (left on by the image), Start recommendations and recently opened files (not set by the image), setup nags and search highlights (not recorded at install), and the System Event Notification Service the image disables. Most of these stored values are community-documented; this is the owner's own follow-up list, read on that install. The image already hides Task View, the Copilot button and account prompts, shows file extensions, turns Game DVR off and removes OneDrive, so those aren't here. For a gaming PC, apply Recommended too. Preferences (search style, where Explorer opens, the classic right-click menu) are left to you.",
+      "operations": [ "notifications.no-tips-and-suggestions", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-recent-items", "notifications.no-setup-nags", "search.no-highlights", "services.sens-on" ]
+    }
+  ]
+}

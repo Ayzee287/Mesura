@@ -1,0 +1,84 @@
+<UserControl x:Class="Mesura.App.Pages.ActivityPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:Mesura.App">
+    <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="40,30,40,28" MaxWidth="1040">
+            <Grid>
+                <StackPanel Margin="0,0,200,0">
+                    <TextBlock Text="{l:T Nav.Activity}" Style="{StaticResource PageTitle}" />
+                    <TextBlock Text="{Binding Status}" Style="{StaticResource PageSubtitle}" />
+                </StackPanel>
+                <Button Style="{StaticResource Ghost}" Command="{Binding OpenFolder}" AutomationProperties.Name="{l:T Activity.OpenFolder}" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconFolder}" FontSize="13" Margin="0,0,8,0" />
+                        <TextBlock Text="{l:T Activity.OpenFolder}" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <Border Style="{StaticResource Banner}" Background="{StaticResource WarningSubtle}" Margin="0,14,0,0"
+                    Visibility="{Binding ProfileNote, Converter={StaticResource Presence}}">
+                <TextBlock Text="{Binding ProfileNote}" Style="{StaticResource Body}" />
+            </Border>
+            <ContentControl Content="{Binding Result}" ContentTemplate="{StaticResource BannerTemplate}" Margin="0,14,0,0" Focusable="False" />
+
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0" Padding="20,26" Visibility="{Binding Empty, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconActivity}" FontSize="28" Foreground="{StaticResource TextTertiary}" HorizontalAlignment="Center" />
+                    <TextBlock Text="{l:T Activity.EmptyHint}" Style="{StaticResource Secondary}" Margin="0,12,0,0" TextAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Items}" Margin="0,18,0,0" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type l:ActivityItem}">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="16,12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid VerticalAlignment="Top">
+                                        <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource NeutralSubtle}"
+                                                Visibility="{Binding HasApp, Converter={StaticResource Presence}, ConverterParameter=invert}">
+                                            <TextBlock Style="{StaticResource Icon}" Text="{Binding Glyph}" FontSize="14" HorizontalAlignment="Center" />
+                                        </Border>
+                                        <l:AppGlyph AppId="{Binding AppId}" Label="{Binding AppLabel}" Width="34" Height="34" Padding="6"
+                                                    Visibility="{Binding HasApp, Converter={StaticResource BoolToVisibility}}" />
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" />
+                                        <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Caption}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Style="{StaticResource Pill}" Background="{Binding StatusTone, Converter={StaticResource StateBackground}}" Margin="0,0,10,0">
+                                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource PillText}" Foreground="{Binding StatusTone, Converter={StaticResource StateBrush}}" />
+                                        </Border>
+                                        <Button Content="{l:T Undo.Action}" Style="{StaticResource Ghost}" Command="{Binding Undo}" Margin="0,0,4,0"
+                                                Visibility="{Binding CanUndo, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="3" Style="{StaticResource ChevronToggle}" IsChecked="{Binding Expanded}" VerticalAlignment="Center"
+                                                  ToolTip="{l:T Common.Details}" AutomationProperties.Name="{l:T Common.Details}" />
+                                </Grid>
+                                <StackPanel Margin="48,12,0,2" Visibility="{Binding Expanded, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl ItemsSource="{Binding Lines}" ItemTemplate="{StaticResource StepLineTemplate}" Focusable="False" />
+                                    <Expander Style="{StaticResource Disclosure}" Header="{l:T Details.Technical}" Margin="0,8,0,0">
+                                        <TextBox Text="{Binding Technical, Mode=OneWay}" Style="{StaticResource LogBox}" MaxHeight="260" />
+                                    </Expander>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Expander Style="{StaticResource Disclosure}" Header="{l:T Activity.SessionLog}" Margin="0,14,0,0">
+                <TextBox Text="{Binding SessionLog, Mode=OneWay}" Style="{StaticResource LogBox}" MaxHeight="300" />
+            </Expander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

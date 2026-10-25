@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plain net10.0, not -windows: Core must not be able to reach an OS API (D009, architecture §3.2). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Mesura.Core</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The Track A pipeline's failure seams (a normaliser that throws) are internal; their tests live in Core.Tests. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mesura.Core.Tests" />
+  </ItemGroup>
+
+  <!-- The built-in catalogs. An edited copy lives in %LOCALAPPDATA%\Mesura (Setup's CatalogFiles), not next to an exe. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Apps\apps.catalog.json" LogicalName="apps.catalog.json" />
+    <EmbeddedResource Include="Windows\windows.catalog.json" LogicalName="windows.catalog.json" />
+  </ItemGroup>
+
+</Project>

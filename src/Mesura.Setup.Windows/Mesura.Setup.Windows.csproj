@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The change component: the personal setup layer that installs apps, imports app settings and keeps a history of
+       what it changed. It is a separate project so the diagnostic code (Core, Platform.Windows) keeps its read-only
+       boundary untouched (architecture §2.3, §18; D015). The same BannedSymbols.txt applies here, so every write and
+       every process launch still goes through one named owner: SetupStore (files) and WingetRunner (winget). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Mesura.Setup.Windows</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mesura.Core\Mesura.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mesura.Setup.Tests" />
+  </ItemGroup>
+
+  <!-- WMI for the licensing owner (LicensingWriter, D031); the same package and version as Platform. -->
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

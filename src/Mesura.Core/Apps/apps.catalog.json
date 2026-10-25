@@ -1,0 +1,53 @@
+{
+  // Mesura's installable apps (architecture section 4.8). "listed": false keeps an entry for saved profiles and the CLI
+  // while the app doesn't offer it among the apps to install (redesign 2026-10: Firefox, VLC, Epic, Git, VS Code and Zoom
+  // left the list; the NVIDIA tools moved into the NVIDIA section of Optimize). "context": "user" runs the installer as
+  // the signed-in user, unelevated: Discord and Spotify are per-user installers (winget manifests "Scope: user"; Spotify
+  // also "ElevationRequirement: elevationProhibited") and Vencord patches that user's Discord (manifests read on
+  // 2026-10-23). "detector" names a detector that reads the state from the app's own files when winget can't.
+  // "customizes" names the app a package modifies: Vencord is offered on Discord's card, not as an app of its own (D031).
+  // Schema 2 marks a catalog with these fields: a build before it refuses this file rather than misread it, and this
+  // build sets aside an edited copy of schema 1 and uses its built-in catalog instead (it says so).
+  "kind": "Mesura.AppCatalog",
+  "schemaVersion": 2,
+  "apps": [
+    { "id": "brave", "wingetId": "Brave.Brave", "name": "Brave", "category": "Browser",
+      "note": "Mesura can set it up with its defaults or your saved settings." },
+    { "id": "firefox", "wingetId": "Mozilla.Firefox", "name": "Firefox", "category": "Browser", "listed": false },
+    { "id": "chrome", "wingetId": "Google.Chrome", "name": "Google Chrome", "category": "Browser" },
+    { "id": "discord", "wingetId": "Discord.Discord", "name": "Discord", "category": "Chat", "context": "user",
+      "note": "Mesura can restore your saved settings." },
+    { "id": "vencord", "wingetId": "Vendicated.Vencord", "name": "Vencord", "category": "Chat", "context": "user",
+      "detectable": false, "detector": "vencord", "listed": false, "customizes": "discord",
+      "note": "Patches stable Discord with the official Vencord installer; close Discord first, and patch again after a Discord update." },
+    { "id": "spotify", "wingetId": "Spotify.Spotify", "name": "Spotify", "category": "Media", "context": "user",
+      "note": "Mesura can set it up with its defaults or your saved settings." },
+    { "id": "vlc", "wingetId": "VideoLAN.VLC", "name": "VLC media player", "category": "Media", "listed": false },
+    { "id": "obs", "wingetId": "OBSProject.OBSStudio", "name": "OBS Studio", "category": "Media" },
+    { "id": "steam", "wingetId": "Valve.Steam", "name": "Steam", "category": "Gaming",
+      "note": "Mesura can restore your saved settings; account settings apply after you sign in once." },
+    { "id": "epic", "wingetId": "EpicGames.EpicGamesLauncher", "name": "Epic Games Launcher", "category": "Gaming", "listed": false },
+    { "id": "nvcleanstall", "wingetId": "TechPowerUp.NVCleanstall", "name": "NVCleanstall", "category": "Drivers", "listed": false,
+      "note": "Builds a trimmed NVIDIA driver package; the driver install itself is an interactive step in NVCleanstall." },
+    { "id": "nvpi", "wingetId": "Orbmu2k.nvidiaProfileInspector", "name": "NVIDIA Profile Inspector", "category": "Drivers", "listed": false,
+      "note": "Portable; winget adds it to the command path as 'nvpi'." },
+    { "id": "sevenzip", "wingetId": "7zip.7zip", "name": "7-Zip", "category": "Utility" },
+    { "id": "notepadpp", "wingetId": "Notepad++.Notepad++", "name": "Notepad++", "category": "Utility" },
+    { "id": "vscode", "wingetId": "Microsoft.VisualStudioCode", "name": "Visual Studio Code", "category": "Developer", "listed": false },
+    { "id": "git", "wingetId": "Git.Git", "name": "Git", "category": "Developer", "listed": false },
+    { "id": "zoom", "wingetId": "Zoom.Zoom", "name": "Zoom", "category": "Communication", "listed": false }
+  ],
+  // Bundles stay readable for saved profiles and the CLI; the app no longer offers them.
+  "bundles": [
+    { "id": "everyday", "name": "Everyday environment", "description": "Brave, Discord with Vencord, Spotify and 7-Zip.",
+      "apps": [ "brave", "discord", "vencord", "spotify", "sevenzip" ] },
+    { "id": "gaming", "name": "Gaming PC", "description": "Steam, Discord, Epic and OBS.",
+      "apps": [ "steam", "discord", "epic", "obs" ] },
+    { "id": "nvidia", "name": "NVIDIA tools", "description": "NVCleanstall and NVIDIA Profile Inspector.",
+      "apps": [ "nvcleanstall", "nvpi" ] },
+    { "id": "media", "name": "Media", "description": "Spotify, VLC and OBS.",
+      "apps": [ "spotify", "vlc", "obs" ] },
+    { "id": "dev", "name": "Developer", "description": "VS Code, Git and 7-Zip.",
+      "apps": [ "vscode", "git", "sevenzip" ] }
+  ]
+}

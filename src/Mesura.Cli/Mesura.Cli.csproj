@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- x64 only (D008). CET compatibility keeps the SDK default: CETCompat is never set to false (D010).
+       Single-file publishing is set here, not on the command line, so that building and publishing restore
+       the same packages and the lock files never change between them (a changed lock file marks the build
+       as uncommitted, and a fixture then can't name its commit). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Mesura.Cli</RootNamespace>
+    <!-- The executable is mesura.exe: the command people type. -->
+    <AssemblyName>mesura</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+
+  <!-- The snapshot's app.commit must name the commit that produced the binary: a build from uncommitted changes is
+       stamped ".dirty" (src\Directory.Build.targets), which Program.ReadAppInfo records as "no single commit". -->
+
+  <!-- The Track A kit's operator files sit next to the exe in the publish folder, which is then the portable kit
+       (architecture §4.7). They are separate files, not bundled into the single-file exe. -->
+  <ItemGroup>
+    <None Include="TrackA\Kit\*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- The catalogs are embedded in Core; an edited copy lives in %LOCALAPPDATA%\Mesura, shared with the app. An example
+       setup profile sits next to the exe as a starting point. -->
+  <ItemGroup>
+    <None Include="Setup\example.profile.json" Link="example.profile.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mesura.Core\Mesura.Core.csproj" />
+    <ProjectReference Include="..\Mesura.Platform.Windows\Mesura.Platform.Windows.csproj" />
+    <ProjectReference Include="..\Mesura.Setup.Windows\Mesura.Setup.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

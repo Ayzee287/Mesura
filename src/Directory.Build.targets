@@ -1,0 +1,14 @@
+<Project>
+  <!-- The executables name the commit that produced them: the CLI in a snapshot's app.commit, the app on its Mesura tab.
+       A build from a working tree with uncommitted changes has its stamp marked ".dirty", which both show as "no single
+       commit" instead of claiming HEAD. Libraries keep the plain stamp (nothing reads it). -->
+  <Target Name="MarkUncommittedBuild" AfterTargets="InitializeSourceControlInformation" Condition="'$(SourceRevisionId)' != '' and '$(OutputType)' != 'Library'">
+    <Exec Command="git status --porcelain" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatusOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitStatusExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(_GitStatusExitCode)' == '0' and '$(_GitStatusOutput)' != ''">
+      <SourceRevisionId>$(SourceRevisionId).dirty</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+</Project>

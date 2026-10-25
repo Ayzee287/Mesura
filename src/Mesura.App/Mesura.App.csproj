@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The WPF application (architecture §3.3, §4.10, §4.11): the same operations as the CLI behind one window and a
+       tray presence. It holds no setup or diagnostic logic: it composes Core, Platform and Setup. Its one side effect
+       of its own is ShellLauncher (open a Windows settings page or URL; relaunch elevated), both on a user click. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms is referenced only for the tray NotifyIcon (§4.11). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Mesura.App</RootNamespace>
+    <AssemblyName>Mesura</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <ApplicationIcon>Assets\mesura.ico</ApplicationIcon>
+    <AssemblyTitle>Mesura</AssemblyTitle>
+    <Description>Mesura: personal Windows setup and configuration</Description>
+  </PropertyGroup>
+
+  <!-- A publish is the app you install: one Mesura.exe. tools\publish.ps1 adds self-contained, so it needs no .NET on
+       the PC (a fresh Ghost Spectre image has none). Single-file is set here, unconditionally, not on the command line,
+       so building and publishing restore the same packages and the lock files never change between them. -->
+  <PropertyGroup>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <!-- WinForms and System.Drawing are used only by the tray (they import or qualify the namespaces themselves). Keeping
+       them out of the implicit usings avoids Application/MessageBox/Brush clashing with WPF across the project. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <!-- One icon for the exe, the window and the tray (rendered once from the glyph; see Branding.cs). -->
+  <ItemGroup>
+    <Resource Include="Assets\mesura.ico" />
+    <Resource Include="Assets\mesura-mark.png" />
+    <!-- The apps' own icons (Assets\Apps\README.md), inside the executable so they show offline. -->
+    <Resource Include="Assets\Apps\*.png" />
+  </ItemGroup>
+
+  <!-- The interface strings and catalog translations (Loc): embedded, one pair of JSON files per language. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\*.json" LogicalName="Mesura.App.Localization.%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mesura.Core\Mesura.Core.csproj" />
+    <ProjectReference Include="..\Mesura.Platform.Windows\Mesura.Platform.Windows.csproj" />
+    <ProjectReference Include="..\Mesura.Setup.Windows\Mesura.Setup.Windows.csproj" />
+  </ItemGroup>
+
+  <!-- No catalog copies ship next to the exe: the built-in catalogs are embedded in Core, and an edited copy lives in
+       %LOCALAPPDATA%\Mesura, shared with the CLI (Mesura tab > Copy the catalogs here to edit). -->
+
+</Project>

@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mesura.App/Mesura.App.csproj" />
+    <Project Path="src/Mesura.Cli/Mesura.Cli.csproj" />
+    <Project Path="src/Mesura.Core/Mesura.Core.csproj" />
+    <Project Path="src/Mesura.Platform.Windows/Mesura.Platform.Windows.csproj" />
+    <Project Path="src/Mesura.Setup.Windows/Mesura.Setup.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mesura.Core.Tests/Mesura.Core.Tests.csproj" />
+    <Project Path="tests/Mesura.Platform.Tests/Mesura.Platform.Tests.csproj" />
+    <Project Path="tests/Mesura.Setup.Tests/Mesura.Setup.Tests.csproj" />
+  </Folder>
+</Solution>

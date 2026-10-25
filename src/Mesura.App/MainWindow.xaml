@@ -1,0 +1,66 @@
+<Window x:Class="Mesura.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="clr-namespace:Mesura.App"
+        xmlns:p="clr-namespace:Mesura.App.Pages"
+        Title="Mesura" Height="820" Width="1240" MinHeight="620" MinWidth="980"
+        WindowStartupLocation="CenterScreen" PreviewKeyDown="OnWindowKeyDown" Style="{StaticResource AppWindow}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="228" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Navigation rail -->
+        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="14,18,14,16">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,0,26">
+                    <Image x:Name="Logo" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="Mesura" FontFamily="{StaticResource DisplayFont}" FontSize="19" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="10,0,0,1" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Border x:Name="ElevationNote" Style="{StaticResource Inset}" Background="{StaticResource WarningSubtle}" Margin="0,0,0,10" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="{l:T Nav.NotElevated}" Style="{StaticResource Caption}" Foreground="{StaticResource Warning}" />
+                            <Button Style="{StaticResource Link}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="12" Click="OnRestartElevated"
+                                    AutomationProperties.Name="{l:T Nav.RestartElevated}">
+                                <TextBlock Text="{l:T Nav.RestartElevated}" TextWrapping="Wrap" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <RadioButton x:Name="NavSettings" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconSettings}"
+                                 Content="{l:T Nav.Settings}" Checked="OnNavigate" />
+                </StackPanel>
+
+                <StackPanel>
+                    <RadioButton x:Name="NavOptimize" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconOptimize}"
+                                 Content="{l:T Nav.Optimize}" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavApps" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconApps}"
+                                 Content="{l:T Nav.Apps}" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavConfigurations" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconConfigurations}"
+                                 Content="{l:T Nav.Configurations}" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavProfiles" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconProfiles}"
+                                 Content="{l:T Nav.Profiles}" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavActivation" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconKey}"
+                                 Content="{l:T Nav.Activation}" Checked="OnNavigate" />
+                    <RadioButton x:Name="NavActivity" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconActivity}"
+                                 Content="{l:T Nav.Activity}" Checked="OnNavigate" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Pages: each keeps its state while another is shown. -->
+        <Grid Grid.Column="1">
+            <p:OptimizePage x:Name="OptimizePage" />
+            <p:AllSettingsPage x:Name="AllSettingsPage" Visibility="Collapsed" />
+            <p:AppsPage x:Name="AppsPage" Visibility="Collapsed" />
+            <p:ConfigurationsPage x:Name="ConfigurationsPage" Visibility="Collapsed" />
+            <p:ProfilesPage x:Name="ProfilesPage" Visibility="Collapsed" />
+            <p:ActivationPage x:Name="ActivationPage" Visibility="Collapsed" />
+            <p:ActivityPage x:Name="ActivityPage" Visibility="Collapsed" />
+            <p:SettingsPage x:Name="SettingsPage" Visibility="Collapsed" />
+        </Grid>
+    </Grid>
+</Window>
