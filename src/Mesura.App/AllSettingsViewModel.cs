@@ -35,7 +35,7 @@ public sealed class FilterChoice(string value, Func<string> label, Action<string
     public void Relocalize() => Raise(nameof(Label));
 }
 
-/// <summary>A quick selection in All settings: a collection preset or the Ghost Spectre follow-up.</summary>
+/// <summary>A quick selection in All settings: a collection preset.</summary>
 public sealed record CollectionChoice(string Name, string Summary, RelayCommand Select);
 
 /// <summary>
@@ -90,7 +90,7 @@ public sealed class RailChoice(string value, Func<string> label, Action<string> 
 /// act here comes first, advanced entries next, entries that don't apply to this PC last. Applying uses the same run as
 /// Setup.
 /// </summary>
-public sealed class AllSettingsViewModel : Observable, IPageState
+public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
 {
     private const string Guides = "guides";
     private readonly Services _services;
@@ -272,6 +272,18 @@ public sealed class AllSettingsViewModel : Observable, IPageState
 
     public bool HasSelection => _selectedRow is not null;
 
+    /// <summary>Back first closes the open details drawer.</summary>
+    public bool CloseOpenDetail()
+    {
+        if (_selectedRow is null)
+        {
+            return false;
+        }
+
+        SelectedRow = null;
+        return true;
+    }
+
     public string CountText => Loc.Plural("AllSettings.Shown", View.Count);
 
     public bool Empty => View.Count == 0 && _state.Loaded;
@@ -448,11 +460,11 @@ public sealed class AllSettingsViewModel : Observable, IPageState
             var (run, recorded, error) = await RunActions.ApplyWindowsAsync(_services, ops);
             var applied = run.WindowsSteps.Count(s => s.Status == WindowsOpStatus.Applied);
             var problems = run.WindowsSteps.Count(s => !s.Ok);
-            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Append(_services.RestoreNote).Where(t => t.Length > 0));
-            Result.Show(problems == 0 ? Tone.Ok : Tone.Warn,
+            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Where(t => t.Length > 0));
+            Result.Show(problems == 0 && _services.RestoreNote.Length == 0 ? Tone.Ok : Tone.Warn,
                 problems == 0 ? Loc.Plural("Optimize.ResultDone", applied) : Loc.Format("Optimize.ResultPartial", applied, problems), detail,
                 recorded && error is null && RunActions.CanUndo(run) ? () => _ = UndoAsync(run) : null,
-                recorded ? () => _openActivity(run.Id) : null, RunActions.TechnicalLines(run));
+                recorded ? () => _openActivity(run.Id) : null, RunActions.Technical(_services, run), _services.RestoreNote);
             if (!recorded)
             {
                 await _state.RefreshAsync();

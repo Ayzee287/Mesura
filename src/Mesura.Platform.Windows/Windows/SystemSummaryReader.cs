@@ -5,15 +5,10 @@ namespace Mesura.Platform.Windows.Windows;
 
 /// <summary>
 /// Reads the <see cref="SystemSummary"/> Optimize shows (read-only): the OS facts the platform check already reads, the
-/// power capabilities the system reader already has, the graphics adapters from DXCore, and the presence of the
-/// Ghost Spectre toolbox folder (<c>C:\Ghost Toolbox</c>, created by the image's installer; read on a Superlite 25H2
-/// install, PC-000). Each part that fails is reported as unknown; nothing here throws.
+/// power capabilities the system reader already has and the graphics adapters from DXCore. Each part that fails is reported as unknown; nothing here throws.
 /// </summary>
 public static class SystemSummaryReader
 {
-    /// <summary>The folder a Ghost Spectre image installs at the root of the system drive.</summary>
-    public const string GhostToolboxFolder = "Ghost Toolbox";
-
     public static SystemSummary Read(SystemStateReader reader)
     {
         ArgumentNullException.ThrowIfNull(reader);
@@ -35,9 +30,7 @@ public static class SystemSummaryReader
         var adapters = ReadNvidia(gpus);
         nvidia.AddRange(adapters?.Select(a => a.Name) ?? []);
 
-        var systemDrive = Path.GetPathRoot(Environment.SystemDirectory) ?? @"C:\";
-        return new SystemSummary(edition, version, reader.Build, reader.HasBattery, reader.ModernStandby, gpus, nvidia, adapters is not null,
-            Directory.Exists(Path.Combine(systemDrive, GhostToolboxFolder)), adapters ?? []);
+        return new SystemSummary(edition, version, reader.Build, reader.HasBattery, reader.ModernStandby, gpus, nvidia, adapters is not null, adapters ?? []);
     }
 
     /// <summary>

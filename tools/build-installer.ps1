@@ -8,6 +8,9 @@
 # Run tools\publish.ps1 first; this takes artifacts\current\Mesura as it is.
 param(
   [string]$Out = '',
+  [switch]$Sign,            # Authenticode-sign the MSIs (tools\sign-release.ps1) before make-release hashes them
+  [string]$Thumbprint = '',
+  [string]$PfxPath = '',
   [switch]$FailInstall   # a test-only package whose install fails after copying (proves the rollback); written as test-only\Mesura-<v>-x64-FAILTEST.msi (never beside the installers that are published)
 )
 
@@ -53,6 +56,7 @@ foreach ($culture in @(@{ Dir = 'en-US'; Suffix = '' }, @{ Dir = 'ru-RU'; Suffix
   $targetFolder = if ($FailInstall) { New-Item -ItemType Directory -Force -Path (Join-Path $current 'test-only') | Select-Object -ExpandProperty FullName } else { $current }
   $target = Join-Path $targetFolder "Mesura-$stamp-x64$($culture.Suffix)$(if ($FailInstall) { '-FAILTEST' }).msi"
   Copy-Item -LiteralPath $built.FullName -Destination $target -Force
+  if ($Sign -and -not $FailInstall) { & (Join-Path $PSScriptRoot 'sign-release.ps1') -Path $target -Thumbprint $Thumbprint -PfxPath $PfxPath }
   Write-Output ("{0}  {1:N1} MB" -f $target, ((Get-Item $target).Length / 1MB))
 }
 Remove-Item -Recurse -Force $wixout, $rtf

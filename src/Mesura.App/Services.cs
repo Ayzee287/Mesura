@@ -51,8 +51,11 @@ public sealed class Services
     /// <summary>Windows restore points (made before a run that changes the whole PC, listed on Activity).</summary>
     public IRestorePoints RestorePoints { get; } = new Mesura.Setup.Windows.Windows.RestorePoints();
 
-    /// <summary>What the last restore point attempt said (empty when it worked or none was asked for), for the result of that run.</summary>
+    /// <summary>What the last restore point attempt said, in the user's language (empty when it worked or none was asked for): shown as a warning of its own, apart from the result of the run.</summary>
     public string RestoreNote { get; set; } = "";
+
+    /// <summary>Windows' own words for why the last restore point was not made (English), for the technical details.</summary>
+    public string RestoreTechnical { get; set; } = "";
 
     private IStartupSource? _startupApps;
 

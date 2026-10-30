@@ -42,10 +42,11 @@ public sealed class AppsFourTests
     public void The_install_folder_is_offered_only_where_the_installer_takes_one()
     {
         var supported = AppCatalog.Default.Packages.Where(p => p.InstallLocation).Select(p => p.Id).Order().ToList();
-        Assert.Equal(["ayugram", "notepadpp", "obs", "sevenzip", "steam", "telegram"], supported);
+        Assert.Equal(["ayugram", "notepadpp", "obs", "regorganizer", "sevenzip", "steam", "telegram", "vscode"], supported);
 
         // Squirrel (Discord), the vendors' own exes (Brave, Spotify) and Chrome's MSI have no folder option: choosing one would be ignored.
         Assert.All(new[] { "discord", "brave", "spotify", "chrome", "vencord" }, id => Assert.False(AppCatalog.Default.ById(id)!.InstallLocation, id));
+        Assert.False(AppCatalog.Default.ById("medal")!.InstallLocation); // an exe installer with no documented folder switch
     }
 
     [Fact]

@@ -47,6 +47,11 @@
                     <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" />
                     <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" Margin="0,4,0,0" LineHeight="18"
                                Visibility="{Binding Detail, Converter={StaticResource Presence}}" />
+                    <!-- Something around the run that did not work (no restore point): its own line in the warning colour, never part of the result's sentence. -->
+                    <Border Style="{StaticResource Inset}" Background="{StaticResource WarningSubtle}" Margin="0,8,0,0"
+                            Visibility="{Binding Warning, Converter={StaticResource Presence}}">
+                        <TextBlock Text="{Binding Warning}" Style="{StaticResource Caption}" Foreground="{StaticResource Warning}" LineHeight="18" />
+                    </Border>
                     <Expander Style="{StaticResource Disclosure}" Header="{l:T Details.Technical}" Margin="0,6,0,0"
                               Visibility="{Binding Technical, Converter={StaticResource Presence}}">
                         <TextBlock Text="{Binding Technical}" Style="{StaticResource Mono}" LineHeight="17" />

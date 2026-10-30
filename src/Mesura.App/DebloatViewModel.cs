@@ -297,11 +297,11 @@ public sealed class DebloatViewModel : Observable, IPageState
             var (run, recorded, error) = await RunActions.ApplyWindowsAsync(_services, ops);
             var applied = run.WindowsSteps.Count(s => s.Status == WindowsOpStatus.Applied);
             var problems = run.WindowsSteps.Count(s => !s.Ok);
-            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Append(_services.RestoreNote).Where(t => t.Length > 0));
-            Result.Show(problems == 0 ? Tone.Ok : Tone.Warn,
+            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Where(t => t.Length > 0));
+            Result.Show(problems == 0 && _services.RestoreNote.Length == 0 ? Tone.Ok : Tone.Warn,
                 problems == 0 ? Loc.Plural("Optimize.ResultDone", applied) : Loc.Format("Optimize.ResultPartial", applied, problems), detail,
                 recorded && error is null && RunActions.CanUndo(run) ? () => _ = UndoAsync(run) : null,
-                recorded ? () => _openActivity(run.Id) : null, RunActions.TechnicalLines(run));
+                recorded ? () => _openActivity(run.Id) : null, RunActions.Technical(_services, run), _services.RestoreNote);
             if (!recorded)
             {
                 await _state.RefreshAsync();

@@ -18,7 +18,7 @@
   // measured) says what is known about its effect; without it, a user preference claims nothing, an undocumented knob is
   // unverified and documented configuration is documented. "tcp" sets a global TCP/IP setting through netsh
   // (autotuninglevel, rss or rsc only; schema 3, 2026-10-24 quality pass). A preset's "tier" says where the app offers it: "primary"
-  // (the two outcomes on Optimize), "specialized" (shown when it applies, such as on a Ghost Spectre image) or
+  // (the two outcomes on Optimize), "specialized" (shown only when it applies) or
   // "collection" (a quick selection in All settings); its "optional" entries are offered unticked beside it.
   // Translations of names and texts live in the app (Mesura.App\Localization), not here.
   // Schema 2 marks the audited catalog with these fields: a build before it refuses this file rather than misread it,
@@ -419,19 +419,19 @@
     {
       "id": "services.print-on", "name": "Turn printing back on", "category": "Services",
       "impact": "maintenance", "summary": "Turns printing back on.",
-      "description": "Sets the Print Spooler to start automatically again, as Windows does by default, for images that disabled printing (Ghost Spectre Superlite does).",
+      "description": "Sets the Print Spooler to start automatically again, as Windows does by default, for images that disabled printing (some stripped images do).",
       "risk": "systemConfiguration", "activation": "reboot",
       "limitations": "Takes effect at the next start of Windows. Can't run together with 'Disable printing'.",
-      "source": "services.msc (Spooler: Automatic by default); Ghost Spectre install audit 2026-09-24 (Spooler disabled by the image).",
+      "source": "services.msc (Spooler: Automatic by default).",
       "services": [ { "name": "Spooler", "start": "automatic" } ]
     },
     {
       "id": "services.sens-on", "name": "Turn the System Event Notification Service back on", "category": "Services",
       "impact": "maintenance", "summary": "Turns the System Event Notification Service back on.",
-      "description": "Sets SENS (System Event Notification Service) to start automatically again, as Windows does by default. Ghost Spectre Superlite disables it, and services that depend on it then fail at every start (Intel's graphics service did on PC-000).",
+      "description": "Sets SENS (System Event Notification Service) to start automatically again, as Windows does by default. Some stripped Windows images disable it, and services that depend on it then fail at every start (Intel's graphics service did on PC-000).",
       "risk": "systemConfiguration", "activation": "reboot",
       "limitations": "Takes effect at the next start of Windows. Already automatic on a standard Windows.",
-      "source": "services.msc (SENS: Automatic by default); Ghost Spectre install audit 2026-09-24 and its final report (SENS disabled by the image; the Intel Graphics service failed with Service Control Manager event 7001 until SENS was restored).",
+      "source": "services.msc (SENS: Automatic by default); (SENS disabled by a stripped image; the Intel Graphics service failed with Service Control Manager event 7001 until SENS was restored).",
       "services": [ { "name": "SENS", "start": "automatic" } ]
     },
     {
@@ -566,9 +566,9 @@
     {
       "id": "security.defender-status", "name": "Microsoft Defender status", "category": "Security (information)",
       "impact": "maintenance", "summary": "Microsoft Defender's state.",
-      "description": "Microsoft Defender Antivirus. Guided: Mesura shows the service's start type and any policy values that switch Defender off, and opens Windows Security, where you check or change protection. Ghost Spectre Superlite images don't carry Defender (and Windows Security may be missing, so the link doesn't open); Superlite + DEF images do.",
+      "description": "Microsoft Defender Antivirus. Guided: Mesura shows the service's start type and any policy values that switch Defender off, and opens Windows Security, where you check or change protection. Heavily stripped Windows images may not carry Defender at all.",
       "risk": "observe",
-      "source": "service WinDefend; Defender policy values; Windows Security. Mesura does not script this: tamper protection blocks a registry or service write, so the reliable, reversible change is the one you make in Windows Security. The start type isn't the real-time protection state (catalog audit 2026-10-22).",
+      "source": "service WinDefend; Defender policy values; Windows Security. Mesura does not script this: tamper protection blocks a registry or service write, so the reliable, reversible change is the one you make in Windows Security. The start type isn't the real-time protection state.",
       "observe": {
         "service": "WinDefend",
         "reads": [
@@ -583,7 +583,7 @@
     {
       "id": "security.memory-integrity-status", "name": "Memory integrity (HVCI) status", "category": "Security (information)",
       "impact": "maintenance", "summary": "Memory integrity (HVCI).",
-      "description": "Memory integrity (HVCI), a Core isolation feature. Guided: Mesura shows its configured state and any policy that sets it, and opens Core isolation (on images without Windows Security, such as Ghost Spectre Superlite, the link doesn't open). Some older drivers block it; some anti-cheat (Riot Vanguard, FACEIT) may require it on. Microsoft says it can cost some performance in some gaming configurations.",
+      "description": "Memory integrity (HVCI), a Core isolation feature. Guided: Mesura shows its configured state and any policy that sets it, and opens Core isolation (on images without Windows Security the link doesn't open). Some older drivers block it; some anti-cheat (Riot Vanguard, FACEIT) may require it on. Microsoft says it can cost some performance in some gaming configurations.",
       "risk": "observe",
       "source": "DeviceGuard scenario and policy keys (Microsoft Learn 'Enable virtualization-based protection of code integrity'); Riot 'Vanguard security requirements'. Mesura does not script this: the change needs a restart and can be refused while an incompatible driver is loaded, so the Windows control is the reliable path. The values shown are the configuration, not the running state.",
       "observe": {
@@ -601,7 +601,7 @@
     {
       "id": "security.smartscreen-status", "name": "SmartScreen status", "category": "Security (information)",
       "impact": "maintenance", "summary": "SmartScreen's state.",
-      "description": "SmartScreen's check of apps and files you download and run. Guided: Mesura shows the setting and the policy that overrides it, and opens its Windows Security page (on images without Windows Security, such as Ghost Spectre Superlite, the link doesn't open).",
+      "description": "SmartScreen's check of apps and files you download and run. Guided: Mesura shows the setting and the policy that overrides it, and opens its Windows Security page (on images without Windows Security the link doesn't open).",
       "risk": "observe",
       "source": "SmartScreen for apps and files (Explorer value) and the policy 'Configure Windows Defender SmartScreen' (EnableSmartScreen, Policy CSP SmartScreen); Windows Security. Mesura does not script this: its values live under policy and per-user keys Windows re-evaluates, so the app-and-browser-control page is the reliable, reversible control.",
       "observe": {
@@ -3004,9 +3004,9 @@
   ],
   "presets": [
     {
-      "id": "recommended-gaming", "name": "Recommended", "tier": "primary",
-      "summary": "Windows without the promotion, ad profiling and nagging, and nothing you would miss.",
-      "description": "A short list that applies to almost every PC. Windows stops showing tips, suggestions, setup prompts and lock-screen and Start promotions, stops building an advertising profile (the advertising ID, tailored experiences, the language list sent to websites), stops asking for feedback, sends only the required diagnostic data and takes no part in usage-improvement programs, and stops offering the accessibility shortcuts in the middle of a game. Game Mode stays on. Two Windows defaults that tweak packs often change (the internet connectivity check and threaded DPCs) are put back if they were changed; on an untouched PC they change nothing. Every value is documented by Microsoft or was checked on a real Windows build. It claims no gain in frame rate: on a current Windows these settings are about what Windows shows and sends, not about speed. Nothing here touches power, services, security or drivers; machine policies need Windows Pro.",
+      "id": "recommended-gaming", "name": "Mesura Reference", "tier": "primary",
+      "summary": "The safe basics in three parts: performance, privacy, fewer promotions.",
+      "description": "Mesura's own baseline: eighteen documented settings that apply to almost every PC, in three parts you can also apply one by one. Performance: Game Mode on, the accessibility shortcuts that interrupt a game off, and two Windows defaults that tweak packs often change (the connectivity check, threaded DPCs) put back. Privacy: no advertising ID, tailored experiences or language list for websites, required diagnostic data only, no improvement programs or app telemetry. Fewer promotions: no tips, suggestions, setup prompts or lock-screen and Start ads. Nothing here touches power, services, security or drivers, and none of it claims a frame-rate gain: it is about what Windows shows, sends and settles on, not speed. Machine policies need Windows Pro.",
       "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
                       "privacy.no-language-list", "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
                       "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
@@ -3015,8 +3015,8 @@
     },
     {
       "id": "maximum-performance", "name": "Maximum performance", "tier": "primary",
-      "summary": "Recommended, plus the background work and desktop power settings a performance-minded PC can do without; the trade-offs are named.",
-      "description": "Everything in Recommended, plus changes that keep a desktop out of its power-saving states and stop background components nobody asked for. On a desktop on AC power: the High performance plan, USB selective suspend off, no PCI Express link power saving and drives that are never switched off (a laptop would lose battery life, and a Modern Standby PC only offers Balanced, so these are skipped there). Everywhere: Windows stops running Game Bar recording and broadcasting in the background, the Widgets process, Microsoft Edge's startup boost and its background mode, and stops sharing downloaded updates with other PCs. You give up automatic energy saving at idle (more heat, fan noise and electricity), Game Bar clips and widgets. Not ticked, offered beside it because they depend on the hardware or on taste: hardware-accelerated GPU scheduling (restart; needed for DLSS Frame Generation), background recording off, the pointer-precision switch, window animations and transparency off, NTFS last-access updates off, the processor energy hint and memory compression off (16 GB or more). No reliable measurement of a frame-rate gain from any of these on current hardware exists, and none is claimed. Every value is documented by Microsoft or was checked on a real Windows build, and Undo in Activity puts it back.",
+      "summary": "Mesura Reference, plus the background work and desktop power settings a performance-minded PC can do without; the trade-offs are named.",
+      "description": "Everything in Mesura Reference, plus changes that keep a desktop out of its power-saving states and stop background components nobody asked for. On a desktop on AC power: the High performance plan, USB selective suspend off, no PCI Express link power saving and drives that are never switched off (a laptop would lose battery life, and a Modern Standby PC only offers Balanced, so these are skipped there). Everywhere: Windows stops running Game Bar recording and broadcasting in the background, the Widgets process, Microsoft Edge's startup boost and its background mode, and stops sharing downloaded updates with other PCs. You give up automatic energy saving at idle (more heat, fan noise and electricity), Game Bar clips and widgets. Not ticked, offered beside it because they depend on the hardware or on taste: hardware-accelerated GPU scheduling (restart; needed for DLSS Frame Generation), background recording off, the pointer-precision switch, window animations and transparency off, NTFS last-access updates off, the processor energy hint and memory compression off (16 GB or more). No reliable measurement of a frame-rate gain from any of these on current hardware exists, and none is claimed. Every value is documented by Microsoft or was checked on a real Windows build, and Undo in Activity puts it back.",
       "optional": [ "gpu.hardware-scheduling-on", "gaming.background-recording-off", "input.pointer-precision-off", "dwm.window-animations-off",
                       "visual.transparency-off", "system.ntfs-last-access-off", "power.cpu-epp-performance-ac", "memory.compression-off" ],
       "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
@@ -3055,14 +3055,27 @@
       "summary": "Undoes tweak-pack changes to scheduling, memory and prefetch.",
       "description": "Puts the intended Windows values back where a tweak tool changed them: threaded DPCs on, the multimedia scheduler's reserve for background work at 20, the memory manager favouring programs over the file cache, and boot and app-launch prefetch on. Each undoes a tweak and is not a performance setting; none claims a frame-rate gain. On a PC nobody tweaked nothing changes. Not in Recommended on purpose: these are corrections for a PC a tweak tool changed, not settings every gaming PC needs, and none has a documented effect on games (the two Recommended repairs, threaded DPCs and the connectivity check, also appear here).",
       "operations": [ "repair.threaded-dpc", "repair.mmcss-responsiveness", "repair.large-system-cache", "repair.prefetcher", "cpu.platform-clock-default",
-                      "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default" ]
+                      "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default", "services.sens-on", "services.print-on" ]
     },
     {
-      "id": "ghost-spectre-superlite", "name": "Ghost Spectre Superlite follow-up", "tier": "specialized",
-      "summary": "What a Ghost Spectre Superlite image still leaves to do.",
-      "description": "What a Superlite image still leaves to do (checked against a 25H2 Superlite install, 2026-09-24): tips and suggestions and lock-screen tips (left on by the image), Start recommendations and setup nags (not set by the image), and the System Event Notification Service the image disables. The image already hides Task View, the Copilot button and account prompts, shows file extensions, turns Game DVR off and removes OneDrive, so those aren't here. For a gaming PC, apply Recommended too.",
-      "operations": [ "notifications.no-tips-and-suggestions", "lockscreen.no-spotlight-ads", "start.no-recommendations", "notifications.no-setup-nags",
-                      "services.sens-on" ]
+      "id": "reference-performance", "name": "Performance basics", "tier": "collection",
+      "summary": "Game Mode on, no accessibility pop-ups in games, two defaults put back.",
+      "description": "The performance part of Mesura Reference: Game Mode on, Sticky Keys and the other accessibility shortcuts off so a game is not interrupted, and the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them. No frame-rate gain is claimed.",
+      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "repair.ncsi-active-probing", "repair.threaded-dpc" ]
+    },
+    {
+      "id": "reference-privacy", "name": "Privacy basics", "tier": "collection",
+      "summary": "No advertising profile, required diagnostic data only.",
+      "description": "The privacy part of Mesura Reference: no advertising ID, tailored experiences or language list sent to websites, required diagnostic data only, and no Customer Experience or application telemetry programs. A privacy choice, not a speed-up. Windows keeps sending the diagnostic data it requires.",
+      "operations": [ "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.diagnostic-data-required",
+                      "telemetry.ceip-policy-off", "telemetry.application-telemetry-off" ]
+    },
+    {
+      "id": "reference-convenience", "name": "Fewer promotions", "tier": "collection",
+      "summary": "No tips, suggestions, setup prompts or ads in Windows.",
+      "description": "The convenience part of Mesura Reference: no feedback requests, tips and suggestions, 'finish setting up your device' screens, lock-screen ads, Start recommendations or account prompts, no third-party suggestions and no search highlights. Changes what Windows shows, nothing else.",
+      "operations": [ "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
+                      "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy" ]
     },
     {
       "id": "desktop-performance", "name": "Hardware-dependent tuning (desktop)", "tier": "collection",

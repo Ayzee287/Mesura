@@ -89,8 +89,8 @@
                         <!-- One card shape for every app, so a row never stretches one card to the height of its neighbour: icon, name and group, one line of
                              note, then the state, the link to its settings and any component that belongs to it (Vencord on Discord) on a single line. -->
                         <DataTemplate DataType="{x:Type l:AppItem}">
-                            <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Padding="16,14,14,14" Margin="0,0,12,12" Cursor="Hand" MinHeight="104" VerticalAlignment="Top"
-                                    MouseLeftButtonUp="OnCardClick">
+                            <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Padding="16,14,14,14" Margin="0,0,12,12" Cursor="Hand" MinHeight="92" VerticalAlignment="Top"
+                                    MouseLeftButtonUp="OnCardClick" ToolTip="{Binding Note}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -104,8 +104,6 @@
                                             <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
                                             <TextBlock Text="{Binding Category}" Style="{StaticResource Tertiary}" Margin="8,1,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
                                         </StackPanel>
-                                        <TextBlock Text="{Binding Note}" Style="{StaticResource Caption}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
-                                                   ToolTip="{Binding Note}" MinHeight="16" />
                                         <WrapPanel Margin="0,8,0,0">
                                             <Border Style="{StaticResource Pill}" Background="{Binding StateTone, Converter={StaticResource StateBackground}}" VerticalAlignment="Center" Margin="0,0,10,0">
                                                 <TextBlock Text="{Binding StateText}" Style="{StaticResource PillText}" Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
@@ -117,33 +115,13 @@
                                                     AutomationProperties.Name="{l:T Apps.OpenConfigurations}">
                                                 <TextBlock Text="{l:T Apps.OpenConfigurations}" />
                                             </Button>
-                                            <!-- A component of this app (Vencord on Discord): ticked here, installed after the app, with its own state. -->
-                                            <ItemsControl ItemsSource="{Binding Mods}" Focusable="False" Visibility="{Binding HasMods, Converter={StaticResource BoolToVisibility}}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="{x:Type l:AppMod}">
-                                                        <Border Style="{StaticResource Tag}" Padding="8,3,8,3" ToolTip="{Binding Note}">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <CheckBox IsChecked="{Binding Selected}" IsEnabled="{Binding CanSelect}" VerticalAlignment="Center" Margin="0,0,8,0"
-                                                                          AutomationProperties.Name="{Binding Name}" />
-                                                                <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="Medium" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding StateText}" Margin="8,0,0,0" FontSize="12" VerticalAlignment="Center"
-                                                                           Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
                                         </WrapPanel>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                                         <!-- Where it installs: a folder where its installer takes one; for the others the button says that it cannot be chosen. -->
                                         <Button Content="{StaticResource IconFolder}" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="12" Margin="0,-3,6,0"
                                                 Command="{Binding ChooseFolder}" ToolTip="{Binding FolderTip}" ToolTipService.ShowOnDisabled="True"
+                                                Visibility="{Binding SupportsFolder, Converter={StaticResource BoolToVisibility}}"
                                                 AutomationProperties.Name="{Binding FolderTip}" />
                                         <CheckBox IsChecked="{Binding Selected}" IsEnabled="{Binding CanSelect}" VerticalAlignment="Top"
                                                   AutomationProperties.Name="{Binding Name}" />

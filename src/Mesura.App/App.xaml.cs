@@ -106,7 +106,7 @@ public partial class App : Application
         _elevationAsked |= Has(NoElevateArgument);
         if (!CreateSignals(relaunched))
         {
-            MessageBox.Show(Loc.Get("Common.RunningOtherAccount"), Branding.Name, MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Loc.Safe("Common.RunningOtherAccount", "Mesura is already running in this session under another account. Switch to it from the taskbar or the notification area, or exit it there and try again."), Branding.Name, MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown(1);
             return;
         }
@@ -121,7 +121,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             StartupLog.Fatal("Services.Create", ex);
-            MessageBox.Show(Loc.Format("Common.StartFailed", ex.Message), Branding.Name, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(Loc.Safe("Common.StartFailed", "Mesura couldn't start: {0}", ex.Message), Branding.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
             return;
         }
@@ -378,6 +378,7 @@ public partial class App : Application
                 }
             }
 
+            HighContrastTheme.ApplyIfOn(Resources);
             _window = new MainWindow(_services, hostedInTray: _tray is not null);
             _window.Closed += (_, _) => _window = null;
         }
@@ -404,7 +405,7 @@ public partial class App : Application
         e.Handled = true;
         _services?.Log($"Unexpected: {e.Exception}");
         StartupLog.Fatal("the window (unexpected, the app keeps running)", e.Exception);
-        MessageBox.Show(Loc.Format("Common.UnexpectedDialog", $"{e.Exception.GetType().Name}: {e.Exception.Message}"),
+        MessageBox.Show(Loc.Safe("Common.UnexpectedDialog", "Something unexpected went wrong; nothing further ran.\n\n{0}", $"{e.Exception.GetType().Name}: {e.Exception.Message}"),
             Branding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 

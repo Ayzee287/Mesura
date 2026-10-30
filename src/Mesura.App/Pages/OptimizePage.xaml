@@ -10,7 +10,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
+            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding SelectionSummary}"
                        Visibility="{Binding Running, Converter={StaticResource Presence}, ConverterParameter=invert}" />
             <TextBlock Text="{Binding Progress}" Style="{StaticResource Caption}" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="0,0,12,0"
                        TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Visibility="{Binding Running, Converter={StaticResource BoolToVisibility}}" />
@@ -241,7 +241,8 @@
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SectionHead}" Focusable="False" />
                         <StackPanel Style="{StaticResource Reveal}" Margin="50,12,0,0" Visibility="{Binding Windows.Expanded, Converter={StaticResource BoolToVisibility}}"
                                     DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                            <TextBlock Text="{Binding PlanHeader}" Style="{StaticResource GroupLabel}" Margin="0,0,0,4" />
+                            <TextBlock Text="{Binding PlanHeader}" Style="{StaticResource GroupLabel}" Margin="0,0,0,4"
+                                       Visibility="{Binding PlanEmpty, Converter={StaticResource Presence}, ConverterParameter=invert}" />
                             <Border Style="{StaticResource Inset}" Margin="0,4,0,8" Visibility="{Binding PlanEmpty, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconDone}" Foreground="{StaticResource Success}" Margin="0,0,10,0" />
@@ -253,11 +254,6 @@
                                 <TextBlock Text="{l:T Optimize.Extras}" Style="{StaticResource GroupLabel}" Margin="0,8,0,2" />
                                 <TextBlock Text="{l:T Optimize.ExtrasHint}" Style="{StaticResource Caption}" Margin="0,0,0,6" />
                                 <ItemsControl ItemsSource="{Binding Extras}" ItemTemplate="{StaticResource PlanItemTemplate}" Focusable="False" />
-                            </StackPanel>
-                            <StackPanel Visibility="{Binding HasGhostSpectre, Converter={StaticResource BoolToVisibility}}" Margin="0,8,0,0">
-                                <TextBlock Text="{l:T Optimize.GhostSpectre}" Style="{StaticResource GroupLabel}" Margin="0,8,0,2" />
-                                <TextBlock Text="{l:T Optimize.GhostSpectreHint}" Style="{StaticResource Caption}" Margin="0,0,0,6" />
-                                <ItemsControl ItemsSource="{Binding GhostSpectre}" ItemTemplate="{StaticResource PlanItemTemplate}" Focusable="False" />
                             </StackPanel>
                             <Border Style="{StaticResource Divider}" Margin="0,12,0,6" Visibility="{Binding HasDone, Converter={StaticResource BoolToVisibility}}" />
                             <Expander Style="{StaticResource Disclosure}" Header="{Binding DoneHeader}" Visibility="{Binding HasDone, Converter={StaticResource BoolToVisibility}}">

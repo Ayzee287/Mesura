@@ -259,7 +259,14 @@ public sealed class QualityPassTests
     {
         Assert.Equal(["repair.threaded-dpc", "repair.mmcss-responsiveness", "repair.large-system-cache", "repair.prefetcher",
             // 0.2.0: the boot-timer overrides and the scheduler value put back to Windows' own (all no-ops on an untouched PC)
-            "cpu.platform-clock-default", "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default"], Catalog.PresetById("system-defaults")!.OperationIds);
+            "cpu.platform-clock-default", "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default",
+            // 0.4.1: the two service defaults that stripped images change (the old brand-named follow-up collection is gone)
+            "services.sens-on", "services.print-on"], Catalog.PresetById("system-defaults")!.OperationIds);
+
+        // Mesura Reference is exactly its three parts: performance, privacy and fewer promotions, no overlap and nothing left over.
+        var parts = new[] { "reference-performance", "reference-privacy", "reference-convenience" }.SelectMany(id => Catalog.PresetById(id)!.OperationIds).ToList();
+        Assert.Equal(parts.Count, parts.Distinct().Count());
+        Assert.Equal(Catalog.PresetById("recommended-gaming")!.OperationIds.Order(), parts.Order());
         Assert.Equal(["privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking",
             "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences",
             // 0.4: the documented policies of the old privacy-policies collection moved in, and its duplicates and harmful switches were dropped by the audit.

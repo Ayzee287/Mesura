@@ -108,7 +108,6 @@ public sealed class GuideItem(SettingRow row) : Observable
 /// </summary>
 public sealed class OptimizeViewModel : Observable, IPageState
 {
-    private const string GhostSpectrePreset = "ghost-spectre-superlite";
     private static readonly string[] NvidiaGuideIds = ["manual.nvidia-clean-driver", "manual.nvidia-profile-inspector", "manual.vrr-sync-setup"];
 
     private readonly Services _services;
@@ -260,7 +259,6 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     public ObservableCollection<PlanItem> Extras { get; } = [];
 
-    public ObservableCollection<PlanItem> GhostSpectre { get; } = [];
 
     public ObservableCollection<SettingRow> Done { get; } = [];
 
@@ -391,18 +389,12 @@ public sealed class OptimizeViewModel : Observable, IPageState
                 SystemFact.With("IconWindows", $"{s.WindowsName} {s.Version}".Replace("  ", " ", StringComparison.Ordinal).Trim(), Tone.Neutral),
             };
 
-            if (s.GhostSpectre)
-            {
-                facts.Add(SystemFact.With("IconImage", Loc.Get("Optimize.GhostSpectreImage"), Tone.Neutral));
-            }
-
             return facts;
         }
     }
 
     public bool HasExtras => Extras.Count > 0;
 
-    public bool HasGhostSpectre => GhostSpectre.Count > 0;
 
     public bool HasDone => Done.Count > 0;
 
@@ -412,7 +404,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     public string NotHereHeader => Loc.Plural("Optimize.NotHereHeader", NotHere.Count);
 
-    public bool PlanEmpty => _state.Loaded && Selected is not null && Changes.Count == 0 && Extras.Count == 0 && GhostSpectre.Count == 0;
+    public bool PlanEmpty => _state.Loaded && Selected is not null && Changes.Count == 0 && Extras.Count == 0;
 
     public bool HasPlanApps => PlanApps.Count > 0;
 
@@ -765,14 +757,13 @@ public sealed class OptimizeViewModel : Observable, IPageState
     /// <summary>Rebuilds the plan from the current reading, keeping what the user ticked or unticked.</summary>
     private void Rebuild()
     {
-        foreach (var item in Changes.Concat(Extras).Concat(GhostSpectre))
+        foreach (var item in Changes.Concat(Extras))
         {
             item.PropertyChanged -= OnItemChanged;
         }
 
         Changes.Clear();
         Extras.Clear();
-        GhostSpectre.Clear();
         Done.Clear();
         NotHere.Clear();
         NvidiaGuides.Clear();
@@ -798,15 +789,6 @@ public sealed class OptimizeViewModel : Observable, IPageState
             foreach (var row in _state.RowsOf(outcome.Preset.OptionalIds).Where(r => r.CanSelect))
             {
                 Extras.Add(Item(row, false));
-            }
-
-            if (_summary?.GhostSpectre == true && _state.Catalog?.PresetById(GhostSpectrePreset) is { } ghost)
-            {
-                var inPlan = Changes.Concat(Extras).Select(i => i.Row.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                foreach (var row in _state.RowsOf(ghost.OperationIds).Where(r => r.CanSelect && !inPlan.Contains(r.Id)))
-                {
-                    GhostSpectre.Add(Item(row, true));
-                }
             }
 
             foreach (var other in Outcomes)
@@ -985,7 +967,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
     }
 
     private List<SettingRow> IncludedRows() =>
-        [.. Changes.Concat(Extras).Concat(GhostSpectre).Where(i => i.Included).Select(i => i.Row).DistinctBy(r => r.Id)];
+        [.. Changes.Concat(Extras).Where(i => i.Included).Select(i => i.Row).DistinctBy(r => r.Id)];
 
     /// <summary>The steps Review and apply would run, from the cards that are switched on and have something to do.</summary>
     private List<SetupStep> PlannedSteps()

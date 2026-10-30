@@ -10,7 +10,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding SelectionSummary}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                 <ProgressBar Style="{StaticResource Busy}" Width="80" Margin="0,0,14,0" VerticalAlignment="Center"
                              Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />

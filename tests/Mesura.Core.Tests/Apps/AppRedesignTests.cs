@@ -14,17 +14,19 @@ public sealed class AppRedesignTests
     [Fact]
     public void Removed_apps_stay_in_the_catalog_for_profiles_but_are_not_listed()
     {
-        string[] unlisted = ["zoom", "firefox", "epic", "vlc", "git", "vscode", "nvpi", "nvcleanstall", "vencord"];
+        string[] unlisted = ["zoom", "firefox", "epic", "vlc", "git", "nvpi", "nvcleanstall"];
         Assert.All(unlisted, id => Assert.False(Catalog.ById(id)!.Listed, id));
-        Assert.All(["brave", "discord", "spotify", "steam", "sevenzip", "obs", "chrome", "notepadpp"],
+        Assert.All(["brave", "discord", "vencord", "spotify", "steam", "sevenzip", "obs", "chrome", "notepadpp", "vscode", "medal", "regorganizer", "telegram", "ayugram"],
             id => Assert.True(Catalog.ById(id)!.Listed, id));
     }
 
     [Fact]
-    public void Vencord_is_a_customisation_of_discord_and_a_customisation_must_name_a_catalog_app()
+    public void Vencord_is_an_app_of_its_own_and_a_customisation_must_name_a_catalog_app()
     {
-        Assert.Equal("discord", Catalog.ById("vencord")!.Customizes);
-        Assert.All(Catalog.Packages.Where(p => p.Id != "vencord"), p => Assert.Equal("", p.Customizes));
+        // 0.4.1: Vencord is listed beside Discord (its winget manifest depends on Discord, so winget brings it in); the mechanism stays for a future add-on.
+        Assert.Equal("", Catalog.ById("vencord")!.Customizes);
+        Assert.True(Catalog.ById("vencord")!.Listed);
+        Assert.All(Catalog.Packages, p => Assert.Equal("", p.Customizes));
         var e = Assert.Throws<FormatException>(() => AppCatalog.Parse("""
             { "kind": "Mesura.AppCatalog", "schemaVersion": 2,
               "apps": [ { "id": "mod", "wingetId": "A.Mod", "name": "Mod", "customizes": "missing" } ] }

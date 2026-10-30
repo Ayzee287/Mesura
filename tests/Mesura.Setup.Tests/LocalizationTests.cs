@@ -32,6 +32,26 @@ public sealed partial class LocalizationTests
     private static Dictionary<string, string> Strings(string language) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(Folder, $"{language}.json")), Options)!;
 
+    [Fact]
+    public void Loc_reads_its_files_with_options_that_exist_when_the_instance_is_built()
+    {
+        // 0.4.0-rc1 failed to start on a Russian Windows because the options (comments allowed) were a static field declared after the static instance,
+        // so they were still null while the first language was loaded. Options are now created on demand; a static field of that type must not return.
+        var source = File.ReadAllText(Path.Combine(Folder, "Loc.cs"));
+        Assert.DoesNotContain("static readonly JsonSerializerOptions", source, StringComparison.Ordinal);
+        Assert.Contains("_options ??= new()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Every_language_file_is_readable_json_with_comments_allowed()
+    {
+        foreach (var file in Directory.GetFiles(Folder, "*.json"))
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            Assert.Equal(JsonValueKind.Object, document.RootElement.ValueKind);
+        }
+    }
+
     private static readonly string[] PluralForms = [".one", ".few", ".many", ".other"];
 
     /// <summary>A key with its plural suffix removed.</summary>

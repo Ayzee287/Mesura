@@ -10,7 +10,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBlock Text="{Binding SelectionSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding SelectionSummary}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                 <ProgressBar Style="{StaticResource Busy}" Width="80" Margin="0,0,14,0" VerticalAlignment="Center"
                              Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}" />
@@ -38,19 +38,23 @@
                                   AutomationProperties.Name="{l:T AllSettings.QuickSelect}">
                         <ToggleButton.Template>
                             <ControlTemplate TargetType="ToggleButton">
-                                <Border x:Name="B" Background="Transparent" CornerRadius="8" Padding="12,0" Height="34">
+                                <!-- Quick select is the fastest way to a sensible set, so it is drawn as a control: a filled pill with an accent edge and the sparkle mark. -->
+                                <Border x:Name="B" Background="{StaticResource Raised}" BorderBrush="{StaticResource AccentRim}" BorderThickness="1" CornerRadius="17" Padding="14,0" Height="34">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{l:T AllSettings.QuickSelect}" Foreground="{StaticResource TextSecondary}" />
+                                        <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconOptimize}" FontSize="13" Margin="0,0,8,0" Foreground="{StaticResource Accent}" />
+                                        <TextBlock Text="{l:T AllSettings.QuickSelect}" Foreground="{StaticResource Text}" FontWeight="Medium" />
                                         <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconChevronDown}" FontSize="10" Margin="8,1,0,0"
                                                    Foreground="{StaticResource TextSecondary}" />
                                     </StackPanel>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="B" Property="Background" Value="{StaticResource Raised}" />
+                                        <Setter TargetName="B" Property="Background" Value="{StaticResource Hover}" />
+                                        <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Accent}" />
                                     </Trigger>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter TargetName="B" Property="Background" Value="{StaticResource Raised}" />
+                                        <Setter TargetName="B" Property="Background" Value="{StaticResource Hover}" />
+                                        <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Accent}" />
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>

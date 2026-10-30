@@ -97,19 +97,25 @@
     <!-- Ambient light behind everything (AmbientField): a cool key light that follows the pointer with inertia, a broad cool light
          and a warm counter-light; all neutral, all low. -->
     <RadialGradientBrush x:Key="OrbKey" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#2CC6D3F0" Offset="0" />
-        <GradientStop Color="#10C6D3F0" Offset="0.5" />
-        <GradientStop Color="#00C6D3F0" Offset="1" />
+        <GradientStop Color="#58708CFF" Offset="0" />
+        <GradientStop Color="#22708CFF" Offset="0.5" />
+        <GradientStop Color="#00708CFF" Offset="1" />
+    </RadialGradientBrush>
+    <!-- The second, slower light that trails the pointer (Full mode only): the violet end of the logo's gradient. -->
+    <RadialGradientBrush x:Key="OrbTrail" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#44A070FF" Offset="0" />
+        <GradientStop Color="#18A070FF" Offset="0.5" />
+        <GradientStop Color="#00A070FF" Offset="1" />
     </RadialGradientBrush>
     <RadialGradientBrush x:Key="OrbCool" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#26AFC2EA" Offset="0" />
-        <GradientStop Color="#0DAFC2EA" Offset="0.5" />
-        <GradientStop Color="#00AFC2EA" Offset="1" />
+        <GradientStop Color="#3C2AB6FF" Offset="0" />
+        <GradientStop Color="#142AB6FF" Offset="0.5" />
+        <GradientStop Color="#002AB6FF" Offset="1" />
     </RadialGradientBrush>
     <RadialGradientBrush x:Key="OrbWarm" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#1CE8D0AE" Offset="0" />
-        <GradientStop Color="#08E8D0AE" Offset="0.5" />
-        <GradientStop Color="#00E8D0AE" Offset="1" />
+        <GradientStop Color="#2E34F0B0" Offset="0" />
+        <GradientStop Color="#0E34F0B0" Offset="0.5" />
+        <GradientStop Color="#0034F0B0" Offset="1" />
     </RadialGradientBrush>
 
     <!-- Type (0.4): Onest for the interface (drawn for Cyrillic and Latin together), JetBrains Mono for measured values, Spectral Light
@@ -972,6 +978,45 @@
         </Setter>
     </Style>
 
+    <!-- The logo as a button: no chrome, a lift and a glow on hover, a ring for the keyboard. -->
+    <Style x:Key="LogoButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="B" Background="Transparent" CornerRadius="11" Padding="2" RenderTransformOrigin="0.5,0.5" BorderThickness="1" BorderBrush="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="B" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.07" ScaleY="1.07" />
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="B" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#2AB6FF" BlurRadius="16" ShadowDepth="0" Opacity="0.55" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="B" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.96" ScaleY="0.96" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Accent}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A read-only text area (the session log): selectable, monospace. -->
     <Style x:Key="LogBox" TargetType="TextBox">
         <Setter Property="Background" Value="{StaticResource Raised}" />
@@ -1038,6 +1083,7 @@
 
     <!-- A chevron toggle that expands a row's details. -->
     <Style x:Key="ChevronToggle" TargetType="ToggleButton">
+        <Setter Property="local:ExpandOnClick.Enabled" Value="True" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Width" Value="28" />
         <Setter Property="Height" Value="28" />

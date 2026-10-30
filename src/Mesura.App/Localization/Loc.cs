@@ -58,6 +58,29 @@ public sealed class Loc : INotifyPropertyChanged
     public static string Format(string key, params object[] args) => string.Format(Instance.Culture, Instance[key], args);
 
     /// <summary>
+    /// Text for the places that must work even when localization itself is what failed (the start-up and unhandled-error dialogs): the translated
+    /// string when the catalog loads, the English <paramref name="english"/> otherwise. Never throws.
+    /// </summary>
+    public static string Safe(string key, string english, params object[] args)
+    {
+        try
+        {
+            return Format(key, args);
+        }
+        catch (Exception)
+        {
+            try
+            {
+                return string.Format(CultureInfo.InvariantCulture, english, args);
+            }
+            catch (FormatException)
+            {
+                return english;
+            }
+        }
+    }
+
+    /// <summary>
     /// A counted phrase: <c>{key}.one</c>, <c>.few</c>, <c>.many</c> (Russian) or <c>.one</c>, <c>.other</c> (English),
     /// each with <c>{0}</c> for the number.
     /// </summary>
@@ -90,8 +113,18 @@ public sealed class Loc : INotifyPropertyChanged
     }
 
     /// <summary>Russian when Windows' display language is Russian, otherwise English.</summary>
-    public static string DefaultLanguage() =>
-        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ru", StringComparison.OrdinalIgnoreCase) ? "ru" : "en";
+    public static string DefaultLanguage()
+    {
+#if DEBUG
+        // Debug builds only: pretend Windows' display language is this one, so the start-up path of a Russian PC can be run on an English one.
+        var forced = Environment.GetEnvironmentVariable("MESURA_PREVIEW_LANGUAGE");
+        if (forced is "en" or "ru")
+        {
+            return forced;
+        }
+#endif
+        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ru", StringComparison.OrdinalIgnoreCase) ? "ru" : "en";
+    }
 
     // ---- Catalog text ------------------------------------------------------------------------------------------------
 
@@ -141,24 +174,30 @@ public sealed class Loc : INotifyPropertyChanged
     private static Stream? Resource(string name) =>
         typeof(Loc).Assembly.GetManifestResourceStream($"Mesura.App.Localization.{name}");
 
-    private static Dictionary<string, string> Strings(string language)
+    // A damaged or unreadable language file must not stop the program: that language falls back to English (or to the key), and the start-up log says which file and why.
+    private static Dictionary<string, string> Strings(string language) => Read($"{language}.json", () => new Dictionary<string, string>());
+
+    private static CatalogText Catalog(string language) => Read($"catalog-{language}.json", () => new CatalogText());
+
+    private static T Read<T>(string name, Func<T> empty) where T : class
     {
-        using var stream = Resource($"{language}.json");
-        if (stream is null)
+        try
         {
-            return [];
+            using var stream = Resource(name);
+            return stream is null ? empty() : JsonSerializer.Deserialize<T>(stream, Options) ?? empty();
         }
-
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream, Options) ?? [];
+        catch (Exception e) when (e is JsonException or IOException or InvalidOperationException)
+        {
+            StartupLog.Note($"localization: {name} could not be read ({e.GetType().Name}: {e.Message}); using the fallback");
+            return empty();
+        }
     }
 
-    private static CatalogText Catalog(string language)
-    {
-        using var stream = Resource($"catalog-{language}.json");
-        return stream is null ? new CatalogText() : JsonSerializer.Deserialize<CatalogText>(stream, Options) ?? new CatalogText();
-    }
+    // A property, not a static field: the instance above is built while this class initialises, and a static field declared below it would still be null then
+    // (0.4.0-rc1 failed to start on a PC whose Windows language is Russian: the comments in the language files were read with default options).
+    private static JsonSerializerOptions? _options;
 
-    private static readonly JsonSerializerOptions Options = new()
+    private static JsonSerializerOptions Options => _options ??= new()
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,

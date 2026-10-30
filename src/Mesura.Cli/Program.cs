@@ -123,6 +123,7 @@ internal static partial class Program
                 WindowsCommand windows => WindowsCli.Run(windows.Args),
                 ProfileCommand profile => ProfileCli.RunProfile(profile.Args),
                 HistoryCommand history => ProfileCli.RunHistory(history.Args),
+                FirmwareCommand firmware => FirmwareCli.Run(firmware.Args),
                 SetupCommand setup => SetupCli.Run(setup.Args),
                 UpdateCommand update => UpdateCli.Run(update.Args),
                 _ => throw new InvalidOperationException("Unknown command."),
@@ -292,6 +293,11 @@ internal static partial class Program
         if (args[0] == "profile")
         {
             return new ProfileCommand(args[1..]);
+        }
+
+        if (args[0] == "firmware")
+        {
+            return new FirmwareCommand(args[1..]);
         }
 
         if (args[0] == "history")
@@ -526,6 +532,8 @@ internal static partial class Program
     private sealed record ProfileCommand(string[] Args) : Command("profile");
 
     private sealed record HistoryCommand(string[] Args) : Command("history");
+
+    private sealed record FirmwareCommand(string[] Args) : Command("firmware");
 
     private sealed record SetupCommand(string[] Args) : Command("setup");
 

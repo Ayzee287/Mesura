@@ -6,8 +6,8 @@
   //   mesura profile run --in example.profile.json --apply    (run it and record it in the history)
   "kind": "Mesura.SetupProfile",
   "schemaVersion": 1,
-  "name": "Example: everyday apps and the Ghost Spectre follow-up",
-  "description": "Browser, chat, music and Steam, and the Ghost Spectre Superlite follow-up settings.",
+  "name": "Example: everyday apps and Mesura Reference",
+  "description": "Browser, chat, music and Steam, and the Mesura Reference settings.",
 
   // App ids and bundle ids from 'apps list' and 'apps bundles'.
   "bundles": [ "everyday" ],
@@ -22,6 +22,6 @@
 
   // Windows configuration: presets from 'windows presets' and operations from 'windows list'. Operations marked
   // "needs admin" in the preview run only when Mesura runs as administrator; the rest apply either way.
-  "windowsPresets": [ "ghost-spectre-superlite" ],
+  "windowsPresets": [ "recommended-gaming" ],
   "windows": [ "explorer.show-extensions" ]
 }

@@ -265,7 +265,7 @@ internal static class WindowsCli
             && preview.Any(p => p.State is OperationState.NotApplied or OperationState.Partial))
         {
             // A System Restore point beneath Mesura's own undo, as the window makes: before whole-PC changes, never blocking them.
-            var why = new RestorePoints().Create($"Mesura: before {operations.Count} changes");
+            var why = new RestorePoints().TryCreate($"Mesura: before {operations.Count} changes").Sentence;
             Console.Error.WriteLine(why is null ? "Made a System Restore point first." : $"No restore point was made: {why}");
         }
 
@@ -318,7 +318,7 @@ internal static class WindowsCli
             return Bad("windows restore-point --apply needs an elevated terminal (Run as administrator).");
         }
 
-        var why = new RestorePoints().Create("Mesura: manual");
+        var why = new RestorePoints().TryCreate("Mesura: manual").Sentence;
         Console.WriteLine(why ?? "Made a System Restore point.");
         return why is null ? Ok : Failed;
     }

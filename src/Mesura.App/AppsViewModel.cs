@@ -157,6 +157,9 @@ public sealed class AppItem : Observable
     public string InstallFolder => Package.InstallLocation ? _folderOf?.Invoke(Package.Id) ?? "" : "";
 
     /// <summary>Whether the card offers a folder at all: only for installers that take one.</summary>
+    /// <summary>Whether this app's installer takes a folder at all; the button is not drawn for the ones that don't (it would only say "not here").</summary>
+    public bool SupportsFolder => Package.InstallLocation;
+
     public bool CanChooseFolder => Package.InstallLocation && !_checking && _state != InstallState.Installed;
 
     /// <summary>What the folder button says: the chosen folder, the default, or why there is no choice (the honest limit).</summary>

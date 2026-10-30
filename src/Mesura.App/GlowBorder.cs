@@ -161,7 +161,8 @@ public class GlowBorder : Border
         base.OnRender(dc);
         var hover = GlowOpacity;
         var intensity = Math.Max(hover, _near);
-        var opacity = intensity * GlowStrength;
+        // Full is the full effect; Reduced draws the same light at about half strength (Off is handled by the caller: nothing is lit).
+        var opacity = intensity * GlowStrength * (LightField.Mode == LightingMode.Reduced ? 0.5 : 1.0);
         if (opacity < 0.01 || ActualWidth < 4 || ActualHeight < 4)
         {
             return;
@@ -173,8 +174,8 @@ public class GlowBorder : Border
         var lit = LightField.Mode != LightingMode.Off && (_over || _near > 0.004);
         var center = !lit ? new Point(ActualWidth / 2, 0) : _over ? _pointer : _light;
 
-        _wash ??= Ramp(c, 0x34, GlowRadius);
-        _edge ??= Ramp(c, 0xB4, GlowRadius * 0.8);
+        _wash ??= Ramp(c, 0x46, GlowRadius);
+        _edge ??= Ramp(c, 0xD2, GlowRadius * 0.8);
         _wash.Center = _wash.GradientOrigin = center;
         _edge.Center = _edge.GradientOrigin = center;
 

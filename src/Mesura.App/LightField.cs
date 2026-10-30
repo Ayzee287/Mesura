@@ -67,6 +67,7 @@ public static class LightField
     /// </summary>
     public static LightingMode Resolve(string? setting) => setting switch
     {
+        _ when HighContrastTheme.IsOn => LightingMode.Off, // a high-contrast theme is a plain field, whatever was chosen
         "full" => LightingMode.Full,
         "reduced" => LightingMode.Reduced,
         "off" => LightingMode.Off,

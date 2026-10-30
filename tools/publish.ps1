@@ -16,7 +16,10 @@
 # Settings, in the zip's name and at the top of Start here.txt); -Label '' builds the plain version for a release.
 param(
   [string]$Label = 'review',
-  [string]$Out = ''
+  [string]$Out = '',
+  [switch]$Sign,            # Authenticode-sign Mesura.exe and cli\mesura.exe (tools\sign-release.ps1) before they are zipped
+  [string]$Thumbprint = '', # the certificate in the Windows store, or
+  [string]$PfxPath = ''     # a PFX file (its password in MESURA_SIGN_PFX_PASSWORD)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -99,6 +102,10 @@ dotnet publish (Join-Path $repo 'src\Mesura.Cli\Mesura.Cli.csproj') -c Release -
 if ($LASTEXITCODE -ne 0) { throw 'Publishing the command line failed.' }
 # The Track A kit's operator files ship with the kit (CLAUDE.md), not with the everyday app.
 Remove-Item (Join-Path $app 'cli\capture.cmd'), (Join-Path $app 'cli\OPERATOR.txt') -ErrorAction SilentlyContinue
+if ($Sign) {
+  & (Join-Path $PSScriptRoot 'sign-release.ps1') -Path (Join-Path $app 'Mesura.exe'), (Join-Path $app 'cli\mesura.exe') -Thumbprint $Thumbprint -PfxPath $PfxPath
+  if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw 'Signing the executables failed.' }
+}
 
 $startHere = Get-Content -Raw -Encoding UTF8 (Join-Path $PSScriptRoot 'Start here.txt')
 if ($Label) {

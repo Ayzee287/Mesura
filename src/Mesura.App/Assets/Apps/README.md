@@ -13,6 +13,7 @@ Collected on 2026-10-23, then resized with high-quality bicubic scaling, alpha k
 | obs | OBS Studio's repository: `frontend/forms/images/obs.png` |
 | vencord | Vencord's repository: `browser/icon.png` |
 | telegram | Telegram Desktop's repository: `Telegram/Resources/art/icon256.png` (collected on 2026-10-30) |
+| regorganizer | ChemTable's site: `apple-touch-icon.png` (the company's mark, resized; collected on 2026-10-30) |
 | ayugram | AyuGram Desktop's repository: `Telegram/Resources/art/icon256.png` (collected on 2026-10-30) |
 
 An app without an icon here shows its initial instead. A new app's icon comes from the same kind of source: its own

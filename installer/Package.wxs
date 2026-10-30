@@ -52,6 +52,9 @@
 
     <!-- The wizard: welcome, licence, features and folder, ready, progress, finish (with a box to start Mesura). -->
     <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
+    <!-- The wizard's pictures (tools\make-installer-art.ps1): the mark and the logo's light, so the installer looks like the program. -->
+    <WixVariable Id="WixUIBannerBmp" Value="$(ArtDir)\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(ArtDir)\dialog.bmp" />
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchMesura)" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
@@ -68,6 +71,10 @@
     </InstallExecuteSequence>
     <?endif?>
     <UI>
+      <!-- 0.4.1: the licence page is skipped (the MIT licence is in the install folder and one click away in the notices); the wizard goes from the
+           welcome page straight to the folder and the choices. -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="4" Condition="NOT Installed" />
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="4" Condition="NOT Installed" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchMesura" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
     </UI>
   </Package>

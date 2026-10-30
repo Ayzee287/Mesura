@@ -14,7 +14,7 @@
     <!-- Per-user installs keep their files in the user's profile and their registry keys in HKCU; ICE 38/43/57/64/91 expect
          per-machine rules and are about exactly that difference. -->
     <SuppressIces>ICE38;ICE43;ICE57;ICE61;ICE64;ICE91</SuppressIces>
-    <DefineConstants>$(DefineConstants);PayloadDir=$(PayloadDir);LicenseRtf=$(LicenseRtf);IconFile=$(IconFile);MsiProductVersion=$(MsiProductVersion);AppVersion=$(AppVersion);FailInstall=$(FailInstall)</DefineConstants>
+    <DefineConstants>$(DefineConstants);PayloadDir=$(PayloadDir);LicenseRtf=$(LicenseRtf);IconFile=$(IconFile);MsiProductVersion=$(MsiProductVersion);AppVersion=$(AppVersion);FailInstall=$(FailInstall);ArtDir=$(MSBuildProjectDirectory)\art</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

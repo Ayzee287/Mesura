@@ -34,8 +34,8 @@ public sealed class CatalogClassificationTests
     public void Optimize_offers_exactly_recommended_and_maximum_performance()
     {
         Assert.Equal(["recommended-gaming", "maximum-performance"], Catalog.Presets.Where(p => p.Tier == PresetTier.Primary).Select(p => p.Id));
-        Assert.Equal(PresetTier.Specialized, Catalog.PresetById("ghost-spectre-superlite")!.Tier);
-        Assert.All(new[] { "gaming", "less-data-sharing", "network-defaults", "desktop-performance" }, id => Assert.Equal(PresetTier.Collection, Catalog.PresetById(id)!.Tier));
+        Assert.Null(Catalog.PresetById("ghost-spectre-superlite"));
+        Assert.All(new[] { "gaming", "less-data-sharing", "network-defaults", "desktop-performance", "reference-performance", "reference-privacy", "reference-convenience" }, id => Assert.Equal(PresetTier.Collection, Catalog.PresetById(id)!.Tier));
     }
 
     [Fact]

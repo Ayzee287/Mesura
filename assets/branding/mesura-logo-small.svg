@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">
-  <rect x="0" y="0" width="256" height="256" rx="56" fill="#0E1013"/>
-  <path d="M 54 160 L 54 52 L 92 52 L 128 100 L 164 52 L 202 52 L 202 160 L 166 160 L 166 106 L 138 146 L 118 146 L 90 106 L 90 160 Z" fill="#EDF0F7"/>
-  <rect x="54" y="182" width="148" height="20" rx="0" fill="#62D6B8"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5CFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient></defs>
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="url(#g)"/>
+  <path d="M 48 166 L 48 48 L 92 48 L 128 100 L 164 48 L 208 48 L 208 166 L 168 166 L 168 108 L 140 150 L 116 150 L 88 108 L 88 166 Z" fill="#FFFFFF"/>
+  <rect x="48" y="186" width="160" height="24" rx="0" fill="#FFFFFF" fill-opacity="0,95"/>
 </svg>

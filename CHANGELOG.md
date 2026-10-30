@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.1-rc1 (release candidate, not published)
+
+Fixes from the first real use of 0.4.0-rc1, and the next round of the redesign.
+
+- **Starts on a Russian Windows 10 again.** 0.4.0-rc1 stopped at start on a PC whose Windows language is Russian: the language files were read before their reading options existed, so the comments in them
+  were rejected. The options are created on demand, a language file that cannot be read now falls back to English (and says so in the start-up log), and the error dialogs no longer depend on the
+  language component that failed.
+- **System Restore.** A restore point that cannot be made ("Provider load failure" on stripped Windows images) is tried a second way (the System Restore API) and, if that fails too, reported in your language
+  as a warning of its own, apart from the result of the run, with Windows' own message under Technical details. Nothing says a point was made when it was not.
+- **Mesura Reference** replaces the old "Recommended" level and the image-specific follow-up list: the same 18 documented settings in three parts you can also apply one by one (performance basics, privacy basics,
+  fewer promotions). Performance and privacy are no longer mixed in one list; Maximum performance is Mesura Reference plus the performance extras.
+- **Logo and navigation.** A new, brighter mark that is also the way home; a Back button (and Alt+Left, and the mouse's Back button) that first closes an open details drawer and then returns to the page before;
+  cards with a chevron open by a click on the card; Quick select is drawn as a control.
+- **Light.** Off is a plain dark field with no glow; Reduced is a thin static light; Full is the whole effect, with a second light that trails the pointer. A Windows high-contrast theme switches the light off and uses
+  the system colours.
+- **Apps.** Vencord is an app of its own; Medal, Reg Organizer and Visual Studio Code were added; the cards lost their descriptions (they are tooltips) and the folder button is drawn only where the installer takes a folder.
+- **Installer.** The wizard has Mesura's pictures and no licence page.
+- **For the owner's desktop.** `mesura firmware [--json]` prints what the BIOS & Firmware page reads and concludes, so the page can be checked on a PC where the window cannot be opened from here.
+- **Tools.** `tools\sign-release.ps1` and the `-Sign` switches of `publish.ps1` and `build-installer.ps1` Authenticode-sign the executables and installers with a certificate you own; the update signature is unchanged.
 ## 0.4.0-rc1 (release candidate, not published)
 
 A new look, a shorter and more honest list of settings, a BIOS & Firmware page, and a start-up choice about administrator rights.

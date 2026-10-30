@@ -18,6 +18,7 @@ public sealed class Banner : Observable
     private string _title = "";
     private string _detail = "";
     private string _technical = "";
+    private string _warning = "";
     private string _tone = Mesura.App.Tone.Neutral;
     private Action? _undo;
     private Action? _details;
@@ -47,6 +48,13 @@ public sealed class Banner : Observable
         private set => Set(ref _tone, value);
     }
 
+    /// <summary>A warning about something around the run (no restore point could be made), kept apart from the result so it never reads as part of it.</summary>
+    public string Warning
+    {
+        get => _warning;
+        private set => Set(ref _warning, value);
+    }
+
     /// <summary>The raw messages behind the result, for the "Technical details" disclosure; empty when there are none.</summary>
     public string Technical
     {
@@ -66,8 +74,9 @@ public sealed class Banner : Observable
 
     public RelayCommand Close { get; }
 
-    public void Show(string tone, string title, string detail = "", Action? undo = null, Action? details = null, string? technical = null)
+    public void Show(string tone, string title, string detail = "", Action? undo = null, Action? details = null, string? technical = null, string? warning = null)
     {
+        Warning = warning ?? "";
         Tone = tone;
         Detail = detail;
         Technical = technical ?? "";
@@ -100,6 +109,15 @@ public sealed class Banner : Observable
 /// A page that reacts to being shown (it may read its state again) and to being left (its settled results go; see
 /// <see cref="Banner.Settle"/>).
 /// </summary>
+/// <summary>
+/// A page with something open inside it (a details drawer): Back closes that first, and only when nothing is open leaves the page (<c>MainWindow</c>).
+/// </summary>
+public interface IPageBack
+{
+    /// <summary>Closes what is open on the page; <c>false</c> when nothing was open.</summary>
+    bool CloseOpenDetail();
+}
+
 public interface IPageState
 {
     void Enter()
@@ -129,12 +147,14 @@ public static class RunActions
         using var change = services.BeginChange();
         var started = DateTimeOffset.UtcNow;
         services.RestoreNote = "";
+        services.RestoreTechnical = "";
         var wantsPoint = services.Settings.RestorePointBeforeChanges && services.Reader.IsElevated && ops.Any(o => o.Applicable && o.MachineWide && o.NeedsElevation);
         var outcomes = await Task.Run(() =>
         {
-            if (wantsPoint && services.RestorePoints.Create(Loc.Format("Restore.Description", ops.Count)) is { } why)
+            if (wantsPoint && services.RestorePoints.TryCreate(Loc.Format("Restore.Description", ops.Count)) is { Made: false } point)
             {
-                services.RestoreNote = Loc.Format("Restore.NotMade", why);
+                services.RestoreNote = Loc.Format("Restore.NotMade", Loc.Get($"Restore.Failure.{point.Failure}"));
+                services.RestoreTechnical = point.Technical;
             }
 
             services.Reader.Refresh(); // before-images from the system as it is now
@@ -419,6 +439,13 @@ public static class RunActions
         lines.AddRange(run.WindowsSteps.Where(w => !w.Ok || w.Status == WindowsOpStatus.RevertSkipped).Select(w => $"{w.OperationId}: {w.Status} — {w.Detail}"));
         lines.AddRange(run.SetupSteps.Where(s => s.State == StepState.Failed && s.Detail.Length > 0).Select(s => $"{s.Kind}: {s.Detail}"));
         return string.Join("\n", lines);
+    }
+
+    /// <summary>The technical lines of a run plus, when no restore point was made, Windows' own message about it.</summary>
+    public static string Technical(Services services, SetupRun run)
+    {
+        var lines = TechnicalLines(run);
+        return services.RestoreTechnical.Length == 0 ? lines : (lines.Length == 0 ? "" : lines + "\n") + "restore point: " + services.RestoreTechnical;
     }
 
     /// <summary>

@@ -116,8 +116,25 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Shows one page, checks its entry in the dock and hands the dock the page's actions.</summary>
-    private void ShowPage(UserControl page)
+    private void ShowPage(UserControl page) => ShowPage(page, record: true);
+
+    // The pages visited, newest last, so Back returns to the one before without losing that page's state (every page is kept alive).
+    private readonly List<UserControl> _history = [];
+    private UserControl? _current;
+
+    private void ShowPage(UserControl page, bool record)
     {
+        if (record && _current is not null && _current != page)
+        {
+            _history.Add(_current);
+            if (_history.Count > 24)
+            {
+                _history.RemoveAt(0);
+            }
+        }
+
+        _current = page;
+        BackButton.Visibility = _history.Count > 0 || page.DataContext is IPageBack ? Visibility.Visible : Visibility.Collapsed;
         var changed = page.Visibility != Visibility.Visible;
         foreach (var child in new UserControl[] { OptimizePage, AllSettingsPage, DebloatPage, FirmwarePage, AppsPage, ConfigurationsPage, ProfilesPage, ActivationPage, SystemInfoPage, ActivityPage, SettingsPage })
         {
@@ -299,9 +316,51 @@ public partial class MainWindow : Window
         Application.Current.Shutdown(); // the elevated instance takes over
     }
 
+    /// <summary>Back: close what is open on this page first, then return to the page before.</summary>
+    private void OnBackClick(object sender, RoutedEventArgs e) => GoBack();
+
+    private void GoBack()
+    {
+        if (_current?.DataContext is IPageBack open && open.CloseOpenDetail())
+        {
+            return;
+        }
+
+        while (_history.Count > 0)
+        {
+            var previous = _history[^1];
+            _history.RemoveAt(_history.Count - 1);
+            if (previous != _current)
+            {
+                ShowPage(previous, record: false);
+                return;
+            }
+        }
+    }
+
+    /// <summary>The mouse's Back button goes back too.</summary>
+    private void OnWindowMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.XButton1)
+        {
+            GoBack();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>The logo: back to the Optimization page from anywhere.</summary>
+    private void OnHomeClick(object sender, RoutedEventArgs e) => NavOptimize.IsChecked = true;
+
     /// <summary>Ctrl+F opens All settings with its search box focused.</summary>
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Left && Keyboard.Modifiers == ModifierKeys.Alt)
+        {
+            GoBack();
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
         {
             ShowPage(AllSettingsPage);

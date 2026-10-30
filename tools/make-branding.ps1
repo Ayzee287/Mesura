@@ -2,8 +2,9 @@
 #
 #   powershell -ExecutionPolicy Bypass -File tools\make-branding.ps1 [-Preview <png>]
 #
-# The mark is an M measured with a dimension line: the M is the product, the mint line under it with its two end caps is
-# the measurement. The tile is near-black, so the mark reads the same on a light or a dark surface. Sizes up to 32 px use an
+# The mark (0.4.1) is an M measured with a dimension line: the M is the product, the line under it with its two end caps is
+# the measurement. The tile is a vivid violet-azure-mint gradient with a soft top light so the mark stands out on the dark window
+# and on a light surface alike; the M and the line are white. Sizes up to 32 px use an
 # optically heavier variant (thicker strokes, no end caps) because the master's fine parts would blur; everything is drawn
 # from the numbers here, nothing is traced or taken from another source. Output (committed): assets\branding\*.svg and
 # *.png, src\Mesura.App\Assets\mesura.ico and mesura-mark.png, docs\images\mesura-logo.{svg,png}.
@@ -13,27 +14,32 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-$Tile = '#0E1013'; $Ink = '#EDF0F7'; $Accent = '#62D6B8'; $Edge = '#FFFFFF'
+$Tile = 'grad:#7A5CFF,#2AB6FF,#34F0B0'; $Ink = '#FFFFFF'; $Accent = '#FFFFFF'; $Edge = '#FFFFFF'
 # A shape is: @(kind, data, fill, opacity). kind 'path' or 'rect' (x y w h rx).
+$Light = 'M 0 56 A 56 56 0 0 1 56 0 L 200 0 A 56 56 0 0 1 256 56 L 256 118 C 176 156 80 156 0 118 Z'
 $master = @(
   @('rect', '0 0 256 256 56', $Tile, 1),
-  @('path', 'M 62 164 L 62 56 L 90 56 L 128 108 L 166 56 L 194 56 L 194 164 L 166 164 L 166 100 L 134 144 L 122 144 L 90 100 L 90 164 Z', $Ink, 1),
-  @('rect', '62 190 132 8 0', $Accent, 1),
-  @('rect', '62 182 8 24 0', $Accent, 1),
-  @('rect', '186 182 8 24 0', $Accent, 1)
+  @('path', $Light, '#FFFFFF', 0.16),
+  @('path', 'M 58 168 L 58 54 L 90 54 L 128 108 L 166 54 L 198 54 L 198 168 L 166 168 L 166 104 L 134 150 L 122 150 L 90 104 L 90 168 Z', $Ink, 1),
+  @('rect', '58 194 140 10 0', $Accent, 0.92),
+  @('rect', '58 184 10 30 0', $Accent, 0.92),
+  @('rect', '188 184 10 30 0', $Accent, 0.92)
 )
 $small = @(
   @('rect', '0 0 256 256 56', $Tile, 1),
-  @('path', 'M 54 160 L 54 52 L 92 52 L 128 100 L 164 52 L 202 52 L 202 160 L 166 160 L 166 106 L 138 146 L 118 146 L 90 106 L 90 160 Z', $Ink, 1),
-  @('rect', '54 182 148 20 0', $Accent, 1)
+  @('path', 'M 48 166 L 48 48 L 92 48 L 128 100 L 164 48 L 208 48 L 208 166 L 168 166 L 168 108 L 140 150 L 116 150 L 88 108 L 88 166 Z', $Ink, 1),
+  @('rect', '48 186 160 24 0', $Accent, 0.95)
 )
 
 function ToSvg($shapes, [bool]$edge) {
   $out = New-Object System.Text.StringBuilder
   [void]$out.AppendLine('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">')
+  [void]$out.AppendLine('  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5CFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient></defs>')
   foreach ($s in $shapes) {
-    if ($s[0] -eq 'rect') { $v = $s[1] -split ' '; [void]$out.AppendLine(('  <rect x="{0}" y="{1}" width="{2}" height="{3}" rx="{4}" fill="{5}"/>' -f $v[0], $v[1], $v[2], $v[3], $v[4], $s[2])) }
-    else { [void]$out.AppendLine(('  <path d="{0}" fill="{1}"/>' -f $s[1], $s[2])) }
+    $fill = if ($s[2] -like 'grad:*') { 'url(#g)' } else { $s[2] }
+    $op = if ($s[3] -lt 1) { (' fill-opacity="{0}"' -f $s[3]) } else { '' }
+    if ($s[0] -eq 'rect') { $v = $s[1] -split ' '; [void]$out.AppendLine(('  <rect x="{0}" y="{1}" width="{2}" height="{3}" rx="{4}" fill="{5}"{6}/>' -f $v[0], $v[1], $v[2], $v[3], $v[4], $fill, $op)) }
+    else { [void]$out.AppendLine(('  <path d="{0}" fill="{1}"{2}/>' -f $s[1], $fill, $op)) }
     if ($edge -and $s -eq $shapes[0]) { [void]$out.AppendLine(('  <rect x="1" y="1" width="254" height="254" rx="55" fill="none" stroke="{0}" stroke-opacity="0.14" stroke-width="2"/>' -f $Edge)) }
   }
   [void]$out.AppendLine('</svg>')
@@ -41,6 +47,14 @@ function ToSvg($shapes, [bool]$edge) {
 }
 
 function Brush([string]$hex, [double]$opacity) {
+  if ($hex -like 'grad:*') {
+    $stops = ($hex.Substring(5)) -split ','
+    $g = New-Object System.Windows.Media.LinearGradientBrush
+    $g.StartPoint = New-Object System.Windows.Point(0, 0); $g.EndPoint = New-Object System.Windows.Point(1, 1)
+    $offsets = 0.0, 0.55, 1.0
+    for ($i = 0; $i -lt $stops.Count; $i++) { [void]$g.GradientStops.Add((New-Object System.Windows.Media.GradientStop(([System.Windows.Media.ColorConverter]::ConvertFromString($stops[$i])), $offsets[$i]))) }
+    $g.Opacity = $opacity; $g.Freeze(); return $g
+  }
   $c = [System.Windows.Media.ColorConverter]::ConvertFromString($hex)
   $b = New-Object System.Windows.Media.SolidColorBrush($c); $b.Opacity = $opacity; $b.Freeze(); $b
 }
