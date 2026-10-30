@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -237,6 +237,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
             Rebuild();
             Raise(nameof(Facts));
+            Raise(nameof(ShowRuntimes));
         };
         _ = LoadAsync();
     }
@@ -371,6 +372,9 @@ public sealed class OptimizeViewModel : Observable, IPageState
         }
     }
 
+    /// <summary>The Visual C++ step is shown only while a runtime is missing (or could not be read): a complete set needs no card.</summary>
+    public bool ShowRuntimes => _installedRuntimes is null || _runtimesUnreadable || _installedRuntimes.Count < VcRuntimes.All.Count;
+
     public IReadOnlyList<SystemFact> Facts
     {
         get
@@ -380,42 +384,16 @@ public sealed class OptimizeViewModel : Observable, IPageState
                 return [];
             }
 
-            var facts = new List<SystemFact>();
-            var edition = s.Edition switch
+            // Home says what matters for the choice below: which Windows this is, and an image that leaves less to do. The edition, build,
+            // device type, graphics card and runtimes are on System; who is running Mesura is in the dock.
+            var facts = new List<SystemFact>
             {
-                "Professional" => "Pro",
-                "Core" => "Home",
-                "CoreSingleLanguage" => "Home",
-                "ProfessionalWorkstation" => "Pro for Workstations",
-                "" => "",
-                var other => other,
+                SystemFact.With("IconWindows", $"{s.WindowsName} {s.Version}".Replace("  ", " ", StringComparison.Ordinal).Trim(), Tone.Neutral),
             };
-            facts.Add(SystemFact.With("IconWindows", $"{s.WindowsName} {edition} {s.Version}".Replace("  ", " ", StringComparison.Ordinal).Trim(), Tone.Neutral));
-            if (s.HasBattery is { } battery)
-            {
-                facts.Add(SystemFact.With(battery ? "IconLaptop" : "IconDesktop",
-                    (battery ? Loc.Get("Optimize.Laptop") : Loc.Get("Optimize.Desktop")) + (s.ModernStandby == true ? " · Modern Standby" : ""), Tone.Neutral));
-            }
-
-            var gpu = s.NvidiaGpus.FirstOrDefault() ?? s.Gpus.FirstOrDefault();
-            if (gpu is { Length: > 0 })
-            {
-                facts.Add(SystemFact.With("IconGpu", s.Nvidia?.Release is { } release ? $"{gpu} · {release}" : gpu, Tone.Neutral));
-            }
-
-            if (_installedRuntimes is { } runtimes && !_runtimesUnreadable)
-            {
-                facts.Add(SystemFact.With("IconRuntime", Loc.Format("Setup.FactRuntimes", runtimes.Count, VcRuntimes.All.Count), Tone.Neutral));
-            }
 
             if (s.GhostSpectre)
             {
                 facts.Add(SystemFact.With("IconImage", Loc.Get("Optimize.GhostSpectreImage"), Tone.Neutral));
-            }
-
-            if (!_services.Reader.IsElevated)
-            {
-                facts.Add(SystemFact.With("IconShield", Loc.Get(Loc.AdminKey("Optimize.NotElevated")), Tone.Warn));
             }
 
             return facts;
@@ -657,6 +635,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
         BuildComponents();
         Raise(nameof(Facts));
+            Raise(nameof(ShowRuntimes));
         Rebuild();
         await Task.WhenAll(ReadRuntimesAsync(), ReadNvidiaToolsAsync(), LookUpDriverAsync());
         if (WaitingForDriver)
@@ -697,6 +676,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
             : $"Runtimes: {_installedRuntimes.Count} of {VcRuntimes.All.Count} Visual C++ runtimes installed.");
         Raise(nameof(Checking));
         Raise(nameof(Facts));
+            Raise(nameof(ShowRuntimes));
         UpdateRuntimes();
     }
 
@@ -1404,6 +1384,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
             {
                 _summary = summary with { NvidiaAdapters = adapters };
                 Raise(nameof(Facts));
+            Raise(nameof(ShowRuntimes));
                 UpdateNvidia();
             }
         }

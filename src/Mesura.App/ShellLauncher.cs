@@ -84,6 +84,44 @@ public static class ShellLauncher
         return Launch(info);
     }
 
+    /// <summary>
+    /// Restarts Windows into the firmware (BIOS/UEFI) setup with Windows' own <c>shutdown /r /fw</c>, after ten seconds' notice that <c>shutdown /a</c> cancels.
+    /// Only on a click and after a confirmation that says so; it needs UEFI and administrator rights (Windows refuses otherwise, and the refusal is returned).
+    /// </summary>
+    /// <returns>An error to show, or <c>null</c> when the restart is scheduled.</returns>
+    public static string? RestartToFirmware() => RunShutdown(["/r", "/fw", "/t", "10", "/c", "Mesura: restarting into the firmware settings. Run shutdown /a to cancel."]);
+
+    /// <summary>Cancels a restart scheduled with <see cref="RestartToFirmware"/>.</summary>
+    public static string? CancelRestart() => RunShutdown(["/a"]);
+
+    private static string? RunShutdown(string[] arguments)
+    {
+        var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "shutdown.exe")) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true };
+        foreach (var argument in arguments)
+        {
+            info.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+#pragma warning disable RS0030 // The app's one launch owner: Windows' own shutdown tool, on a confirmed click (class remarks).
+            using var process = Process.Start(info);
+#pragma warning restore RS0030
+            if (process is null)
+            {
+                return Loc.Get("Shell.NoExecutable");
+            }
+
+            var error = process.StandardError.ReadToEnd().Trim();
+            process.WaitForExit(5000);
+            return process.HasExited && process.ExitCode != 0 ? (error.Length > 0 ? error : "shutdown.exe " + string.Join(' ', arguments) + " returned " + process.ExitCode) : null;
+        }
+        catch (Win32Exception e)
+        {
+            return Loc.Format("Shell.Failed", e.Message);
+        }
+    }
+
     private static string? Launch(ProcessStartInfo info)
     {
         try

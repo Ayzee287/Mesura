@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,11 +28,16 @@ public sealed record InfoGroup(string Heading, string Badge, IReadOnlyList<InfoR
     public bool HasBars => Bars.Count > 0;
 }
 
-/// <summary>A card of the System page: a glyph, a title and its groups.</summary>
-public sealed record InfoCard(string Key, string Glyph, string Title, IReadOnlyList<InfoGroup> Groups);
+/// <summary>
+/// A card of the System page: a glyph, a title and its groups. A card about one thing (the processor, the memory, the storage) leads with
+/// its headline (the name or the total, as large as the card allows, wrapping instead of cutting a long hardware name) and one line under it.
+/// </summary>
+public sealed record InfoCard(string Key, string Glyph, string Title, IReadOnlyList<InfoGroup> Groups, string Headline = "", string Sub = "")
+{
+    public bool HasHeadline => Headline.Length > 0;
 
-/// <summary>One of the four large facts at the top of the page (processor, memory, graphics, storage).</summary>
-public sealed record Highlight(string Glyph, string Label, string Value, string Caption);
+    public bool HasSub => Sub.Length > 0;
+}
 
 /// <summary>
 /// The System page (0.3): an overview of this PC and its Windows configuration as cards (computer, Windows, processor, memory,
@@ -68,10 +73,40 @@ public sealed class SystemInfoViewModel : Observable, IPageState
 
     public IReadOnlyList<InfoCard> Cards { get; private set; } = [];
 
-    /// <summary>The cards split over the page's two columns.</summary>
-    public IReadOnlyList<InfoCard> LeftCards { get; private set; } = [];
+    /// <summary>The cards split over the page's columns (one, two or three by the width the page has; see <see cref="SetColumns"/>).</summary>
+    public IReadOnlyList<IReadOnlyList<InfoCard>> Columns { get; private set; } = [];
 
-    public IReadOnlyList<InfoCard> RightCards { get; private set; } = [];
+    public int ColumnCount { get; private set; } = 3;
+
+    /// <summary>Re-deals the cards when the page gains or loses room for a column: each card goes under the shorter column, so no column ends in a gap.</summary>
+    public void SetColumns(int count)
+    {
+        count = Math.Clamp(count, 1, 3);
+        if (count == ColumnCount)
+        {
+            return;
+        }
+
+        ColumnCount = count;
+        Raise(nameof(ColumnCount));
+        Deal();
+    }
+
+    private void Deal()
+    {
+        var columns = Enumerable.Range(0, ColumnCount).Select(_ => new List<InfoCard>()).ToList();
+        var heights = new double[ColumnCount];
+        foreach (var card in Cards)
+        {
+            var height = 3 + card.Groups.Sum(g => (g.HasHeading ? 1.4 : 0) + g.Rows.Count + g.Bars.Count * 1.5) + (card.HasHeadline ? 1.5 : 0);
+            var shortest = Array.IndexOf(heights, heights.Min());
+            columns[shortest].Add(card);
+            heights[shortest] += height;
+        }
+
+        Columns = columns.Where(c => c.Count > 0).Select(c => (IReadOnlyList<InfoCard>)c).ToList();
+        Raise(nameof(Columns));
+    }
 
     public bool Loading
     {
@@ -234,7 +269,6 @@ public sealed class SystemInfoViewModel : Observable, IPageState
         cards.Add(new InfoCard("computer", Glyph("IconSystem"), Loc.Get("System.Computer"),
         [
             new InfoGroup("", "", [
-                Row("System.Model", Join(" ", machine.Manufacturer, machine.Model)),
                 Row("System.Type", Tr(machine.Kind)),
                 Row("System.Board", Join(" ", machine.BoardManufacturer, machine.Board)),
                 Row("System.Bios", Join(" ", r.Firmware.Vendor, r.Firmware.Version)),
@@ -247,7 +281,6 @@ public sealed class SystemInfoViewModel : Observable, IPageState
         cards.Add(new InfoCard("windows", Glyph("IconWindows"), Loc.Get("System.Windows"),
         [
             new InfoGroup("", "", [
-                Row("System.Version", Join(" ", os.Name, os.Version)),
                 Row("System.Edition", os.Edition),
                 Row("System.Build", os.Build is { } b ? b.ToString(CultureInfo.InvariantCulture) + (os.Revision is { } rev ? "." + rev.ToString(CultureInfo.InvariantCulture) : "") : null),
                 Row("System.Architecture", os.Architecture),
@@ -266,10 +299,21 @@ public sealed class SystemInfoViewModel : Observable, IPageState
             cpuGroups.Add(new InfoGroup("", "", [Row("System.Processor", null)], []));
         }
 
-        cards.Add(new InfoCard("processor", Glyph("IconBoard"), Loc.Get("System.ProcessorCard"), cpuGroups));
+        if (r.Processors.Count == 1 && Plain(r.Processors[0].Name) is { } cpuName)
+        {
+            // One processor: its name leads the card instead of repeating as the first row.
+            cards.Add(new InfoCard("processor", Glyph("IconBoard"), Loc.Get("System.ProcessorCard"), [new InfoGroup("", "", cpuGroups[0].Rows.Skip(1).ToList(), [])], cpuName));
+        }
+        else
+        {
+            cards.Add(new InfoCard("processor", Glyph("IconBoard"), Loc.Get("System.ProcessorCard"), cpuGroups));
+        }
 
         var memory = r.Memory;
-        var memoryRows = new List<InfoRow> { Row("System.Capacity", memory.TotalBytes is null ? null : Bytes(memory.TotalBytes)) };
+        var memoryRows = new List<InfoRow>();
+        var firstModule = memory.Modules.FirstOrDefault();
+        var memorySub = Join(" · ", Join(" ", string.IsNullOrEmpty(firstModule?.Type) ? null : firstModule!.Type, firstModule?.SpeedMts is { } fs ? fs.ToString(CultureInfo.InvariantCulture) + " MT/s" : null),
+            memory.Modules.Count > 0 ? Loc.Plural("System.ModuleCount", memory.Modules.Count) : null) ?? "";
         var memoryBars = new List<InfoBar>();
         if (memory.UsedBytes is { } used && memory.TotalBytes is { } total && total > 0)
         {
@@ -283,22 +327,30 @@ public sealed class SystemInfoViewModel : Observable, IPageState
             memoryGroups.Add(new InfoGroup(
                 Join(" · ", module.Slot, Bytes(module.SizeBytes)) ?? "",
                 "",
-                [Row("System.ModuleKind", Join(" ", string.IsNullOrEmpty(module.Type) ? null : module.Type, module.SpeedMts is { } s ? s.ToString(CultureInfo.InvariantCulture) + " MT/s" : null, string.IsNullOrEmpty(module.FormFactor) ? null : Tr(module.FormFactor))),
+                [Row("System.ModuleKind", Join(" ", module.SpeedMts is { } s ? s.ToString(CultureInfo.InvariantCulture) + " MT/s" : null, string.IsNullOrEmpty(module.FormFactor) ? null : Tr(module.FormFactor))),
                  Row("System.Maker", module.Manufacturer)],
                 []));
         }
 
-        cards.Add(new InfoCard("memory", Glyph("IconMemory"), Loc.Get("System.Memory"), memoryGroups));
+        cards.Add(new InfoCard("memory", Glyph("IconMemory"), Loc.Get("System.Memory"), memoryGroups, memory.TotalBytes is null ? Missing : Bytes(memory.TotalBytes), memorySub));
 
         var gpuGroups = r.Gpus.Select(gpu => new InfoGroup(Plain(gpu.Name) ?? Missing,
             gpu.Integrated switch { true => Loc.Get("System.Integrated"), false => Loc.Get("System.Discrete"), _ => "" },
-            [Row("System.Vendor", gpu.Vendor), Row("System.Driver", gpu.DriverVersion), Row("System.VideoMemory", gpu.MemoryBytes is { } vram ? Bytes(vram) : null)], [])).ToList();
+            [Row("System.Driver", gpu.DriverVersion), Row("System.VideoMemory", gpu.MemoryBytes is { } vram ? Bytes(vram) : null)], [])).ToList();
         if (gpuGroups.Count == 0)
         {
             gpuGroups.Add(new InfoGroup("", "", [Row("System.Graphics", null)], []));
         }
 
-        cards.Add(new InfoCard("graphics", Glyph("IconImage"), Loc.Get("System.GraphicsCard"), gpuGroups));
+        if (r.Gpus.Count == 1 && Plain(r.Gpus[0].Name) is { } gpuName)
+        {
+            cards.Add(new InfoCard("graphics", Glyph("IconImage"), Loc.Get("System.GraphicsCard"), [new InfoGroup("", "", gpuGroups[0].Rows, [])], gpuName,
+                r.Gpus[0].Integrated switch { true => Loc.Get("System.Integrated"), false => Loc.Get("System.Discrete"), _ => "" }));
+        }
+        else
+        {
+            cards.Add(new InfoCard("graphics", Glyph("IconImage"), Loc.Get("System.GraphicsCard"), gpuGroups));
+        }
 
         var storageGroups = new List<InfoGroup>();
         foreach (var disk in r.Disks)
@@ -322,7 +374,9 @@ public sealed class SystemInfoViewModel : Observable, IPageState
             storageGroups.Add(new InfoGroup("", "", [Row("System.Drives", null)], []));
         }
 
-        cards.Add(new InfoCard("storage", Glyph("IconStorage"), Loc.Get("System.Storage"), storageGroups));
+        var totalDisk = r.Disks.Where(d => d.SizeBytes is not null).Sum(d => (long)d.SizeBytes!.Value);
+        cards.Add(new InfoCard("storage", Glyph("IconStorage"), Loc.Get("System.Storage"), storageGroups, totalDisk > 0 ? Bytes((ulong)totalDisk, decimalUnits: true) : "",
+            r.Disks.Count > 0 ? Loc.Format("System.DriveCount", r.Disks.Count) : ""));
 
         var displayGroups = r.Displays.Select(display => new InfoGroup(display.Name ?? Loc.Get("System.Display"), Tr(display.Connection) ?? "",
         [
@@ -347,62 +401,12 @@ public sealed class SystemInfoViewModel : Observable, IPageState
             ], []),
         ]));
 
-        // Two columns, each card in the shorter one so a short card isn't followed by a gap.
-        var (left, right) = (new List<InfoCard>(), new List<InfoCard>());
-        double leftHeight = 0, rightHeight = 0;
-        foreach (var card in cards)
-        {
-            var height = 2 + card.Groups.Sum(g => (g.HasHeading ? 1.4 : 0) + g.Rows.Count + g.Bars.Count * 1.5);
-            if (leftHeight <= rightHeight)
-            {
-                left.Add(card);
-                leftHeight += height;
-            }
-            else
-            {
-                right.Add(card);
-                rightHeight += height;
-            }
-        }
-
         Cards = cards;
-        LeftCards = left;
-        RightCards = right;
-        Highlights = BuildHighlights(r);
-        Raise(nameof(LeftCards));
-        Raise(nameof(RightCards));
+        Deal();
         Raise(nameof(Cards));
-        Raise(nameof(Highlights));
-        Raise(nameof(HasHighlights));
         Raise(nameof(ShowEmpty));
     }
 
-    /// <summary>The four large facts above the cards (always four, so the row never changes shape); an unknown one says so.</summary>
-    private static IReadOnlyList<Highlight> BuildHighlights(SystemReport r)
-    {
-        var cpu = r.Processors.FirstOrDefault();
-        var module = r.Memory.Modules.FirstOrDefault();
-        var memoryKind = Join(" ", module is { Type: { Length: > 0 } t } ? t : null, module?.SpeedMts is { } speed ? speed.ToString(CultureInfo.InvariantCulture) + " MT/s" : null);
-        var gpu = r.Gpus.FirstOrDefault(g => g.Integrated == false) ?? r.Gpus.FirstOrDefault();
-        var totalDisk = r.Disks.Where(d => d.SizeBytes is not null).Sum(d => (long)d.SizeBytes!.Value);
-        var systemVolume = r.Volumes.FirstOrDefault(v => string.Equals(v.Letter, "C", StringComparison.OrdinalIgnoreCase));
-        return
-        [
-            new Highlight(Glyph("IconBoard"), Loc.Get("System.ProcessorCard"), cpu?.Name is { } name ? ShortProcessor(name) : Missing,
-                cpu?.Cores is { } cores ? Loc.Format("System.CoresThreadsValue", cores, cpu.Threads?.ToString(CultureInfo.InvariantCulture) ?? "?") : ""),
-            new Highlight(Glyph("IconMemory"), Loc.Get("System.Memory"), r.Memory.TotalBytes is null ? Missing : Bytes(r.Memory.TotalBytes),
-                Join(" · ", memoryKind, r.Memory.UsedBytes is { } used && r.Memory.TotalBytes is { } total ? Loc.Format("System.PercentInUse", SystemReportText.Percent(used, total)) : null) ?? ""),
-            new Highlight(Glyph("IconImage"), Loc.Get("System.GraphicsCard"), Plain(gpu?.Name) ?? Missing,
-                gpu?.DriverVersion is { } driver ? Loc.Format("System.DriverValue", driver) : ""),
-            new Highlight(Glyph("IconStorage"), Loc.Get("System.Storage"), totalDisk > 0 ? Bytes((ulong)totalDisk, decimalUnits: true) : Missing,
-                Join(" · ", r.Disks.Count > 0 ? Loc.Format("System.DriveCount", r.Disks.Count) : null,
-                    systemVolume?.FreeBytes is { } free ? Loc.Format("System.FreeOn", Bytes(free), systemVolume.Letter + ":") : null) ?? ""),
-        ];
-    }
-
-    public IReadOnlyList<Highlight> Highlights { get; private set; } = [];
-
-    public bool HasHighlights => Highlights.Count == 4;
 
     /// <summary>"11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz" as "Intel Core i7-1165G7": the name without trademark marks, generation prefix and clock.</summary>
     internal static string ShortProcessor(string name)

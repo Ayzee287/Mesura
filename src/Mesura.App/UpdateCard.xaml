@@ -12,7 +12,7 @@
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
-    <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Background="{StaticResource AccentSubtle}" BorderBrush="#40A99DFF" Padding="12,10" Cursor="Hand"
+    <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Background="{StaticResource AccentSubtle}" BorderBrush="#55C6D3F0" Padding="12,10" Cursor="Hand"
                   MouseLeftButtonUp="OnCardClick" ToolTip="{Binding SidebarTitle}">
         <Grid>
             <Grid.ColumnDefinitions>

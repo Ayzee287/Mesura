@@ -1,0 +1,139 @@
+<UserControl x:Class="Mesura.App.Pages.FirmwarePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:Mesura.App">
+    <UserControl.Resources>
+        <!-- The page's actions, shown in the command dock (MainWindow) while the page is open: how many settings are worth a look, recheck, restart into the setup. -->
+        <DataTemplate x:Key="DockActions">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding DockSummary}" Style="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ProgressBar Style="{StaticResource Busy}" Width="80" Margin="0,0,14,0" VerticalAlignment="Center"
+                                 Visibility="{Binding Loading, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Content="{StaticResource IconRefresh}" Style="{StaticResource IconButton}" Command="{Binding Refresh}" Margin="0,0,8,0" ToolTip="{l:T Firmware.Recheck}"
+                            AutomationProperties.Name="{l:T Firmware.Recheck}" />
+                    <Button Content="{l:T Firmware.CancelRestart}" Style="{StaticResource Ghost}" Command="{Binding CancelRestart}" Margin="0,0,8,0"
+                            Visibility="{Binding RestartScheduled, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Content="{l:T Firmware.RestartButton}" Style="{StaticResource Primary}" Command="{Binding Restart}" MinWidth="150" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- One setting: its name and where it stands, what Windows could read, and on demand what it is, why, what it costs and how to change it. -->
+        <DataTemplate x:Key="FirmwareCardTemplate" DataType="{x:Type l:FirmwareCard}">
+            <l:GlowBorder Style="{StaticResource GlowCard}" Padding="20,16,20,16" Margin="0,0,0,12">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="Medium" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        <Border Grid.Column="1" Style="{StaticResource Pill}" Margin="12,0,0,0" Background="{Binding StatusTone, Converter={StaticResource StateBackground}}">
+                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource PillText}" Foreground="{Binding StatusTone, Converter={StaticResource StateBrush}}" />
+                        </Border>
+                        <ToggleButton Grid.Column="2" Style="{StaticResource ChevronToggle}" IsChecked="{Binding Expanded}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                      ToolTip="{l:T Common.Details}" AutomationProperties.Name="{l:T Common.Details}"
+                                      Visibility="{Binding HasSteps, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Seen}" Focusable="False" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource Secondary}" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <WrapPanel Margin="0,10,0,0">
+                        <Border Style="{StaticResource Tag}" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding CertaintyText}" Style="{StaticResource TagText}" />
+                        </Border>
+                        <Border Style="{StaticResource Tag}" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding RiskText}" Style="{StaticResource TagText}" Foreground="{Binding RiskTone, Converter={StaticResource StateBrush}}" />
+                        </Border>
+                    </WrapPanel>
+
+                    <StackPanel Style="{StaticResource Reveal}" Margin="0,14,0,0" Visibility="{Binding Expanded, Converter={StaticResource BoolToVisibility}}">
+                        <Border Style="{StaticResource Divider}" Margin="0,0,0,12" />
+                        <TextBlock Text="{l:T Firmware.What}" Style="{StaticResource GroupLabel}" Margin="0,0,0,2" />
+                        <TextBlock Text="{Binding What}" Style="{StaticResource Body}" />
+                        <TextBlock Text="{l:T Firmware.Why}" Style="{StaticResource GroupLabel}" Margin="0,12,0,2" />
+                        <TextBlock Text="{Binding Why}" Style="{StaticResource Body}" />
+                        <TextBlock Text="{l:T Firmware.Cost}" Style="{StaticResource GroupLabel}" Margin="0,12,0,2" />
+                        <TextBlock Text="{Binding Cost}" Style="{StaticResource Body}" />
+                        <TextBlock Text="{Binding StepsHeading}" Style="{StaticResource GroupLabel}" Margin="0,12,0,4" />
+                        <ItemsControl ItemsSource="{Binding Steps}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Style="{StaticResource Body}" Margin="0,2" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{l:T Firmware.Verify}" Style="{StaticResource GroupLabel}" Margin="0,12,0,2" />
+                        <TextBlock Text="{Binding Verify}" Style="{StaticResource Body}" />
+                        <ItemsControl ItemsSource="{Binding Links}" Focusable="False" Margin="0,10,0,0" Visibility="{Binding HasLinks, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type l:FirmwareLink}">
+                                    <Button Style="{StaticResource Link}" HorizontalAlignment="Left" Margin="0,2" Command="{Binding Open}" CommandParameter="{Binding Url}"
+                                            AutomationProperties.Name="{Binding Title}">
+                                        <TextBlock Text="{Binding Title}" />
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </l:GlowBorder>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="36,0,36,28">
+            <l:PageHero Title="{l:T Firmware.Title}" Subtitle="{Binding Status}" HeroMargin="0,28,0,12" />
+
+            <ProgressBar Style="{StaticResource Busy}" Margin="0,6,0,10" Visibility="{Binding Loading, Converter={StaticResource BoolToVisibility}}" />
+            <ContentControl Content="{Binding Result}" ContentTemplate="{StaticResource BannerTemplate}" Margin="0,0,0,12" Focusable="False" />
+
+            <ItemsControl ItemsSource="{Binding Facts}" Focusable="False" Margin="0,4,0,14">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type l:FirmwareFact}">
+                        <Border Style="{StaticResource Tag}" Padding="10,6" Margin="0,0,8,8" HorizontalAlignment="Left">
+                            <TextBlock FontSize="12.5">
+                                <Run Text="{Binding Label, Mode=OneWay}" Foreground="{StaticResource TextTertiary}" /><Run Text="  " /><Run Text="{Binding Value, Mode=OneWay}" Foreground="{StaticResource Text}" />
+                            </TextBlock>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- What a restart changed: values read now against the last different reading. -->
+            <Border Style="{StaticResource Banner}" Background="{StaticResource SuccessSubtle}" Margin="0,0,0,14" Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{l:T Firmware.SinceLast}" Style="{StaticResource BodyStrong}" />
+                    <ItemsControl ItemsSource="{Binding Changes}" Focusable="False" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource Body}" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Cards}" ItemTemplate="{StaticResource FirmwareCardTemplate}" Focusable="False" />
+
+            <TextBlock Text="{Binding MenuNote}" Style="{StaticResource Tertiary}" Margin="2,6,0,0" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

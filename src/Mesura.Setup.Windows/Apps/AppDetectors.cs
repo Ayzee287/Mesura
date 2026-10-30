@@ -20,6 +20,7 @@ public static class AppDetectors
         var detectors = new Dictionary<string, Func<InstallState>>(StringComparer.OrdinalIgnoreCase)
         {
             ["vencord"] = () => sameUser ? VencordDetector.Detect(localAppData) : InstallState.Unknown,
+            ["ayugram"] = () => sameUser ? AyuGramDetector.Detect(localAppData, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)) : InstallState.Unknown,
         };
 
         // The Visual C++ runtimes are machine-wide: read from the registry for any account.

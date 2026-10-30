@@ -90,10 +90,18 @@ public sealed class WingetRunner : IWingetRunner
 
         // --no-upgrade: an app that turns out to be installed is reported as installed, never upgraded in place
         // (an upgrade can rewrite its files and settings).
-        var run = Run(
-            ["install", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--silent", "--no-upgrade",
-             "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"],
-            package.Context, onOutput, InstallTimeout, cancellationToken);
+        var arguments = new List<string>
+        {
+            "install", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--silent", "--no-upgrade",
+            "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity",
+        };
+        if (package.InstallLocation && InstallFolders.Valid(package.InstallFolder) is { } folder)
+        {
+            // Only a package whose installer takes a folder gets one; the path is passed as one argument, never through a shell.
+            arguments.AddRange(["--location", folder]);
+        }
+
+        var run = Run(arguments, package.Context, onOutput, InstallTimeout, cancellationToken);
         return new WingetRunResult(run.Launched, run.ExitCode, "", run.Refusal);
     }
 

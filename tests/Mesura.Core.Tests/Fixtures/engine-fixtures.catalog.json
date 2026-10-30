@@ -1,0 +1,337 @@
+{
+// Operations the 0.4 audit removed from the product catalog (docs/catalog-audit-0.4.md), kept here only as fixtures for the engine tests: they exercise per-user
+// registry writes, a service, a scheduled task, a power setting and operations that set one value two ways. Never shipped.
+  "kind": "Mesura.WindowsCatalog",
+  "schemaVersion": 5,
+  "operations": [
+    {
+      "id": "taskbar.hide-task-view",
+      "name": "Hide the Task View button",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Removes the Task View button from the taskbar.",
+      "description": "Removes the Task View button from the taskbar. Task View stays available with Win+Tab.",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "source": "Settings > Personalization > Taskbar; SapphireOS playbook registry.yml L447; present on PC-000",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowTaskViewButton",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.search-icon-only",
+      "name": "Taskbar search as an icon",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Shows taskbar search as an icon instead of a box.",
+      "description": "Shows search as an icon instead of a search box (the value is 0 hidden, 1 icon, 2 box, 3 icon and label on Windows 11 22H2 and later).",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "limitations": "Can't run together with 'Hide taskbar search' (the same value). A search policy an organisation sets (SearchOnTaskbarMode) overrides it.",
+      "source": "Settings > Personalization > Taskbar (backing value SearchboxTaskbarMode); SapphireOS playbook registry.yml L226; present on PC-000",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "SearchboxTaskbarMode",
+          "type": "dword",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.hide-search",
+      "name": "Hide taskbar search",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Removes search from the taskbar; Start still searches.",
+      "description": "Removes search from the taskbar entirely. Typing after pressing Start still searches.",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "limitations": "Can't run together with 'Taskbar search as an icon' (the same value).",
+      "source": "Settings > Personalization > Taskbar; present on PC-000 (honoured on 26200: no search button)",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "SearchboxTaskbarMode",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.align-left",
+      "name": "Align the taskbar to the left",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Puts Start and the taskbar icons on the left.",
+      "description": "Puts the Start button and taskbar icons on the left, as in Windows 10.",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "minBuild": 22000,
+      "source": "Settings > Personalization > Taskbar > Taskbar behaviours; present on PC-000",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAl",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.hide-widgets",
+      "name": "Widgets button on the taskbar",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Whether the Widgets button is on the taskbar.",
+      "description": "The Widgets (news and weather) button. Guided: Mesura shows the stored value and opens Taskbar settings, where you turn the button off. Current Windows 11 refuses this value from any program but Settings, so Mesura doesn't write it.",
+      "risk": "observe",
+      "minBuild": 22000,
+      "source": "Settings > Personalization > Taskbar (backing value TaskbarDa). The User Choice Protection Driver (UCPD.sys, delivered with 2024 updates; running on PC-000) denies the write to programs Microsoft didn't sign, so the earlier write-based operation failed there (catalog audit 2026-10-22). To turn Widgets off for every user, use 'Turn off Widgets (policy)'.",
+      "observe": {
+        "reads": [
+          {
+            "hive": "HKCU",
+            "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+            "name": "TaskbarDa",
+            "type": "dword",
+            "value": "0"
+          }
+        ],
+        "openUri": "ms-settings:taskbar"
+      }
+    },
+    {
+      "id": "start.no-recent-items",
+      "name": "Don't show recently opened files in Start",
+      "category": "Taskbar and Start",
+      "impact": "maintenance",
+      "summary": "Start stops listing recently opened files.",
+      "description": "Stops Start, Jump Lists and File Explorer listing the files you opened recently.",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "limitations": "Tracking which apps you start is a separate operation (Turn off app-launch tracking).",
+      "source": "Settings > Personalization > Start > 'Show recently opened items in Start, Jump Lists and File Explorer' (backing value Start_TrackDocs, listed in Microsoft's privacy connections doc); SapphireOS playbook registry.yml L448. Until 2026-10-22 this operation also wrote Start_TrackProgs, which is now its own operation.",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_TrackDocs",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "system.verbose-status",
+      "name": "Verbose startup and shutdown messages",
+      "category": "System",
+      "impact": "maintenance",
+      "summary": "Detailed messages during startup and shutdown.",
+      "description": "Shows what Windows is doing during sign-in and shutdown ('Starting services', 'Shutting down') instead of a blank splash.",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "limitations": "Ignored while the policy 'Remove Boot/Shutdown/Logon/Logoff status messages' (DisableStatusMessages) is set.",
+      "source": "Group Policy 'Display highly detailed status messages'; HKLM Policies\\System VerboseStatus (learn.microsoft.com/troubleshoot/windows-server/performance/enable-verbose-startup-shutdown-logon-logoff-status-messages).",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+          "name": "VerboseStatus",
+          "type": "dword",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "input.keyboard-repeat-fast",
+      "name": "Fastest key repeat",
+      "category": "Input",
+      "impact": "maintenance",
+      "summary": "A held key starts repeating sooner and repeats faster.",
+      "description": "Sets the keyboard's repeat delay to its shortest and the repeat rate to its fastest, the quickest settings the Keyboard control panel offers. A held key starts repeating sooner and repeats faster. A matter of feel; it doesn't affect frame rate or in-game key presses.",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "limitations": "Takes effect after signing out, or at once if you move either slider in Control Panel > Keyboard. The repeat rate is already at its fastest on most PCs, so usually only the delay changes. Revert restores your exact previous values.",
+      "source": "Control Panel > Keyboard > Speed (RepeatDelay and RepeatRate sliders; HKCU\\Control Panel\\Keyboard KeyboardDelay 0-3 and KeyboardSpeed 0-31). A commercial tweak utility offers 'Lower Keyboard Repeat Delay' and 'Increase Keyboard Repeat Rate'. Read on PC-000 (delay 1, speed 31). Added in the 2026-10-25 tweak-utility audit.",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Keyboard",
+          "name": "KeyboardDelay",
+          "type": "string",
+          "value": "0"
+        },
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Keyboard",
+          "name": "KeyboardSpeed",
+          "type": "string",
+          "value": "31"
+        }
+      ]
+    },
+    {
+      "id": "appearance.dark-mode",
+      "name": "Dark mode",
+      "category": "Appearance",
+      "impact": "maintenance",
+      "summary": "Dark theme for Windows and apps.",
+      "description": "Uses the dark colour mode for Windows (taskbar, Start, notification centre) and for apps that follow the system mode.",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "limitations": "Written directly, the taskbar and apps that are already open switch after Explorer restarts or you sign out; the Settings toggle switches at once.",
+      "source": "Settings > Personalization > Colors > Choose your mode (backing values; 0 = dark); SapphireOS playbook registry.yml L377-379; set on PC-000.",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "AppsUseLightTheme",
+          "type": "dword",
+          "value": "0"
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "SystemUsesLightTheme",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "power.usb3-link-power-off",
+      "name": "Turn off USB 3 link power management (on AC)",
+      "category": "Power",
+      "impact": "maintenance",
+      "summary": "USB 3 links stay at full power on AC.",
+      "description": "Keeps USB 3 links out of their low-power states on AC power. A troubleshooting step for USB 3 devices that disconnect.",
+      "risk": "undocumented",
+      "activation": "immediate",
+      "limitations": "Advanced: a hidden power setting Microsoft doesn't describe on Learn. Active plan only, AC only. Never in a preset.",
+      "source": "powercfg setting d4e98f31 (USB 3 Link Power Management) in subgroup 2a737441, resolved from powercfg /qh in the reassessment; 18 of 20 community plans set it to off; no vendor-neutral documentation found (catalog audit 2026-10-22).",
+      "powerSettings": [
+        {
+          "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+          "setting": "d4e98f31-5ffe-4ce1-be31-1b38b384c009",
+          "name": "USB 3 link power management",
+          "ac": 0
+        }
+      ]
+    },
+    {
+      "id": "tasks.telemetry-off",
+      "name": "Turn off data-collection scheduled tasks",
+      "category": "Scheduled tasks",
+      "impact": "maintenance",
+      "summary": "Turns off Windows' data-collection tasks.",
+      "description": "Turns off Windows' own scheduled tasks that collect usage data for the Customer Experience Improvement Program and feedback surveys, and the disk-diagnostic data collector. The tasks stay in place, turned off. Privacy only, and modest: the CEIP tasks do nothing without CEIP consent.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "limitations": "Not a documented Microsoft control: Microsoft's documented levers are the diagnostic-data policy and settings, and the CEIP policy for the first two tasks. Only these named tasks: Windows Update, compatibility-appraiser, Defender, restore-point, defrag/retrim and error-reporting tasks are left alone. Tasks a trimmed image already removed are left out. A feature update can turn some back on; Mesura then shows the operation as not applied again.",
+      "source": "Task Scheduler (Windows' own tasks under \\Microsoft\\Windows; descriptions read on PC-000). The research corpus's sap-08 disables tasks by substring (CEIP, compatibility appraiser and also Defender, update, restore), so Mesura names exact tasks. The 2026-10-22 audit removed the compatibility appraiser tasks (they feed feature-update safeguards; KB4525208) and the flighting usage-report task (undocumented, next to feature-rollout tasks).",
+      "tasks": [
+        {
+          "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Autochk\\Proxy",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClient",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload",
+          "enabled": false
+        }
+      ]
+    },
+    {
+      "id": "services.xbox-off",
+      "name": "Disable Xbox Live services",
+      "category": "Services",
+      "impact": "maintenance",
+      "summary": "Disables Xbox Live services.",
+      "description": "Stops the Xbox Live sign-in, cloud-save and networking services from starting. They are manual services that only run when an Xbox-enabled app uses them, so this has no measurable performance effect; it is for PCs that never use Xbox features.",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "limitations": "Breaks Xbox app and Game Pass sign-in, Xbox Live PC games and their cloud saves. Don't use it if you play Game Pass or Microsoft Store games. Xbox controllers and accessories are left alone (their service, XboxGipSvc, is no longer part of this operation).",
+      "source": "services.msc; service names as on Windows 10/11 (Microsoft's 'Guidance on disabling system services' gives their roles). XboxGipSvc was removed in the 2026-10-22 audit: it serves controllers and adapters.",
+      "services": [
+        {
+          "name": "XblAuthManager",
+          "start": "disabled"
+        },
+        {
+          "name": "XblGameSave",
+          "start": "disabled"
+        },
+        {
+          "name": "XboxNetApiSvc",
+          "start": "disabled"
+        }
+      ]
+    },
+    {
+      "id": "services.print-off",
+      "name": "Disable printing",
+      "category": "Services",
+      "impact": "maintenance",
+      "summary": "Disables printing on a PC without a printer.",
+      "description": "Stops the Print Spooler and Fax services from starting, for a PC that never prints. Cleanup and a smaller print attack surface; no performance effect.",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "limitations": "No printing at all, including 'Microsoft Print to PDF', until reverted. Can't run together with 'Turn printing back on'.",
+      "source": "services.msc",
+      "services": [
+        {
+          "name": "Spooler",
+          "start": "disabled"
+        },
+        {
+          "name": "Fax",
+          "start": "disabled"
+        }
+      ]
+    },
+    {
+      "id": "services.telemetry-off",
+      "name": "Disable the telemetry service (unofficial)",
+      "category": "Services",
+      "impact": "maintenance",
+      "summary": "Disables the Connected User Experiences and Telemetry service.",
+      "description": "Stops the Connected User Experiences and Telemetry service (DiagTrack), which sends Windows' diagnostic data. Privacy; no measured performance effect. This is not a control Microsoft documents for reducing diagnostic data: the supported lever is the diagnostic-data setting and policy, which Mesura's other entries use.",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "limitations": "Windows can start it again after a feature update (Mesura then shows the operation as not applied). Feedback Hub and some diagnostics no longer report. A Microsoft Q&A answer (about Windows Server) advises against disabling it. The Device Management WAP Push service (dmwappushservice) is left alone: Intune and other MDM management need it.",
+      "source": "services.msc; Microsoft's 'Guidance on disabling system services' (dmwappushservice is required for Intune/MDM); no Microsoft page documents DiagTrack disabling as a way to reduce diagnostic data (searched 2026-10-25). Narrowed to DiagTrack in the 2026-10-25 profile review.",
+      "services": [
+        {
+          "name": "DiagTrack",
+          "start": "disabled"
+        }
+      ]
+    }
+  ],
+  "presets": []
+}

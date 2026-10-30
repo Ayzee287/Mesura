@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.0-rc1 (release candidate, not published)
+
+A new look, a shorter and more honest list of settings, a BIOS & Firmware page, and a start-up choice about administrator rights.
+
+- **New interface ("Graphite").** A neutral near-black window with one pale accent (green only means verified or done), a bottom command dock instead of the sidebar (the pages,
+  a More menu for Configurations, Profiles and Settings, the page's own actions and, always at the right, the selection and the Apply button), and one interactive light that follows the pointer across
+  the whole window instead of every card lighting up alone. New type (Onest, JetBrains Mono, Spectral; Latin and Cyrillic). The light is turned down on weak graphics and in remote sessions, off when Windows'
+  animations are off, and Settings > Lighting sets it by hand. "PC setup" is now **Optimization**; the page headers lost their captions; System was rebuilt (headline cards, columns by width, long names wrap);
+  Apps cards are one proportion; Activation shows "Windows 11" or "Windows 10", one expressive status word, and a link to Microsoft's own explanation.
+- **A shorter catalog (251 -> 148 settings).** Every setting was re-read against what it changes, what backs the claim, what it costs and whether Windows already does it.
+  103 were removed (44 only change how Windows looks, 16 have no proven benefit and a visible cost, 15 risk more than they give, 13 duplicate another, 9 have an undocumented effect, 4 are covered by new features,
+  2 are already Windows' default). The rest are in eight groups: real performance, gaming, power, components, privacy, maintenance, convenience, experimental. Hardware and edition requirements
+  (battery, Modern Standby, Pro or higher, 16 GB of memory, hybrid processor) are checked before an entry is offered. **Undo still works for what an earlier version applied**, including settings 0.4 no longer ships.
+- **Recommended and Maximum performance rebuilt.** Recommended is 18 settings that remove advertising, profiling and nagging, with no power, service, security or driver change and no frame-rate promise. Maximum
+  performance adds nine documented background and desktop power settings (the High performance plan and PCIe link power saving only on a desktop) and lists eight optional ones unticked, with the trade-offs on the card.
+- **BIOS & Firmware.** Reads the board, BIOS, boot mode, Secure Boot, TPM, virtualization, memory (speed against what the module is rated for, channels), Resizable BAR and the Intel microcode, and
+  says which few settings are worth a look on this PC, why, how risky, and the menu steps for the board's maker in English and Russian. It never flashes, writes firmware variables or changes a BIOS setting; its one action is
+  Windows' own "restart to firmware" after a confirmation, and after the restart it shows what changed.
+- **Apps.** Telegram (Telegram's own installer) and AyuGram (the AyuGram project's portable client; detected even when installed outside winget) were added; Vencord is shown under Discord, with its own state, instead of as a separate app. An install folder can be chosen for the apps whose installers take one (Steam, OBS Studio, 7-Zip, Notepad++, Telegram, AyuGram); for the others the button says the installer decides.
+- **Administrator rights.** When Mesura is installed for all users it asks at start whether to continue normally or restart as administrator, and can remember the answer (Settings). A per-user install still never offers
+  administrator mode, and there is no switch to override that.
+- **Fonts and notices.** The three typefaces and their licences are in `THIRD-PARTY-NOTICES.md`; the Telegram and AyuGram marks are listed with the other app marks.
+
 ## 0.3.0-rc2 (release candidate, not published)
 
 Technical reliability: what runs with administrator rights, and what happens when an install or update fails. No new features, no design changes.

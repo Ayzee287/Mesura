@@ -43,6 +43,8 @@
     <Resource Include="Assets\mesura-mark.png" />
     <!-- The apps' own icons (Assets\Apps\README.md), inside the executable so they show offline. -->
     <Resource Include="Assets\Apps\*.png" />
+    <!-- The typefaces (Assets\Fonts\OFL-*.txt: SIL Open Font License 1.1): Onest, JetBrains Mono, Spectral Light Italic. -->
+    <Resource Include="Assets\Fonts\*.ttf" />
   </ItemGroup>
 
   <!-- The interface strings and catalog translations (Loc): embedded, one pair of JSON files per language. -->

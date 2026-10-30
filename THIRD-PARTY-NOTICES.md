@@ -47,6 +47,105 @@ NVIDIA's public header `NvApiDriverSettings.h` (<https://github.com/NVIDIA/nvapi
 
 The profile file itself is written by Mesura; it is not a copy of any other profile.
 
+## Fonts
+
+Mesura's text is set in three typefaces that are built into `Mesura.exe` as resources. All three are under the SIL Open Font
+License 1.1, which is quoted below once and is the same text in each font's own file (`src/Mesura.App/Assets/Fonts/OFL-*.txt`).
+
+| Font | Copyright | Used for |
+|---|---|---|
+| Onest (Regular, Medium, SemiBold: static instances cut from the variable font) | Copyright 2021 The Onest Project Authors (<https://github.com/googlefonts/onest>) | Interface text, Latin and Cyrillic |
+| JetBrains Mono (Regular, Medium) | Copyright 2020 The JetBrains Mono Project Authors (<https://github.com/JetBrains/JetBrainsMono>) | Technical values: ids, paths, versions |
+| Spectral Light Italic | Copyright 2017 The Spectral Project Authors (<https://github.com/productiontype/Spectral>) | The one expressive line of a page (a status word, a subtitle) |
+
+The Onest weights were instanced from the project's variable font at fixed weights with fontTools; no outline was edited.
+
+> SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+> -----------------------------------------------------------
+>
+> PREAMBLE
+> The goals of the Open Font License (OFL) are to stimulate worldwide
+> development of collaborative font projects, to support the font creation
+> efforts of academic and linguistic communities, and to provide a free and
+> open framework in which fonts may be shared and improved in partnership
+> with others.
+>
+> The OFL allows the licensed fonts to be used, studied, modified and
+> redistributed freely as long as they are not sold by themselves. The
+> fonts, including any derivative works, can be bundled, embedded,
+> redistributed and/or sold with any software provided that any reserved
+> names are not used by derivative works. The fonts and derivatives,
+> however, cannot be released under any other type of license. The
+> requirement for fonts to remain under this license does not apply
+> to any document created using the fonts or their derivatives.
+>
+> DEFINITIONS
+> "Font Software" refers to the set of files released by the Copyright
+> Holder(s) under this license and clearly marked as such. This may
+> include source files, build scripts and documentation.
+>
+> "Reserved Font Name" refers to any names specified as such after the
+> copyright statement(s).
+>
+> "Original Version" refers to the collection of Font Software components as
+> distributed by the Copyright Holder(s).
+>
+> "Modified Version" refers to any derivative made by adding to, deleting,
+> or substituting -- in part or in whole -- any of the components of the
+> Original Version, by changing formats or by porting the Font Software to a
+> new environment.
+>
+> "Author" refers to any designer, engineer, programmer, technical
+> writer or other person who contributed to the Font Software.
+>
+> PERMISSION & CONDITIONS
+> Permission is hereby granted, free of charge, to any person obtaining
+> a copy of the Font Software, to use, study, copy, merge, embed, modify,
+> redistribute, and sell modified and unmodified copies of the Font
+> Software, subject to the following conditions:
+>
+> 1) Neither the Font Software nor any of its individual components,
+> in Original or Modified Versions, may be sold by itself.
+>
+> 2) Original or Modified Versions of the Font Software may be bundled,
+> redistributed and/or sold with any software, provided that each copy
+> contains the above copyright notice and this license. These can be
+> included either as stand-alone text files, human-readable headers or
+> in the appropriate machine-readable metadata fields within text or
+> binary files as long as those fields can be easily viewed by the user.
+>
+> 3) No Modified Version of the Font Software may use the Reserved Font
+> Name(s) unless explicit written permission is granted by the corresponding
+> Copyright Holder. This restriction only applies to the primary font name as
+> presented to the users.
+>
+> 4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+> Software shall not be used to promote, endorse or advertise any
+> Modified Version, except to acknowledge the contribution(s) of the
+> Copyright Holder(s) and the Author(s) or with their explicit written
+> permission.
+>
+> 5) The Font Software, modified or unmodified, in part or in whole,
+> must be distributed entirely under this license, and must not be
+> distributed under any other license. The requirement for fonts to
+> remain under this license does not apply to any document created
+> using the Font Software.
+>
+> TERMINATION
+> This license becomes null and void if any of the above conditions are
+> not met.
+>
+> DISCLAIMER
+> THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+> EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+> MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+> OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+> COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+> INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+> DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+> FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+> OTHER DEALINGS IN THE FONT SOFTWARE.
+
 ## Mesura's own mark
 
 The Mesura logo and icon (`assets/branding`, `docs/images`, `src/Mesura.App/Assets`) are drawn for Mesura from the geometry
@@ -55,7 +154,7 @@ in `tools/make-branding.ps1`, with no stock image, font or third-party mark, and
 ## Marks of the apps Mesura installs
 
 The small icons in Apps and Setup are the marks of the apps they stand for (Brave, Chrome, Discord, Git, Notepad++, OBS
-Studio, 7-Zip, Spotify, Steam, Visual Studio Code, Vencord). They belong to their owners, are used only to show which
+Studio, 7-Zip, Spotify, Steam, Telegram, AyuGram, Visual Studio Code, Vencord). They belong to their owners, are used only to show which
 app is meant, and imply no endorsement. They were taken from each app's own executable or the vendor's official site or
 repository. If an owner objects to one, it is removed and the app shows its initial instead. Mesura is not affiliated
 with any of them, with Microsoft, or with NVIDIA.

@@ -8,12 +8,14 @@ param(
   [ValidateSet('en', 'ru')][string]$Lang = 'en',
   [int]$Width = 0,
   [int]$Height = 0,
-  [string[]]$Pages = @('Setup', 'Tweaks', 'Debloat', 'Apps', 'Profiles', 'SystemInfo', 'Activity', 'Settings', 'Configurations', 'Activation'),
+  [string[]]$Pages = @('Setup', 'Tweaks', 'Debloat', 'Firmware', 'Apps', 'Profiles', 'SystemInfo', 'Activity', 'Settings', 'Configurations', 'Activation'),
   [int]$Settle = 6,
-  [int]$Scroll = -1
+  [int]$Scroll = -1,
+  [int]$Wait = 1800,
+  [string]$Hover = ''   # 'x,y' in window pixels: puts the pointer there before each shot (the interactive light follows it)
 )
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing, System.Windows.Forms
 Add-Type @"
 using System; using System.Runtime.InteropServices;
 public static class MW {
@@ -48,13 +50,13 @@ try {
     $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
   }
   $map = @{ Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Profiles = 'Nav.Profiles'; SystemInfo = 'Nav.SystemInfo'
-            Activity = 'Nav.Activity'; Settings = 'Nav.Settings'; Configurations = 'Nav.Configurations'; Activation = 'Nav.Activation' }
+            Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Configurations'; Activation = 'Nav.Activation' }
   $i = 0
   foreach ($page in ($Pages -join ',').Split(',')) {
     $i++
     $key = $map[$page]; $label = $strings.$key
     if (-not $label) { Write-Host "skip $page (no string $key)"; continue }
-    $more = $page -in 'Configurations', 'Activation'
+    $more = $page -in 'Configurations', 'Profiles', 'Settings'
     if ($more) { $mb = Find-Named $strings.'Nav.More'; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
     $item = $null
     $deadline = (Get-Date).AddSeconds(5)
@@ -66,12 +68,19 @@ try {
     }
     if (-not $item) { Write-Host "skip $page (no nav item '$label')"; continue }
     $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-    Start-Sleep -Milliseconds 1800
+    Start-Sleep -Milliseconds $Wait
     if ($Scroll -ge 0) {
       # Scrolls the page's own scroll viewer (the first visible one that scrolls vertically) to a percentage, to see below the fold.
       $c = New-Object System.Windows.Automation.PropertyCondition($A::IsScrollPatternAvailableProperty, $true)
       $viewer = @($root.FindAll($TS::Descendants, $c)) | Where-Object { -not $_.Current.IsOffscreen -and $_.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern).Current.VerticallyScrollable -and $_.Current.BoundingRectangle.Width -gt 600 } | Select-Object -First 1
       if ($viewer) { $viewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern).SetScrollPercent(-1, $Scroll); Start-Sleep -Milliseconds 700 }
+    }
+    if ($Hover) {
+      $xy = $Hover.Split(','); $r = New-Object MW+RECT; [MW]::GetWindowRect($h, [ref]$r) | Out-Null
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point ($r.Left + [int]$xy[0]), ($r.Top + [int]$xy[1])
+      Start-Sleep -Milliseconds 120
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point ($r.Left + [int]$xy[0] + 6), ($r.Top + [int]$xy[1] + 4)
+      Start-Sleep -Milliseconds 900
     }
     $file = Join-Path $Out ("{0:00}-{1}-{2}.png" -f $i, $page.ToLower(), $Lang)
     Shot $file

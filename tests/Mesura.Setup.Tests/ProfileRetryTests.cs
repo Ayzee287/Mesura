@@ -1,4 +1,4 @@
-using Mesura.Core.Apps;
+﻿using Mesura.Core.Apps;
 using Mesura.Core.Config;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
@@ -117,7 +117,7 @@ public sealed class ProfileRetryTests : IDisposable
         return SetupProfile.Parse("""
             { "kind": "Mesura.SetupProfile", "schemaVersion": 1, "name": "Fresh install",
               "apps": ["brave"], "configBundle": "my.settings.json", "configApps": ["brave"],
-              "windows": ["explorer.show-extensions", "system.verbose-status"] }
+              "windows": ["explorer.show-extensions", "system.long-paths-on"] }
             """, AppCatalog.Default, WindowsCatalog.Default);
     }
 
@@ -145,7 +145,7 @@ public sealed class ProfileRetryTests : IDisposable
         var brave = Assert.Single(first.Config);
         Assert.Equal("waiting", StepWords.Config(brave));                 // not "failed", not "already done"
         Assert.Equal("applied", StepWords.Windows(first.WindowsSteps.Single(w => w.OperationId == "explorer.show-extensions").Status));
-        Assert.Equal("needs admin", StepWords.Windows(first.WindowsSteps.Single(w => w.OperationId == "system.verbose-status").Status));
+        Assert.Equal("needs admin", StepWords.Windows(first.WindowsSteps.Single(w => w.OperationId == "system.long-paths-on").Status));
         Assert.Equal(RunStatus.Incomplete, RunFollowUp.Status(first));    // nothing failed; some steps wait on the user
         var waits = RunFollowUp.For(first, id => id).Where(f => f.Kind == FollowUpKind.RunAgain).ToList();
         Assert.Equal(2, waits.Count);                                      // start Brave once; run as administrator
@@ -167,8 +167,8 @@ public sealed class ProfileRetryTests : IDisposable
         Assert.True(json["brave"]!["new_tab_page"]!["show_clock"]!.GetValue<bool>());
         Assert.Equal("keep me", json["profile"]!["name"]!.GetValue<string>()); // the app's own settings kept
         Assert.Equal(WindowsOpStatus.AlreadyApplied, second.WindowsSteps.Single(w => w.OperationId == "explorer.show-extensions").Status);
-        Assert.Equal(WindowsOpStatus.Applied, second.WindowsSteps.Single(w => w.OperationId == "system.verbose-status").Status);
-        Assert.Equal([@"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\VerboseStatus"], pc.Writes.Skip(writesBefore));
+        Assert.Equal(WindowsOpStatus.Applied, second.WindowsSteps.Single(w => w.OperationId == "system.long-paths-on").Status);
+        Assert.Equal([@"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled"], pc.Writes.Skip(writesBefore));
         Assert.Equal(RunStatus.Succeeded, RunFollowUp.Status(second));
         Assert.DoesNotContain(RunFollowUp.For(second, id => id), f => f.Kind is FollowUpKind.RunAgain or FollowUpKind.Problem);
         Assert.Equal(2, store.ListRuns().Count);

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using Mesura.Core.Support;
 
@@ -137,6 +137,28 @@ public sealed partial class SetupStore
         File.Move(temp, path, overwrite: true);
 #pragma warning restore RS0030
     }
+
+    /// <summary>The firmware readings of the last two different visits to the BIOS &amp; Firmware page (<c>firmware-history.json</c> under the root), or <c>null</c> before the first.</summary>
+    public string? ReadFirmwareHistory()
+    {
+        var path = Path.Combine(Root, FirmwareHistoryFile);
+        return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    /// <summary>Writes those readings, replacing the file whole. They are values only: no serial numbers, no names.</summary>
+    public void WriteFirmwareHistory(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        var path = Path.Combine(Root, FirmwareHistoryFile);
+        var temp = path + TempSuffix;
+#pragma warning disable RS0030 // The setup component's one file writer: Mesura's own firmware readings (class remarks).
+        Directory.CreateDirectory(Root);
+        File.WriteAllBytes(temp, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
+        File.Move(temp, path, overwrite: true);
+#pragma warning restore RS0030
+    }
+
+    private const string FirmwareHistoryFile = "firmware-history.json";
 
     private const string AppSettingsFile = "app-settings.json";
 

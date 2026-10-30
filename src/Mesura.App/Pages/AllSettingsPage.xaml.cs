@@ -5,8 +5,11 @@ using System.Windows.Input;
 namespace Mesura.App.Pages;
 
 /// <summary>All settings (<see cref="AllSettingsViewModel"/>).</summary>
-public partial class AllSettingsPage : UserControl
+public partial class AllSettingsPage : UserControl, IDockPage
 {
+    /// <summary>The page's summary and primary action, shown in the command dock while the page is open.</summary>
+    public DataTemplate? DockTemplate => (DataTemplate?)Resources["DockActions"];
+
     public AllSettingsPage() => InitializeComponent();
 
     public void FocusSearch()

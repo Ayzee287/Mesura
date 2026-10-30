@@ -1,5 +1,7 @@
 # Recommended and Maximum performance: what they hold and why
 
+> **Describes the 0.3 catalog.** 0.4 re-audited every entry and removed 103 of the 251 (see CHANGELOG.md); the numbers and lists below are those of 0.3. This document stays as the record of how those entries were built and checked.
+
 Review of 2026-10-25. This page is generated from the catalog's profile definitions plus the reasons below; the catalog
 (`src/Mesura.Core/Windows/windows.catalog.json`) is the source, and tests pin the lists.
 

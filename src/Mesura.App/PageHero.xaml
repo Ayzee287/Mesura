@@ -2,21 +2,36 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="clr-namespace:Mesura.App" Focusable="False">
-    <!-- A page's opening: a small accent eyebrow, the title, a subtitle, and the page's main actions on the right. Every page
-         opens the same way and at the same height, so moving between pages doesn't move the content. -->
+    <!-- A page's opening: the title, one line of state under it, and the page's main actions on the right. Every page opens the same way and at
+         the same height, so moving between pages doesn't move the content. The line of state is set in the expressive italic where Expressive is
+         on (the home page): one voice moment per screen, never more. -->
     <Grid Margin="{Binding HeroMargin, RelativeSource={RelativeSource AncestorType=l:PageHero}}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel>
-            <TextBlock Text="{Binding Eyebrow, RelativeSource={RelativeSource AncestorType=l:PageHero}}" Foreground="{StaticResource Accent}" FontSize="11.5" FontWeight="SemiBold"
-                       Margin="0,0,0,6" Visibility="{Binding Eyebrow, RelativeSource={RelativeSource AncestorType=l:PageHero}, Converter={StaticResource Presence}}" />
-            <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="{Binding TitleSize, RelativeSource={RelativeSource AncestorType=l:PageHero}}" FontWeight="SemiBold"
+            <TextBlock FontFamily="{StaticResource DisplayFont}" FontSize="{Binding TitleSize, RelativeSource={RelativeSource AncestorType=l:PageHero}}" FontWeight="Medium"
                        Foreground="{StaticResource Text}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1"
                        Text="{Binding Title, RelativeSource={RelativeSource AncestorType=l:PageHero}}" />
-            <TextBlock Text="{Binding Subtitle, RelativeSource={RelativeSource AncestorType=l:PageHero}}" Style="{StaticResource PageSubtitle}" FontSize="13.5" Margin="0,6,0,0" MaxWidth="720" HorizontalAlignment="Left"
-                       Visibility="{Binding Subtitle, RelativeSource={RelativeSource AncestorType=l:PageHero}, Converter={StaticResource Presence}}" />
+            <TextBlock Text="{Binding Subtitle, RelativeSource={RelativeSource AncestorType=l:PageHero}}" MaxWidth="760" HorizontalAlignment="Left" Margin="0,6,0,0" TextWrapping="Wrap"
+                       Visibility="{Binding Subtitle, RelativeSource={RelativeSource AncestorType=l:PageHero}, Converter={StaticResource Presence}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="13.5" />
+                        <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Expressive, RelativeSource={RelativeSource AncestorType=l:PageHero}}" Value="True">
+                                <Setter Property="FontFamily" Value="{StaticResource ExpressiveFont}" />
+                                <Setter Property="FontStyle" Value="Italic" />
+                                <Setter Property="FontWeight" Value="Light" />
+                                <Setter Property="FontSize" Value="21" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentHover}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
         </StackPanel>
         <ContentPresenter Grid.Column="1" Content="{Binding Actions, RelativeSource={RelativeSource AncestorType=l:PageHero}}" VerticalAlignment="Bottom" Margin="24,0,0,2" />
     </Grid>

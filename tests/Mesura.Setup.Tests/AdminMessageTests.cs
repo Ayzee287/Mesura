@@ -54,7 +54,9 @@ public sealed class AdminMessageTests
     {
         var en = Load("en.json");
         // Strings that talk about an already elevated Mesura, or about elevation of a different kind, are not instructions to restart.
-        string[] notInstructions = ["Common.ElevatedElsewhere", "Nav.AdminHint", "Settings.RunningElevated", "Settings.RestorePointHint", "Catalog.IgnoredElevated", "Activation.NeedsAdmin"];
+        string[] notInstructions = ["Common.ElevatedElsewhere", "Nav.AdminHint", "Settings.RunningElevated", "Settings.RestorePointHint", "Catalog.IgnoredElevated", "Activation.NeedsAdmin",
+            // The start-up dialog's button: shown only where administrator mode is offered (a protected folder); the other dialog is the per-user one.
+            "Start.Restart"];
 
         var instructions = en.Where(p => !p.Key.Contains(".PerUser", StringComparison.Ordinal) && !notInstructions.Contains(p.Key)
             && Regex.IsMatch(p.Value, @"(restart|run) (mesura )?(as|from an) administrator", RegexOptions.IgnoreCase)).Select(p => p.Key).ToList();

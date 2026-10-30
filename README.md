@@ -11,27 +11,28 @@ it installs, and makes no promise that your games run faster: see [What it does 
 
 ## What it does
 
-- **Setup** is the start page. Choose **Recommended** or **Maximum performance**, look at the plan, then apply it.
+- **Optimization** is the start page. Choose **Recommended** or **Maximum performance**, look at the plan, then apply it.
   - *Recommended*: everyday Windows with less promotion, ad profiling and nagging, and nothing you would miss
-    (23 settings, none that removes a feature).
+    (18 settings, none that removes a feature or touches power, services, security or drivers).
   - *Maximum performance*: Recommended plus fewer optional background functions and the desktop power settings, with the
-    price of each named (44 settings and 7 you tick yourself).
-  - [What is in them and why](docs/profile-review-2026-10.md), and
-    [how their stored values were checked](docs/value-verification-2026-10.md).
-- **Tweaks** lists about 250 Windows settings as cards: a risk label, what each writes, its status, and what is known
+    price of each named (27 settings, the desktop-only power ones skipped on a laptop, and 8 you tick yourself).
+  - The lists are on the Optimization page, each setting with what it changes and what it costs. Neither promises a frame-rate change.
+- **Tweaks** lists about 100 Windows settings in eight groups (real performance, gaming, power, privacy, maintenance, convenience, experimental and the removable components) as cards: a risk label, what each writes, its status, and what is known
   about it (documented by Microsoft, verified, or community-only). Pick any of them one by one, or a collection (Edge
   policies, less data sharing, fewer network discovery protocols, desktop performance and more).
 - **Debloat** removes bundled apps for your account, turns off Windows' AI features (Recall, Click to Do, Copilot,
   Paint AI) and the programs that start with Windows. Nothing Windows itself depends on can be removed, and Undo
   registers an app again where Windows still has its copy.
-- **Apps** installs apps through winget (browsers, Steam, Discord, Git, runtimes and the like), detecting what is there.
+- **BIOS & Firmware** reads the board, BIOS, boot mode, Secure Boot, TPM, virtualization, memory profile and channels, Resizable BAR and the Intel microcode, and says which few firmware
+  settings are worth a look on this PC, with the menu steps for its maker. It changes nothing in the firmware; its one action is Windows' own *restart to firmware*.
+- **Apps** installs apps through winget (browsers, Steam, Discord with Vencord, Telegram, AyuGram, Git, runtimes and the like), detecting what is there, with an install folder where the installer allows one.
 - **Configurations** exports and restores a short allowlist of app settings (Steam, Brave, Discord, Vencord, Spotify).
 - **Profiles** saves a PC's setup and runs it again on a new one.
 - **NVIDIA** (when the PC has a GeForce card): looks up the current WHQL driver, installs it trimmed with NVCleanstall
   to the selection you choose, and imports [Mesura's own driver profile](docs/nvidia-profile.md), backing up and putting
   back your own profiles around the install.
 - **Activation** shows the Windows and Office licence state, and installs a product key you own and activates it through
-  Windows' own licensing service. Mesura doesn't store or log the key.
+  Windows' own licensing service, with a link to Microsoft's explanation. Mesura doesn't store or log the key and contains no activation workaround.
 - **System** shows this PC at a glance (processor, memory, graphics, drives, displays, power, firmware, Windows) and copies or saves the report.
 - **Activity** is the history of everything Mesura changed, with the exact previous value, and undoes it.
 - A command line, `cli\mesura.exe`, does the same from a terminal; anything that changes the PC previews by default and
@@ -46,12 +47,12 @@ Details, silent install and all-users install: `docs/installing.md`.
 
 **Portable.** Unzip `Mesura-<version>-win-x64.zip` (the whole folder) anywhere and start `Mesura.exe`. A portable copy checks for updates too, and "Install" opens the verified installer.
 
-**Administrator rights depend on the install.** An **all-users** install (`Program Files`, `ALLUSERS=1`) asks once for administrator rights at start, because changes to the whole PC need them, and has every function.
+**Administrator rights depend on the install.** An **all-users** install (`Program Files`, `ALLUSERS=1`) asks at start whether to continue normally or restart as administrator (it can remember the answer; Settings changes it), because changes to the whole PC need administrator rights, and has every function.
 A **per-user** install (the default) lives in your profile, where any program you run could replace `Mesura.exe`, so Mesura never asks for administrator rights from there: functions that need none work, and the
 window says which ones are skipped and how to get full access (install for all users). There is no setting to override this. `docs/security.md`.
 **Nothing changes until you confirm an Apply, Install, Undo or profile run.**
 
-**Updates.** Mesura checks when it starts (Settings > Updates turns it off; Stable or Preview channel) and offers a new version in the sidebar. It downloads and installs only when you click,
+**Updates.** Mesura checks when it starts (Settings > Updates turns it off; Stable or Preview channel) and offers a new version in the window. It downloads and installs only when you click,
 after checking a signature that only the author can make; if the installation fails, the previous version is restored. `docs/updates.md`.
 
 It needs Windows 10 (64-bit) or Windows 11 and no other software: the .NET runtime is inside `Mesura.exe`.

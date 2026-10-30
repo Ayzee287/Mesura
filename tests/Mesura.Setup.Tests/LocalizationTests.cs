@@ -139,6 +139,32 @@ public sealed partial class LocalizationTests
         Assert.Empty(missing);
     }
 
+    /// <summary>
+    /// The keys the BIOS &amp; Firmware page builds at run time: one observation per key the analyzer can give, a status, a certainty, a risk and a change
+    /// per kind, each in both languages.
+    /// </summary>
+    [Fact]
+    public void Keys_built_from_the_firmware_analysis_exist_in_both_languages()
+    {
+        var analyzer = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Mesura.Core", "Firmware", "FirmwareAnalyzer.cs"));
+        var observations = Regex.Matches(analyzer, "\"((?:memory|rebar|bios|boot|sb|tpm|virt|boost|pcie)\\.[a-z0-9-]+|unreadable)\"").Select(m => m.Groups[1].Value).Distinct().ToList();
+        Assert.True(observations.Count > 25, "the scan found too few observation keys: " + observations.Count);
+        var snapshot = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Mesura.Core", "Firmware", "FirmwareSnapshot.cs"));
+        var changes = Regex.Matches(snapshot, "(?:Text|Flag|Number)\\(\"([a-z.-]+)\"").Select(m => m.Groups[1].Value).Append("microcode").Distinct().ToList();
+        Assert.True(changes.Count >= 8, "the scan found too few change keys: " + changes.Count);
+
+        var keys = observations.Select(k => "Firmware.Obs." + k)
+            .Concat(changes.Select(k => "Firmware.Change." + k))
+            .Concat(Enum.GetNames<Mesura.Core.Firmware.FirmwareStatus>().Select(n => "Firmware.Status." + n))
+            .Concat(Enum.GetNames<Mesura.Core.Firmware.FirmwareCertainty>().Select(n => "Firmware.Certainty." + n))
+            .Concat(Enum.GetNames<Mesura.Core.Firmware.FirmwareRisk>().Select(n => "Firmware.Risk." + n));
+        foreach (var lang in new[] { "en", "ru" })
+        {
+            var strings = Strings(lang);
+            Assert.All(keys, key => Assert.True(strings.ContainsKey(key), $"{lang}.json lacks {key}"));
+        }
+    }
+
     /// <summary>The keys built at run time from the setup's and NVIDIA's own values all exist.</summary>
     [Fact]
     public void Keys_built_from_setup_and_nvidia_values_exist()

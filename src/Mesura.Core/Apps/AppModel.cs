@@ -66,6 +66,12 @@ public enum InstallState
 /// The app this package modifies (Vencord patches Discord), or empty. Apps offers it on that app's card rather than as an
 /// app of its own (D031).
 /// </param>
+/// <param name="InstallLocation">
+/// Whether this package's installer takes a folder (winget's <c>--location</c>): true only where the installer's type or manifest
+/// provides the switch (NSIS, Inno Setup, a manifest-declared option, a portable package). False for every installer that doesn't
+/// (Squirrel, most vendor exes, Chrome's MSI): choosing a folder for those would be ignored, so it is not offered.
+/// </param>
+/// <param name="InstallFolder">The folder the user chose for this install (set for one run, never in the catalog); <c>null</c> means the installer's own default.</param>
 public sealed record AppPackage(
     string Id,
     string WingetId,
@@ -78,7 +84,9 @@ public sealed record AppPackage(
     bool Listed = true,
     AppRunContext Context = AppRunContext.Any,
     string Detector = "",
-    string Customizes = "")
+    string Customizes = "",
+    bool InstallLocation = false,
+    string? InstallFolder = null)
 {
     /// <summary>The <c>--source</c> argument for this package.</summary>
     public string SourceArgument => Source == AppSource.MsStore ? "msstore" : "winget";

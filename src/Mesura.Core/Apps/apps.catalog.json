@@ -5,6 +5,8 @@
   // the signed-in user, unelevated: Discord and Spotify are per-user installers (winget manifests "Scope: user"; Spotify
   // also "ElevationRequirement: elevationProhibited") and Vencord patches that user's Discord (manifests read on
   // 2026-10-23). "detector" names a detector that reads the state from the app's own files when winget can't.
+  // "installLocation": true marks a package whose installer takes a folder (winget --location): NSIS and Inno Setup installers, a manifest that declares the switch
+  // (7-Zip), a portable package. Read from the public winget manifests on 2026-10-30; Brave, Chrome, Discord and Spotify install where their own installers decide.
   // "customizes" names the app a package modifies: Vencord is offered on Discord's card, not as an app of its own (D031).
   // Schema 2 marks a catalog with these fields: a build before it refuses this file rather than misread it, and this
   // build sets aside an edited copy of schema 1 and uses its built-in catalog instead (it says so).
@@ -23,16 +25,20 @@
     { "id": "spotify", "wingetId": "Spotify.Spotify", "name": "Spotify", "category": "Media", "context": "user",
       "note": "Mesura can set it up with its defaults or your saved settings." },
     { "id": "vlc", "wingetId": "VideoLAN.VLC", "name": "VLC media player", "category": "Media", "listed": false },
-    { "id": "obs", "wingetId": "OBSProject.OBSStudio", "name": "OBS Studio", "category": "Media" },
+    { "id": "obs", "wingetId": "OBSProject.OBSStudio", "name": "OBS Studio", "category": "Media", "installLocation": true },
+    { "id": "telegram", "wingetId": "Telegram.TelegramDesktop", "name": "Telegram", "category": "Chat", "context": "user", "installLocation": true,
+      "note": "Telegram's own installer (Telegram FZ-LLC, from the telegramdesktop GitHub releases); installs per user." },
+    { "id": "ayugram", "wingetId": "RadolynLabs.AyuGramDesktop", "name": "AyuGram", "category": "Chat", "context": "user", "detector": "ayugram", "installLocation": true,
+      "note": "A Telegram client built from Telegram's open source by the AyuGram project (Radolyn Labs, GitHub releases): portable, not Telegram's own app." },
     { "id": "steam", "wingetId": "Valve.Steam", "name": "Steam", "category": "Gaming",
-      "note": "Mesura can restore your saved settings; account settings apply after you sign in once." },
+      "note": "Mesura can restore your saved settings; account settings apply after you sign in once.", "installLocation": true },
     { "id": "epic", "wingetId": "EpicGames.EpicGamesLauncher", "name": "Epic Games Launcher", "category": "Gaming", "listed": false },
     { "id": "nvcleanstall", "wingetId": "TechPowerUp.NVCleanstall", "name": "NVCleanstall", "category": "Drivers", "listed": false,
       "note": "Builds a trimmed NVIDIA driver package; the driver install itself is an interactive step in NVCleanstall." },
     { "id": "nvpi", "wingetId": "Orbmu2k.nvidiaProfileInspector", "name": "NVIDIA Profile Inspector", "category": "Drivers", "listed": false,
       "note": "Portable; winget adds it to the command path as 'nvpi'." },
-    { "id": "sevenzip", "wingetId": "7zip.7zip", "name": "7-Zip", "category": "Utility" },
-    { "id": "notepadpp", "wingetId": "Notepad++.Notepad++", "name": "Notepad++", "category": "Utility" },
+    { "id": "sevenzip", "wingetId": "7zip.7zip", "name": "7-Zip", "category": "Utility", "installLocation": true },
+    { "id": "notepadpp", "wingetId": "Notepad++.Notepad++", "name": "Notepad++", "category": "Utility", "installLocation": true },
     { "id": "vscode", "wingetId": "Microsoft.VisualStudioCode", "name": "Visual Studio Code", "category": "Developer", "listed": false },
     { "id": "git", "wingetId": "Git.Git", "name": "Git", "category": "Developer", "listed": false },
     { "id": "zoom", "wingetId": "Zoom.Zoom", "name": "Zoom", "category": "Communication", "listed": false }

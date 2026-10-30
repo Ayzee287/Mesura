@@ -66,20 +66,17 @@ public sealed class ProfileReviewTests
     }
 
     [Fact]
-    public void The_unofficial_telemetry_switches_are_extras_of_maximum_and_never_in_a_profile_itself()
+    public void The_unofficial_telemetry_switches_are_gone_and_the_documented_policies_are_the_only_levers()
     {
-        var services = Op("services.telemetry-off");
-        Assert.Equal(["DiagTrack"], services.Services.Select(s => s.Name)); // the MDM message-routing service stays alone
-        Assert.Contains("dmwappushservice", services.Limitations, StringComparison.Ordinal);
-        Assert.Contains("not a control", services.Description, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Not a documented Microsoft control", Op("tasks.telemetry-off").Limitations, StringComparison.Ordinal);
-
-        var maximum = Catalog.PresetById("maximum-performance")!;
-        Assert.All(new[] { "services.telemetry-off", "tasks.telemetry-off" }, id =>
-        {
-            Assert.Contains(id, maximum.OptionalIds);
-            Assert.DoesNotContain(Catalog.Presets, p => p.OperationIds.Contains(id)); // in no preset's own selection
-        });
+        // 0.4 audit: the DiagTrack service and the data-collection tasks were never a Microsoft-documented control and Windows turns them back on;
+        // the documented policies (required diagnostic data, the CEIP and application-telemetry policies) do the job.
+        Assert.Null(Catalog.ById("services.telemetry-off"));
+        Assert.Null(Catalog.ById("tasks.telemetry-off"));
+        Assert.Null(Catalog.ById("services.xbox-off"));
+        var recommended = Catalog.PresetById("recommended-gaming")!;
+        Assert.Contains("privacy.diagnostic-data-required", recommended.OperationIds);
+        Assert.Contains("telemetry.ceip-policy-off", recommended.OperationIds);
+        Assert.Contains("telemetry.application-telemetry-off", recommended.OperationIds);
     }
 
     [Fact]

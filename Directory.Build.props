@@ -9,7 +9,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- Supply chain (architecture §13): restore is pinned by committed lock files. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Product>Mesura</Product>
   </PropertyGroup>
 </Project>

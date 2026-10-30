@@ -7,6 +7,7 @@ using Microsoft.Win32;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.System.Power;
+using Windows.Win32.System.SystemInformation;
 using Windows.Win32.System.RemoteDesktop;
 
 namespace Mesura.Platform.Windows.Windows;
@@ -71,6 +72,60 @@ public sealed partial class SystemStateReader : ISystemReader
             return edition is { ValueExists: true, Kind: RegistryKind.String, Value: { Length: > 0 } id }
                 ? !id.StartsWith("Core", StringComparison.OrdinalIgnoreCase)
                 : null;
+        }
+    }
+
+    /// <summary>Installed physical memory (GlobalMemoryStatusEx reports what Windows can use, which is the installed memory less hardware reservations).</summary>
+    public ulong? PhysicalMemoryBytes { get; } = ReadMemory();
+
+    /// <summary>Whether the processor cores are of more than one efficiency class: the records of <c>RelationProcessorCore</c> carry one each.</summary>
+    public bool? HybridCpu { get; } = ReadHybrid();
+
+    private static ulong? ReadMemory()
+    {
+        var status = new MEMORYSTATUSEX { dwLength = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MEMORYSTATUSEX>() };
+        return PInvoke.GlobalMemoryStatusEx(ref status) ? status.ullTotalPhys : null;
+    }
+
+    private static unsafe bool? ReadHybrid()
+    {
+        try
+        {
+            uint length = 0;
+            PInvoke.GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore, null, ref length);
+            if (length == 0)
+            {
+                return null;
+            }
+
+            var buffer = new byte[length];
+            fixed (byte* p = buffer)
+            {
+                if (!PInvoke.GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationProcessorCore, new Span<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(p, 1), ref length))
+                {
+                    return null;
+                }
+            }
+
+            // SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX: Relationship (4 bytes), Size (4), then PROCESSOR_RELATIONSHIP: Flags (1), EfficiencyClass (1).
+            var classes = new HashSet<byte>();
+            for (var offset = 0; offset + 10 <= length;)
+            {
+                var size = BitConverter.ToUInt32(buffer, offset + 4);
+                if (size == 0)
+                {
+                    break;
+                }
+
+                classes.Add(buffer[offset + 9]);
+                offset += (int)size;
+            }
+
+            return classes.Count > 0 ? classes.Count > 1 : null;
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
+        {
+            return null;
         }
     }
 

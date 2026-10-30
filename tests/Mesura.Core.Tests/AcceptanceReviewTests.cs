@@ -135,10 +135,11 @@ public sealed class AcceptanceReviewTests
     public void The_audited_catalogs_carry_their_schema_so_old_builds_refuse_them_and_old_copies_are_told_apart()
     {
         // Windows catalog schema 3 since the 2026-10-24 quality pass (TCP settings, network impact, benefit); 4 since 0.2.0
-        // (binary values, per-adapter settings, tool-backed settings, a stated level, sources).
-        Assert.Equal(4, WindowsCatalog.CurrentSchema);
+        // (binary values, per-adapter settings, tool-backed settings, a stated level, sources); 5 since the 0.4 audit (impact is
+        // one of eight groups, new hardware requirements).
+        Assert.Equal(5, WindowsCatalog.CurrentSchema);
         Assert.Equal(2, AppCatalog.CurrentSchema);
-        Assert.Contains("\"schemaVersion\": 4", WindowsCatalog.BuiltInJson(), StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 5", WindowsCatalog.BuiltInJson(), StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": 2", AppCatalog.BuiltInJson(), StringComparison.Ordinal);
         Assert.True(WindowsCatalog.Default.Operations.Count >= 99);
 
@@ -150,7 +151,7 @@ public sealed class AcceptanceReviewTests
     public void Hardware_scheduling_isnt_tagged_as_a_performance_gain()
     {
         // Its own text says it isn't an FPS setting; inside "Maximum performance" a Performance tag would read as one.
-        Assert.Equal(OperationImpact.System, WindowsCatalog.Default.ById("gpu.hardware-scheduling-on")!.Impact);
+        Assert.Equal(OperationImpact.Experimental, WindowsCatalog.Default.ById("gpu.hardware-scheduling-on")!.Impact);
         Assert.DoesNotContain("Modern Standby PCs the plan and PCI Express", WindowsCatalog.Default.PresetById("maximum-performance")!.Description, StringComparison.Ordinal);
     }
 

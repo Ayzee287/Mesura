@@ -1,0 +1,1920 @@
+﻿// Operations removed from the catalog in 0.4 that changed Windows settings. They are never listed, previewed or applied: they exist so that Undo, which trusts a history
+// record only for the targets its operation declares (RevertTrust), still works for a record an earlier version wrote. Generated from the 0.3 catalog; see docs/catalog-audit-0.4.md.
+{
+  "kind": "Mesura.WindowsCatalog",
+  "schemaVersion": 5,
+  "operations": [
+    {
+      "id": "ai.paint-ai-off",
+      "name": "Turn off the AI features in Paint (policy)",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Paint",
+          "name": "DisableCocreator",
+          "type": "dword",
+          "value": "1"
+        },
+        {
+          "hive": "HKLM",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Paint",
+          "name": "DisableImageCreator",
+          "type": "dword",
+          "value": "1"
+        },
+        {
+          "hive": "HKLM",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Paint",
+          "name": "DisableGenerativeFill",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "ai.recall-snapshots-off",
+      "name": "Turn off Recall snapshots (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "DisableAIDataAnalysis",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "appearance.dark-mode",
+      "name": "Dark mode",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "AppsUseLightTheme",
+          "type": "dword",
+          "value": "0"
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "SystemUsesLightTheme",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "apps.compatibility-assistant-off",
+      "name": "Turn off the Program Compatibility Assistant (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "Software\\Policies\\Microsoft\\Windows\\AppCompat",
+          "name": "DisablePCA",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "apps.no-silent-suggested-installs",
+      "name": "Stop suggested apps installing themselves",
+      "risk": "undocumented",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SilentInstalledAppsEnabled",
+          "type": "dword",
+          "value": "0",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "cpu.user-presence-qos-off",
+      "name": "Don't lower the foreground app's QoS when idle",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling",
+          "name": "DisableUserPresenceQos",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "desktop.hide-spotlight-learn-more-icon",
+      "name": "Hide the 'Learn more about this picture' desktop icon",
+      "risk": "undocumented",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\HideDesktopIcons\\NewStartPanel",
+          "name": "{2cc5ca98-6485-489a-920e-b3e88a6ccce3}",
+          "type": "dword",
+          "value": "1",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "display.adaptive-brightness-off",
+      "name": "Turn off adaptive brightness when plugged in",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "7516b95f-f776-4464-8c53-06167f40cc99",
+          "setting": "fbd9aa66-9553-4097-ba44-ed6e9d65eab8",
+          "name": "Enable adaptive brightness",
+          "ac": 0
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "display.per-process-dpi-on",
+      "name": "Let Windows fix blurry desktop apps after display scale changes (policy)",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Control Panel\\Desktop",
+          "name": "EnablePerProcessSystemDPI",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.hide-first-run",
+      "name": "Skip the Edge first-run experience",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "HideFirstRunExperience",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-default-pdf-prompts",
+      "name": "Stop Edge asking to become the default PDF reader",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "ShowPDFDefaultRecommendationsEnabled",
+          "type": "dword",
+          "value": "0",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-feature-recommendations",
+      "name": "Turn off Edge feature recommendations and tips",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "ShowRecommendationsEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-microsoft-newtab-content",
+      "name": "No Microsoft content on the Edge new tab page",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "NewTabPageContentEnabled",
+          "type": "dword",
+          "value": "0",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-microsoft-rewards",
+      "name": "Turn off Microsoft Rewards in Edge",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "ShowMicrosoftRewards",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-personalization-reporting",
+      "name": "Stop Edge sending browsing data for personalization",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "PersonalizationReportingEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-shopping-assistant",
+      "name": "Turn off Shopping in Microsoft Edge",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "EdgeShoppingAssistantEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-sidebar",
+      "name": "Hide the Edge sidebar",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "HubsSidebarEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.no-spotlight-recommendations",
+      "name": "Turn off Edge spotlight experiences and Microsoft service tips",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "SpotlightExperiencesAndRecommendationsEnabled",
+          "type": "dword",
+          "value": "0",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "edge.sleeping-tabs-on",
+      "name": "Keep Edge sleeping tabs turned on",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "SleepingTabsEnabled",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "explorer.folder-type-general",
+      "name": "Stop File Explorer guessing the folder type",
+      "risk": "undocumented",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\Bags\\AllFolders\\Shell",
+          "name": "FolderType",
+          "type": "string",
+          "value": "NotSpecified"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "explorer.icons-only-no-thumbnails",
+      "name": "Show icons instead of thumbnails in File Explorer",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "IconsOnly",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "explorer.launch-to-this-pc",
+      "name": "Open File Explorer to This PC",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "LaunchTo",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "explorer.no-cloud-in-quick-access",
+      "name": "No cloud files in Quick Access",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer",
+          "name": "ShowCloudFilesInQuickAccess",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "explorer.no-recent-files",
+      "name": "No recently used files in Quick access and Home",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer",
+          "name": "ShowRecent",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "gaming.background-capture-off",
+      "name": "Turn off Game Bar captures",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "System\\GameConfigStore",
+          "name": "GameDVR_Enabled",
+          "type": "dword",
+          "value": "0"
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+          "name": "AppCaptureEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.clipboard-history",
+      "name": "Turn on clipboard history (Win+V)",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Clipboard",
+          "name": "EnableClipboardHistory",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.keyboard-repeat-fast",
+      "name": "Fastest key repeat",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Keyboard",
+          "name": "KeyboardDelay",
+          "type": "string",
+          "value": "0"
+        },
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Keyboard",
+          "name": "KeyboardSpeed",
+          "type": "string",
+          "value": "31"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.pointer-speed-middle",
+      "name": "Set pointer speed to the middle notch",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Mouse",
+          "name": "MouseSensitivity",
+          "type": "string",
+          "value": "10",
+          "absentMatches": true
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.touchpad-follow-mouse-accel",
+      "name": "Make the touchpad follow the 'Enhance pointer precision' setting",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad",
+          "name": "HonorMouseAccelSetting",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.touchpad-most-sensitive",
+      "name": "Set touchpad sensitivity to 'Most sensitive'",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad",
+          "name": "AAPThreshold",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "input.touchpad-off-with-mouse",
+      "name": "Turn the touchpad off while a mouse is connected",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad",
+          "name": "LeaveOnWithMouse",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "interface.aero-shake-off",
+      "name": "Turn off Aero Shake",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "NoWindowMinimizingShortcuts",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "interface.menu-show-delay",
+      "name": "Open submenus faster",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Desktop",
+          "name": "MenuShowDelay",
+          "type": "string",
+          "value": "200"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "memory.clear-pagefile-at-shutdown",
+      "name": "Clear the page file at shutdown",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+          "name": "ClearPageFileAtShutdown",
+          "type": "dword",
+          "value": "1",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "memory.encrypt-pagefile",
+      "name": "Encrypt the page file",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+          "name": "NtfsEncryptPagingFile",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "memory.ntfs-pool-memory",
+      "name": "Increase NTFS memory cache limits",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+          "name": "NtfsMemoryUsage",
+          "type": "dword",
+          "value": "2"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "memory.page-combining-off",
+      "name": "Turn off page combining",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "system": [
+        {
+          "kind": "mmagent",
+          "name": "pagecombining",
+          "value": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "mmcss.network-throttling-default",
+      "name": "Restore MMCSS network throttling to its default",
+      "risk": "undocumented",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+          "name": "NetworkThrottlingIndex",
+          "type": "dword",
+          "value": "10"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.function-discovery-publication-off",
+      "name": "Stop this PC announcing itself on the network",
+      "risk": "userPreference",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "FDResPub",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.mdns-off",
+      "name": "Turn off mDNS in the DNS client",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient",
+          "name": "EnableMDNS",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.nic-flow-control-off",
+      "name": "Turn off network adapter flow control",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
+          "name": "*FlowControl",
+          "type": "string",
+          "value": "0",
+          "where": {
+            "subkeyExists": "Ndi\\Params\\*FlowControl"
+          }
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.nic-wake-on-pattern-off",
+      "name": "Wake from sleep only on a magic packet",
+      "risk": "userPreference",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
+          "name": "*WakeOnPattern",
+          "type": "string",
+          "value": "0",
+          "where": {
+            "subkeyExists": "Ndi\\Params\\*WakeOnPattern"
+          }
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.smart-multihomed-dns-off",
+      "name": "Turn off smart multi-homed name resolution",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient",
+          "name": "DisableSmartNameResolution",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.ssdp-upnp-services-off",
+      "name": "Disable SSDP Discovery and UPnP Device Host",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "SSDPSRV",
+          "start": "disabled"
+        },
+        {
+          "name": "upnphost",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.tcp-ack-every-segment",
+      "name": "Acknowledge every TCP segment immediately",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\*",
+          "name": "TcpAckFrequency",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "notifications.no-sound",
+      "name": "Silence notification sounds",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings",
+          "name": "NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "notifications.off",
+      "name": "Turn off app notifications",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications",
+          "name": "ToastEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "onedrive.no-existing-account-sign-in-prompts",
+      "name": "Stop OneDrive prompting to sign in with your Microsoft account",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\OneDrive",
+          "name": "DisableNewAccountDetection",
+          "type": "dword",
+          "value": "1",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.cpu-boost-off-ac",
+      "name": "Turn off processor boost (on AC)",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "be337238-0d82-4146-a960-4f3749d470c7",
+          "name": "Processor performance boost mode",
+          "ac": 0
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.cpu-idle-states-off-ac",
+      "name": "Stop the processor entering idle states (on AC)",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "5d76a2ca-e8c0-402f-a133-2158492d58ad",
+          "name": "Processor idle disable",
+          "ac": 1
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.cpu-min-state-full-ac",
+      "name": "Keep the processor at full performance level (on AC)",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "893dee8e-2bef-41e0-89c6-b55d0929964c",
+          "name": "Minimum processor state",
+          "ac": 100
+        },
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "893dee8e-2bef-41e0-89c6-b55d0929964d",
+          "name": "Minimum processor state for efficiency class 1",
+          "ac": 100
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.usb3-link-power-off",
+      "name": "Turn off USB 3 link power management (on AC)",
+      "risk": "undocumented",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+          "setting": "d4e98f31-5ffe-4ce1-be31-1b38b384c009",
+          "name": "USB 3 link power management",
+          "ac": 0
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.wake-timers-off-ac",
+      "name": "Stop wake timers waking the PC (on AC)",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "powerSettings": [
+        {
+          "subgroup": "238c9fa8-0aad-41ed-83f4-97be242c8f20",
+          "setting": "bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d",
+          "name": "Allow wake timers",
+          "ac": 0
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "privacy.no-find-my-device",
+      "name": "Turn off Find My Device (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\FindMyDevice",
+          "name": "AllowFindMyDevice",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "privacy.no-location",
+      "name": "Turn off location (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\LocationAndSensors",
+          "name": "DisableLocation",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "privacy.no-settings-online-tips",
+      "name": "Turn off online tips in Settings (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+          "name": "AllowOnlineTips",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "privacy.no-windows-settings-backup",
+      "name": "Turn off Windows settings backup (policy)",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\SettingSync",
+          "name": "EnableWindowsBackup",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "search.no-device-history",
+      "name": "Don't keep search history on this device",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings",
+          "name": "IsDeviceSearchHistoryEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "search.no-highlights",
+      "name": "No search highlights",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings",
+          "name": "IsDynamicSearchBoxEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "search.no-web-results",
+      "name": "No web results in Start search",
+      "risk": "undocumented",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "BingSearchEnabled",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.compat-assistant-off",
+      "name": "Turn off the Program Compatibility Assistant",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "PcaSvc",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.connected-devices-off",
+      "name": "Turn off the Connected Devices Platform services",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "CDPSvc",
+          "start": "disabled"
+        },
+        {
+          "name": "CDPUserSvc",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.gameinput-off",
+      "name": "Disable the GameInput service",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "GameInputSvc",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.link-tracking-off",
+      "name": "Turn off Distributed Link Tracking",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "TrkWks",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.print-off",
+      "name": "Disable printing",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "Spooler",
+          "start": "disabled"
+        },
+        {
+          "name": "Fax",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.search-indexing-off",
+      "name": "Disable search indexing",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "WSearch",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.telemetry-off",
+      "name": "Disable the telemetry service (unofficial)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "DiagTrack",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.unused-extras-off",
+      "name": "Disable the offline maps service",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "MapsBroker",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "services.xbox-off",
+      "name": "Disable Xbox Live services",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "services": [
+        {
+          "name": "XblAuthManager",
+          "start": "disabled"
+        },
+        {
+          "name": "XblGameSave",
+          "start": "disabled"
+        },
+        {
+          "name": "XboxNetApiSvc",
+          "start": "disabled"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "start.no-personalized-website-recommendations",
+      "name": "No website recommendations in Start (policy)",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "HideRecommendedPersonalizedSites",
+          "type": "dword",
+          "value": "1",
+          "absentMatches": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "start.no-recent-items",
+      "name": "Don't show recently opened files in Start",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_TrackDocs",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "startup.no-startup-app-delay",
+      "name": "Remove the delay before startup apps launch",
+      "risk": "undocumented",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize",
+          "name": "StartupDelayInMSec",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "system.app-shutdown-wait-5s",
+      "name": "Shorten the app wait at shutdown to 5 seconds",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Desktop",
+          "name": "WaitToKillAppTimeout",
+          "type": "string",
+          "value": "5000"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "system.auto-end-tasks",
+      "name": "End unresponsive apps automatically at shutdown",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Desktop",
+          "name": "AutoEndTasks",
+          "type": "string",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "system.automatic-maintenance-off",
+      "name": "Turn off Automatic Maintenance",
+      "risk": "undocumented",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance",
+          "name": "MaintenanceDisabled",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "system.storage-sense-off",
+      "name": "Turn off Storage Sense (policy)",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\StorageSense",
+          "name": "AllowStorageSenseGlobal",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "system.verbose-status",
+      "name": "Verbose startup and shutdown messages",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+          "name": "VerboseStatus",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.align-left",
+      "name": "Align the taskbar to the left",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAl",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.hide-chat",
+      "name": "Hide the Chat (Teams) button",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarMn",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.hide-copilot-button",
+      "name": "Hide the Copilot button",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowCopilotButton",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.hide-search",
+      "name": "Hide taskbar search",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "SearchboxTaskbarMode",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.hide-task-view",
+      "name": "Hide the Task View button",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowTaskViewButton",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "taskbar.search-icon-only",
+      "name": "Taskbar search as an icon",
+      "risk": "userPreference",
+      "activation": "explorerRestart",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "SearchboxTaskbarMode",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "tasks.telemetry-off",
+      "name": "Turn off data-collection scheduled tasks",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "tasks": [
+        {
+          "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Autochk\\Proxy",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClient",
+          "enabled": false
+        },
+        {
+          "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload",
+          "enabled": false
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.ask-before-installing",
+      "name": "Ask before installing Windows updates",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+          "name": "NoAutoUpdate",
+          "type": "dword",
+          "value": "0",
+          "absentMatches": true
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+          "name": "AUOptions",
+          "type": "dword",
+          "value": "3"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.defer-feature-updates-365",
+      "name": "Delay Windows feature updates by 365 days",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "DeferFeatureUpdates",
+          "type": "dword",
+          "value": "1"
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "DeferFeatureUpdatesPeriodInDays",
+          "type": "dword",
+          "value": "365"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.disk-health-model-off",
+      "name": "Stop downloading disk failure-prediction model updates",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\StorageHealth",
+          "name": "AllowDiskHealthModelUpdates",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.limit-background-download-bandwidth",
+      "name": "Cap background update downloads at 25% of bandwidth",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+          "name": "DOPercentageMaxBackgroundBandwidth",
+          "type": "dword",
+          "value": "25"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.no-store-auto-update",
+      "name": "Turn off automatic Microsoft Store app updates",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\WindowsStore",
+          "name": "AutoDownload",
+          "type": "dword",
+          "value": "2"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.no-windows-update-driver-search",
+      "name": "Don't search Windows Update when installing a device driver",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DriverSearching",
+          "name": "SearchOrderConfig",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.notifications-restart-only",
+      "name": "Hide Windows Update notifications except restart warnings",
+      "risk": "userPreference",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "SetUpdateNotificationLevel",
+          "type": "dword",
+          "value": "1"
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "UpdateNotificationLevel",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.pin-windows-11-25h2",
+      "name": "Stay on Windows 11 25H2",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "TargetReleaseVersion",
+          "type": "dword",
+          "value": "1"
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "ProductVersion",
+          "type": "string",
+          "value": "Windows 11"
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+          "name": "TargetReleaseVersionInfo",
+          "type": "string",
+          "value": "25H2"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "updates.recommended-troubleshooting-off",
+      "name": "Don't let Windows apply recommended troubleshooting (policy)",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "Software\\Policies\\Microsoft\\Windows\\Troubleshooting\\AllowRecommendations",
+          "name": "TroubleshootingAllowRecommendations",
+          "type": "dword",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "visual.clear-logon-background",
+      "name": "Show the sign-in background without blur (policy)",
+      "risk": "systemConfiguration",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "DisableAcrylicBackgroundOnLogon",
+          "type": "dword",
+          "value": "1"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "visual.minimize-animation-off",
+      "name": "Turn off minimise and maximise animations",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Desktop\\WindowMetrics",
+          "name": "MinAnimate",
+          "type": "string",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "visual.show-window-contents-off",
+      "name": "Show only an outline while dragging windows",
+      "risk": "userPreference",
+      "activation": "signOut",
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Control Panel\\Desktop",
+          "name": "DragFullWindows",
+          "type": "string",
+          "value": "0"
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    }
+  ]
+}

@@ -33,6 +33,11 @@ public sealed class LicenseCard(LicensedProduct product, string title, string st
 
     public string Title { get; } = title;
 
+    /// <summary>Microsoft's own page about activating this product: the one outside link on the card.</summary>
+    public string HelpUrl => Product == LicensedProduct.Windows
+        ? "https://support.microsoft.com/en-us/windows/activate-windows-c39005d4-95ee-b91e-b399-2820fda32227"
+        : "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e";
+
     public string State { get; } = state;
 
     public string Tone { get; } = tone;
@@ -109,6 +114,13 @@ public sealed class ActivationViewModel : Observable, IPageState
             KeyFor = card?.Product == LicensedProduct.Office ? "office" : "windows";
             KeyError = "";
         }, card => CanChange && card is not null);
+        Help = new RelayCommand<LicenseCard>(card =>
+        {
+            if (card is not null && ShellLauncher.Open(card.HelpUrl) is { } error)
+            {
+                Result.Show(Mesura.App.Tone.Warn, Loc.Get("Firmware.CantOpenLink"), technical: error);
+            }
+        }, card => card is not null);
         CancelKey = new RelayCommand(() =>
         {
             KeyFor = "";
@@ -136,6 +148,9 @@ public sealed class ActivationViewModel : Observable, IPageState
     public AsyncCommand<LicenseCard> Primary { get; }
 
     public RelayCommand<LicenseCard> EnterKey { get; }
+
+    /// <summary>Opens Microsoft's page about activating the card's product.</summary>
+    public RelayCommand<LicenseCard> Help { get; }
 
     public RelayCommand CancelKey { get; }
 
@@ -294,16 +309,11 @@ public sealed class ActivationViewModel : Observable, IPageState
         return facts;
     }
 
-    /// <summary>A short edition name from a licence's name ("Windows Pro", "Windows Home"), or "Windows".</summary>
-    private static string WindowsTitle(LicenseInfo? license)
-    {
-        var name = license?.Name ?? "";
-        return name.Contains("Professional", StringComparison.OrdinalIgnoreCase) ? "Windows Pro"
-            : name.Contains("Core", StringComparison.OrdinalIgnoreCase) ? "Windows Home"
-            : name.Contains("Enterprise", StringComparison.OrdinalIgnoreCase) ? "Windows Enterprise"
-            : name.Contains("Education", StringComparison.OrdinalIgnoreCase) ? "Windows Education"
-            : "Windows";
-    }
+    /// <summary>
+    /// The card's name: Windows and its major version, never the edition (0.4: "Windows Pro" headed the card and said more than anyone asked; the edition is in
+    /// the technical details with the licence's own name).
+    /// </summary>
+    private static string WindowsTitle() => Environment.OSVersion.Version.Build >= 22000 ? "Windows 11" : "Windows 10";
 
     private (string Problem, string Detail, uint Code) ProblemOf(LicensedProduct product) =>
         _problems.TryGetValue(product, out var p) ? (p.Text, p.Detail, p.Code) : ("", "", 0u);
@@ -343,7 +353,7 @@ public sealed class ActivationViewModel : Observable, IPageState
             : _services.Reader.IsElevated ? LicenseAction.EnterKey
             : LicenseAction.OpenSettings;
         var (problem, detail, _) = ProblemOf(LicensedProduct.Windows);
-        return new LicenseCard(LicensedProduct.Windows, WindowsTitle(license), StateWord(license), ToneOf(license), line,
+        return new LicenseCard(LicensedProduct.Windows, WindowsTitle(), StateWord(license), ToneOf(license), line,
             primary, offersKey: !licensed, facts, license, problem, detail);
     }
 

@@ -48,29 +48,44 @@ public enum DeviceRequirement
     /// value Microsoft lists for those editions only, which Home would accept in the registry and ignore.
     /// </summary>
     ProEdition,
+
+    /// <summary>At least 16 GB of physical memory: for settings that trade memory for CPU time or paging, which only suits a PC with room to spare.</summary>
+    Ram16Gb,
+
+    /// <summary>Cores of more than one efficiency class (Intel hybrid, AMD heterogeneous): for settings about which cores a thread prefers.</summary>
+    HybridCpu,
 }
 
 /// <summary>
-/// What an operation is about, for browsing and filtering: never how much it helps (no operation claims a measured
-/// gain unless its description says so) and never how risky it is (<see cref="RiskClass"/> says that).
+/// What an operation is for, as the eight groups of the 0.4 audit (docs/catalog-audit-0.4.md), for browsing and filtering: never how
+/// much it helps (no operation claims a measured gain unless its description says so) and never how risky it is
+/// (<see cref="RiskClass"/> says that). The order is the order the app lists them in.
 /// </summary>
 public enum OperationImpact
 {
+    /// <summary>Less background work and fewer effects: settings that change what Windows runs or draws.</summary>
     Performance,
 
-    /// <summary>Network behaviour: the TCP/IP stack's defaults, connectivity checks, update sharing.</summary>
-    Network,
+    /// <summary>Game Mode, background recording, input behaviour that matters in games.</summary>
+    Gaming,
 
+    /// <summary>Power plans and power settings, mostly for a desktop on AC power.</summary>
+    Power,
+
+    /// <summary>Privacy and telemetry: what Windows and its apps send, and the network protocols that announce this PC.</summary>
     Privacy,
 
-    /// <summary>Convenience and interface: the taskbar, Start, notifications, Explorer, input and appearance.</summary>
-    Interface,
+    /// <summary>Components Windows ships that most people never use: optional features and AI features (bundled apps have their own page).</summary>
+    Components,
 
-    /// <summary>System behaviour and functionality: services, features, updates, restored defaults.</summary>
-    System,
+    /// <summary>Windows maintenance: defaults a tweak tool may have changed, update and driver behaviour, guides and checks.</summary>
+    Maintenance,
 
-    /// <summary>Power and thermals: power plans and power settings.</summary>
-    Power,
+    /// <summary>Convenience: the few interface settings worth a place here (promotions off, file extensions, End task).</summary>
+    Convenience,
+
+    /// <summary>Experimental and hardware-dependent: documented settings whose effect varies by CPU, drive, memory or driver; none claims a gain.</summary>
+    Experimental,
 }
 
 /// <summary>
@@ -373,7 +388,7 @@ public sealed record WindowsOperation(
     ManualProcedure? Manual,
     ObservationSetting? Observation,
     IReadOnlyList<DeviceRequirement>? Requires = null,
-    OperationImpact Impact = OperationImpact.System,
+    OperationImpact Impact = OperationImpact.Maintenance,
     string Summary = "",
     IReadOnlyList<TcpGlobalSetting>? Tcp = null,
     OperationBenefit? Benefit = null,

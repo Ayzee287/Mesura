@@ -2,7 +2,7 @@
 # registry itself, then Undo and check it came back; then try a setting that needs administrator rights from an unelevated window and
 # check it is NOT reported as done and changes nothing.
 #
-# It changes ONE per-user value (HKCU\Control Panel\Desktop\MenuShowDelay) and puts it back; the run it records stays in Activity. It never
+# It changes ONE per-user value (HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers\DisableAutoplay) and puts it back; the run it records stays in Activity. It never
 # touches a machine setting. Needs a build that honours MESURA_PREVIEW_LANGUAGE (Debug) or a window in the language of -Lang.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\e2e-gui.ps1 -Exe <Mesura.exe> [-Lang en|ru]
@@ -17,8 +17,8 @@ $strings = Get-Content -Raw -Encoding UTF8 (Join-Path $repo "src\Mesura.App\Loca
 $A = [System.Windows.Automation.AutomationElement]; $TS = [System.Windows.Automation.TreeScope]; $CT = [System.Windows.Automation.ControlType]
 if (Get-Process Mesura -ErrorAction SilentlyContinue) { throw 'Mesura is running; close it first.' }
 
-$key = 'HKCU:\Control Panel\Desktop'
-$original = (Get-ItemProperty $key).MenuShowDelay
+$key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers'
+$original = (Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay
 $policyKey = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge'
 $policyBefore = try { (Get-ItemProperty $policyKey -ErrorAction Stop).StartupBoostEnabled } catch { $null }
 $results = New-Object System.Collections.Generic.List[string]
@@ -56,16 +56,16 @@ try {
   }
 
   # ---- 1. a per-user setting: detect, preview, apply, verify, undo ---------------------------------------------------------
-  $name = 'Open submenus faster'  # catalog name of interior.menu-show-delay in English; Russian looked up below
-  if ($Lang -eq 'ru') { $name = (Get-Content -Raw -Encoding UTF8 (Join-Path $repo 'src\Mesura.App\Localization\catalog-ru.json') -ErrorAction SilentlyContinue) -replace '(?s).*"interface.menu-show-delay":\s*\{\s*"name":\s*"([^"]+)".*', '$1' }
+  $name = 'Turn off AutoPlay'  # catalog name of explorer.autoplay-off in English; Russian looked up below (the PC must not have AutoPlay off already)
+  if ($Lang -eq 'ru') { $name = (Get-Content -Raw -Encoding UTF8 (Join-Path $repo 'src\Mesura.App\Localization\catalog-ru.json') -ErrorAction SilentlyContinue) -replace '(?s).*"explorer.autoplay-off":\s*\{\s*"name":\s*"([^"]+)".*', '$1' }
   Search-For $name
   $card = Find $root $name $CT::CheckBox
   Check 'the setting is found and offered' ($null -ne $card)
-  Check 'it can be ticked (staged, nothing changed yet)' (Tick $name) "registry still $((Get-ItemProperty $key).MenuShowDelay)"
-  Check 'nothing was written by ticking' ((Get-ItemProperty $key).MenuShowDelay -eq $original)
+  Check 'it can be ticked (staged, nothing changed yet)' (Tick $name) "registry still $((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay)"
+  Check 'nothing was written by ticking' ((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay -eq $original)
   Check 'Apply opened the confirmation and it was confirmed' (Apply-Selected)
-  $written = Wait-For { if ((Get-ItemProperty $key).MenuShowDelay -ne $original) { (Get-ItemProperty $key).MenuShowDelay } } 20
-  Check 'the registry holds the new value (read independently)' ($written -eq '200') "MenuShowDelay=$written"
+  $written = Wait-For { if ((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay -ne $original) { (Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay } } 20
+  Check 'the registry holds the new value (read independently)' ($written -eq '1') "DisableAutoplay=$written"
   $banner = Wait-For { @($root.FindAll($TS::Descendants, (Cond $A::ControlTypeProperty $CT::Text)) | Where-Object { $_.Current.Name -match ($strings.'Optimize.ResultDone.one' -replace '\{0\}', '1') -or $_.Current.Name -like ($strings.'Optimize.ResultDone.one') }) | Select-Object -First 1 } 15
   Check 'the result says it was applied' ($null -ne $banner) $(if ($banner) { $banner.Current.Name } else { 'no result text found' })
   $undo = Wait-For { Find $root $strings.'Undo.Action' $CT::Button } 10
@@ -74,8 +74,8 @@ try {
     Invoke-It $undo
     $dlg = Wait-For { Dialog } 10
     if ($dlg) { Invoke-It (Find $dlg $strings.'Undo.Action' $CT::Button) }
-    $back = Wait-For { if ((Get-ItemProperty $key).MenuShowDelay -eq $original) { 'restored' } } 20
-    Check 'Undo put the original value back (read independently)' ($back -eq 'restored') "MenuShowDelay=$((Get-ItemProperty $key).MenuShowDelay), was $original"
+    $back = Wait-For { if ((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay -eq $original) { 'restored' } } 20
+    Check 'Undo put the original value back (read independently)' ($back -eq 'restored') "DisableAutoplay=$((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay), was $original"
   }
 
   # ---- 2. a setting that needs administrator rights, from an unelevated window: must not claim success ---------------------
@@ -100,7 +100,7 @@ try {
 finally {
   if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
   # safety net: whatever happened, the per-user value ends as it began
-  if ((Get-ItemProperty $key).MenuShowDelay -ne $original) { Set-ItemProperty $key -Name MenuShowDelay -Value $original; Write-Host "restored MenuShowDelay to $original by hand" -ForegroundColor Yellow }
+  if ((Get-ItemProperty $key -ErrorAction SilentlyContinue).DisableAutoplay -ne $original) { Set-ItemProperty $key -Name MenuShowDelay -Value $original; Write-Host "restored MenuShowDelay to $original by hand" -ForegroundColor Yellow }
 }
 Write-Output ''
 $results | ForEach-Object { Write-Output $_ }

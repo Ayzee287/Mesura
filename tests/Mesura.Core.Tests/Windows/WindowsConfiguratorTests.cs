@@ -220,7 +220,7 @@ public sealed class WindowsConfiguratorTests
     private const string Theme = @"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
     private static readonly WindowsCatalog Catalog = WindowsCatalog.Default;
 
-    private static WindowsOperation Op(string id) => Catalog.ById(id)!;
+    private static WindowsOperation Op(string id) => EngineFixtures.Op(id);
 
     [Fact]
     public void The_built_in_catalog_loads_and_every_preset_resolves_to_applicable_documented_operations()
@@ -634,7 +634,7 @@ public sealed class WindowsConfiguratorTests
     [InlineData(@"Microsoft\Windows\Defrag\ScheduledDefrag")]
     public void A_catalog_task_outside_Windows_own_tasks_is_refused(string path)
     {
-        var json = WindowsCatalog.BuiltInJson();
+        var json = System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Fixtures", "engine-fixtures.catalog.json"));
         var edited = json.Replace(@"\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
             path.Replace(@"\", @"\\", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.NotEqual(json, edited);

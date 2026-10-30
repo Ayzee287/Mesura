@@ -56,6 +56,12 @@ public interface ISystemReader
     /// <summary>Whether this Windows is Pro or higher, so machine policies take effect (not Home); <c>null</c> when it can't tell.</summary>
     bool? PolicyEdition { get; }
 
+    /// <summary>Installed physical memory in bytes; <c>null</c> when it can't be read.</summary>
+    ulong? PhysicalMemoryBytes => null;
+
+    /// <summary>Whether the cores are of more than one efficiency class (a hybrid CPU); <c>null</c> when it can't be read.</summary>
+    bool? HybridCpu => null;
+
     RegistryReading ReadRegistry(string hive, string path, string name);
 
     ServiceReading ReadService(string name);
@@ -181,6 +187,12 @@ public static class WindowsEvaluator
                 DeviceRequirement.ProEdition => (reader.PolicyEdition,
                     "This is a Windows Home edition, which doesn't apply this machine policy; the value would be written and ignored.",
                     "Couldn't tell which Windows edition this is, so this machine policy is left alone."),
+                DeviceRequirement.Ram16Gb => (reader.PhysicalMemoryBytes is null ? (bool?)null : reader.PhysicalMemoryBytes.Value >= 15UL * 1024 * 1024 * 1024,
+                    "This PC has less than 16 GB of memory: the setting trades memory for CPU time, so it is left alone.",
+                    "Couldn't tell how much memory this PC has, so it is left alone."),
+                DeviceRequirement.HybridCpu => (reader.HybridCpu,
+                    "This PC's processor has one kind of core, so a preference between core types means nothing here.",
+                    "Couldn't tell whether this processor has more than one kind of core, so it is left alone."),
                 _ => (reader.ModernStandby is null ? (bool?)null : !reader.ModernStandby.Value,
                     "This is a Modern Standby PC: Windows offers only the Balanced plan here; use Settings > System > Power > Power mode instead.",
                     "Couldn't tell whether this is a Modern Standby PC, so it is left alone."),

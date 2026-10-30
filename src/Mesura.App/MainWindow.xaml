@@ -1,4 +1,4 @@
-<Window x:Class="Mesura.App.MainWindow"
+﻿<Window x:Class="Mesura.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:l="clr-namespace:Mesura.App"
@@ -6,102 +6,110 @@
         Title="Mesura" Height="860" Width="1280" MinHeight="660" MinWidth="1020"
         WindowStartupLocation="CenterScreen" PreviewKeyDown="OnWindowKeyDown" SizeChanged="OnWindowSizeChanged" Style="{StaticResource AppWindow}">
     <Grid>
-        <!-- Ambient light: three soft pools of colour behind everything. Static and cheap (gradients, no effects); the glass panels
-             above them let it through, which is what the surfaces are made to show. -->
-        <Canvas IsHitTestVisible="False" ClipToBounds="True">
-            <Ellipse Width="980" Height="720" Fill="{StaticResource OrbViolet}" Canvas.Left="-120" Canvas.Top="-260" />
-            <Ellipse Width="900" Height="760" Fill="{StaticResource OrbBlue}" Canvas.Right="-220" Canvas.Bottom="-300" />
-            <Ellipse Width="620" Height="520" Fill="{StaticResource OrbRose}" Canvas.Right="120" Canvas.Top="-220" />
-        </Canvas>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="SidebarColumn" Width="236" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <!-- The light behind the glass: soft pools on a neutral field, one of which leans toward the pointer (AmbientField, LightField). -->
+        <l:AmbientField Grid.RowSpan="2" />
 
-            <!-- Sidebar: the brand, the pages in three groups, and who is running Mesura. -->
-            <Border x:Name="Sidebar" Background="{StaticResource SidebarSurface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,1,0" Padding="12,0">
+        <!-- Pages: each keeps its state while another is shown, all in one column so they line up. -->
+        <Grid x:Name="PageHost" MaxWidth="1320" HorizontalAlignment="Stretch">
+            <p:OptimizePage x:Name="OptimizePage" />
+            <p:AllSettingsPage x:Name="AllSettingsPage" Visibility="Collapsed" />
+            <p:DebloatPage x:Name="DebloatPage" Visibility="Collapsed" />
+            <p:FirmwarePage x:Name="FirmwarePage" Visibility="Collapsed" />
+            <p:AppsPage x:Name="AppsPage" Visibility="Collapsed" />
+            <p:ConfigurationsPage x:Name="ConfigurationsPage" Visibility="Collapsed" />
+            <p:ProfilesPage x:Name="ProfilesPage" Visibility="Collapsed" />
+            <p:ActivationPage x:Name="ActivationPage" Visibility="Collapsed" />
+            <p:SystemInfoPage x:Name="SystemInfoPage" Visibility="Collapsed" />
+            <p:ActivityPage x:Name="ActivityPage" Visibility="Collapsed" />
+            <p:SettingsPage x:Name="SettingsPage" Visibility="Collapsed" />
+        </Grid>
+
+        <!-- Where a page scrolls under the dock it fades into the field instead of being cut. -->
+        <Rectangle VerticalAlignment="Bottom" Height="34" IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#0008090B" Offset="0" />
+                    <GradientStop Color="#E608090B" Offset="1" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- An update waiting (UpdateViewModel): one quiet card above the dock, never a pop-up. -->
+        <l:UpdateCard x:Name="UpdateNotice" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="320" Margin="0,0,40,10"
+                      Visibility="{Binding HasNoticeOrUpdate, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- The command dock: the pages on the left, what the open page can do (its selection and its one primary action) on the right. -->
+        <Grid Grid.Row="1" Margin="20,4,20,18">
+            <l:GlowBorder x:Name="Dock" Style="{StaticResource DockGlass}" MaxWidth="1240">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" Margin="8,22,0,10" HorizontalAlignment="Left">
-                        <Image x:Name="Logo" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <StackPanel x:Name="BrandText" Margin="11,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="Mesura" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold" />
-                            <TextBlock x:Name="VersionText" Style="{StaticResource Tertiary}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Margin="0,-1,0,0" />
-                        </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Image x:Name="Logo" Width="32" Height="32" Margin="4,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <Border Style="{StaticResource DockDivider}" />
+                        <RadioButton x:Name="NavOptimize" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconOptimize}" Content="{l:T Nav.Optimize}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Optimize}" AutomationProperties.Name="{l:T Nav.Optimize}" />
+                        <RadioButton x:Name="NavTweaks" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconTweaks}" Content="{l:T Nav.Tweaks}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Tweaks}" AutomationProperties.Name="{l:T Nav.Tweaks}" />
+                        <RadioButton x:Name="NavDebloat" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconDebloat}" Content="{l:T Nav.Debloat}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Debloat}" AutomationProperties.Name="{l:T Nav.Debloat}" />
+                        <RadioButton x:Name="NavFirmware" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconBoard}" Content="{l:T Nav.Firmware}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Firmware}" AutomationProperties.Name="{l:T Nav.Firmware}" />
+                        <Border Style="{StaticResource DockDivider}" />
+                        <RadioButton x:Name="NavApps" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconApps}" Content="{l:T Nav.Apps}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Apps}" AutomationProperties.Name="{l:T Nav.Apps}" />
+                        <RadioButton x:Name="NavActivation" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconKey}" Content="{l:T Nav.Activation}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Activation}" AutomationProperties.Name="{l:T Nav.Activation}" />
+                        <Border Style="{StaticResource DockDivider}" />
+                        <RadioButton x:Name="NavSystem" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconSystem}" Content="{l:T Nav.SystemInfo}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.SystemInfo}" AutomationProperties.Name="{l:T Nav.SystemInfo}" />
+                        <RadioButton x:Name="NavActivity" Style="{StaticResource DockItem}" GroupName="Nav" Tag="{StaticResource IconActivity}" Content="{l:T Nav.Activity}" Checked="OnNavigate"
+                                     ToolTip="{l:T Nav.Activity}" AutomationProperties.Name="{l:T Nav.Activity}" />
+                        <Grid>
+                            <ToggleButton x:Name="NavMore" Style="{StaticResource DockMore}" ToolTip="{l:T Nav.More}" AutomationProperties.Name="{l:T Nav.More}" />
+                            <Popup IsOpen="{Binding IsChecked, ElementName=NavMore, Mode=TwoWay}" PlacementTarget="{Binding ElementName=NavMore}" Placement="Top"
+                                   VerticalOffset="-14" HorizontalOffset="-70" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Background="{StaticResource Popover}" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" CornerRadius="16" Padding="6" Margin="24">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.5" Color="Black" />
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <RadioButton x:Name="NavConfigurations" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconConfigurations}" Content="{l:T Nav.Configurations}"
+                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Configurations}" />
+                                        <RadioButton x:Name="NavProfiles" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconProfiles}" Content="{l:T Nav.Profiles}"
+                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Profiles}" />
+                                        <RadioButton x:Name="NavSettings" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconSettings}" Content="{l:T Nav.Settings}"
+                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Settings}" />
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </StackPanel>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
-                        <StackPanel>
-                            <TextBlock x:Name="GroupTune" Text="{l:T Nav.GroupTune}" Style="{StaticResource NavGroup}" />
-                            <RadioButton x:Name="NavOptimize" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconOptimize}" Content="{l:T Nav.Optimize}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Optimize}" AutomationProperties.Name="{l:T Nav.Optimize}" />
-                            <RadioButton x:Name="NavTweaks" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconTweaks}" Content="{l:T Nav.Tweaks}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Tweaks}" AutomationProperties.Name="{l:T Nav.Tweaks}" />
-                            <RadioButton x:Name="NavDebloat" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconDebloat}" Content="{l:T Nav.Debloat}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Debloat}" AutomationProperties.Name="{l:T Nav.Debloat}" />
+                    <!-- What the open page can do: its template (DockActions) over its own view model; empty on pages with nothing to apply. -->
+                    <Grid Grid.Column="1" Margin="10,0,0,0">
+                        <Border x:Name="ActionDivider" Style="{StaticResource DockDivider}" HorizontalAlignment="Left" Visibility="Collapsed" />
+                        <ContentControl x:Name="ActionZone" Margin="14,0,4,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Focusable="False" />
+                    </Grid>
 
-                            <TextBlock x:Name="GroupSoftware" Text="{l:T Nav.GroupSoftware}" Style="{StaticResource NavGroup}" />
-                            <RadioButton x:Name="NavApps" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconApps}" Content="{l:T Nav.Apps}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Apps}" AutomationProperties.Name="{l:T Nav.Apps}" />
-                            <RadioButton x:Name="NavConfigurations" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconConfigurations}" Content="{l:T Nav.Configurations}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Configurations}" AutomationProperties.Name="{l:T Nav.Configurations}" />
-                            <RadioButton x:Name="NavProfiles" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconProfiles}" Content="{l:T Nav.Profiles}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Profiles}" AutomationProperties.Name="{l:T Nav.Profiles}" />
-                            <RadioButton x:Name="NavActivation" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconKey}" Content="{l:T Nav.Activation}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Activation}" AutomationProperties.Name="{l:T Nav.Activation}" />
-
-                            <TextBlock x:Name="GroupInsight" Text="{l:T Nav.GroupInsight}" Style="{StaticResource NavGroup}" />
-                            <RadioButton x:Name="NavSystem" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconSystem}" Content="{l:T Nav.SystemInfo}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.SystemInfo}" AutomationProperties.Name="{l:T Nav.SystemInfo}" />
-                            <RadioButton x:Name="NavActivity" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconActivity}" Content="{l:T Nav.Activity}" Checked="OnNavigate"
-                                         ToolTip="{l:T Nav.Activity}" AutomationProperties.Name="{l:T Nav.Activity}" />
+                    <!-- Who is running Mesura: without administrator rights, changes to the whole PC are skipped. -->
+                    <Button x:Name="AccessButton" Grid.Column="2" Style="{StaticResource Ghost}" Click="OnAccessClick" Height="40" Padding="12,0" Margin="2,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="AccessGlyph" Style="{StaticResource Icon}" Text="{StaticResource IconShield}" FontSize="16" />
+                            <TextBlock x:Name="AccessText" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
                         </StackPanel>
-                    </ScrollViewer>
-
-                    <StackPanel Grid.Row="2" Margin="0,8,0,14">
-                        <!-- An update waiting (UpdateViewModel): one quiet card, never a pop-up. -->
-                        <l:UpdateCard x:Name="UpdateNotice" Margin="0,0,0,8" Visibility="{Binding HasNoticeOrUpdate, Converter={StaticResource BoolToVisibility}}" />
-                        <!-- Who is running Mesura: without administrator rights, changes to the whole PC are skipped. -->
-                        <Border x:Name="StandardChip" Style="{StaticResource Card}" Background="{StaticResource WarningSubtle}" BorderBrush="#33F2B84B" Padding="12,10" Margin="0,0,0,8"
-                                Visibility="Collapsed">
-                            <Grid>
-                                <TextBlock x:Name="StandardGlyph" Style="{StaticResource Icon}" Text="{StaticResource IconShield}" Foreground="{StaticResource Warning}" HorizontalAlignment="Center" Visibility="Collapsed" />
-                            <StackPanel x:Name="StandardBody">
-                                <TextBlock Text="{l:T Nav.Standard}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource Warning}" />
-                                <Button x:Name="RestartButton" Style="{StaticResource Link}" Margin="0,4,0,0" FontSize="12" Click="OnRestartElevated" HorizontalAlignment="Left"
-                                        >
-                                    <TextBlock x:Name="RestartText" TextWrapping="Wrap" />
-                                </Button>
-                            </StackPanel>
-                            </Grid>
-                        </Border>
-                        <TextBlock x:Name="AdminChip" Text="{l:T Nav.Admin}" Style="{StaticResource Tertiary}" Margin="12,0,0,8" Visibility="Collapsed" ToolTip="{l:T Nav.AdminHint}" />
-                        <RadioButton x:Name="NavSettings" Style="{StaticResource NavItem}" GroupName="Nav" Tag="{StaticResource IconSettings}" Content="{l:T Nav.Settings}" Checked="OnNavigate"
-                                     ToolTip="{l:T Nav.Settings}" AutomationProperties.Name="{l:T Nav.Settings}" />
-                    </StackPanel>
+                    </Button>
                 </Grid>
-            </Border>
-
-            <!-- Pages: each keeps its state while another is shown, all in one column so they line up. -->
-            <Grid Grid.Column="1" x:Name="PageHost" MaxWidth="1440" HorizontalAlignment="Stretch">
-                <p:OptimizePage x:Name="OptimizePage" />
-                <p:AllSettingsPage x:Name="AllSettingsPage" Visibility="Collapsed" />
-                <p:DebloatPage x:Name="DebloatPage" Visibility="Collapsed" />
-                <p:AppsPage x:Name="AppsPage" Visibility="Collapsed" />
-                <p:ConfigurationsPage x:Name="ConfigurationsPage" Visibility="Collapsed" />
-                <p:ProfilesPage x:Name="ProfilesPage" Visibility="Collapsed" />
-                <p:ActivationPage x:Name="ActivationPage" Visibility="Collapsed" />
-                <p:SystemInfoPage x:Name="SystemInfoPage" Visibility="Collapsed" />
-                <p:ActivityPage x:Name="ActivityPage" Visibility="Collapsed" />
-                <p:SettingsPage x:Name="SettingsPage" Visibility="Collapsed" />
-            </Grid>
+            </l:GlowBorder>
         </Grid>
     </Grid>
 </Window>

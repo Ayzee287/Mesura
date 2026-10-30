@@ -28,12 +28,18 @@ public sealed record SystemFirmware(string? Vendor, string? Version, string? Rel
 
 public sealed record SystemProcessor(string? Name, string? Manufacturer, int? Cores, int? Threads, int? MaxMhz, string? Socket);
 
-public sealed record SystemMemory(ulong? TotalBytes, ulong? AvailableBytes, IReadOnlyList<SystemMemoryModule> Modules)
+/// <param name="SlotCount">Memory slots the firmware declares, filled or not; <c>null</c> when it declares none.</param>
+public sealed record SystemMemory(ulong? TotalBytes, ulong? AvailableBytes, IReadOnlyList<SystemMemoryModule> Modules, int? SlotCount = null)
 {
     public ulong? UsedBytes => TotalBytes is { } total && AvailableBytes is { } free && free <= total ? total - free : null;
 }
 
-public sealed record SystemMemoryModule(string? Slot, ulong? SizeBytes, string? Type, int? SpeedMts, string? Manufacturer, string? FormFactor);
+/// <param name="ConfiguredMts">The speed the module is configured to run at (SMBIOS "configured speed"), in MT/s.</param>
+/// <param name="MaxMts">The module's maximum capable speed as the firmware declares it: usually the JEDEC speed, never the XMP or EXPO rating (D004).</param>
+/// <param name="PartNumber">The part number as declared (trimmed); a model name, not a serial number.</param>
+/// <param name="Bank">The bank or channel the slot sits in, as the firmware names it.</param>
+public sealed record SystemMemoryModule(string? Slot, ulong? SizeBytes, string? Type, int? SpeedMts, string? Manufacturer, string? FormFactor,
+    int? ConfiguredMts = null, int? MaxMts = null, string? PartNumber = null, string? Bank = null);
 
 public sealed record SystemGpu(string? Name, string? Vendor, bool? Integrated, string? DriverVersion, ulong? MemoryBytes);
 

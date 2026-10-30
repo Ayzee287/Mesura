@@ -55,6 +55,23 @@ public sealed class SettingsViewModel : Observable
         }
 
         Languages.First(l => l.Value == Loc.Instance.Language).IsSelected = true;
+        BuildStartupModes();
+        foreach (var (code, key) in new[] { ("auto", "Settings.LightAuto"), ("full", "Settings.LightFull"), ("reduced", "Settings.LightReduced"), ("off", "Settings.LightOff") })
+        {
+            LightingChoices.Add(new FilterChoice(code, () => Loc.Get(key), chosen =>
+            {
+                var setting = chosen == "auto" ? null : chosen;
+                if (_services.Settings.Lighting != setting)
+                {
+                    _services.Settings.Lighting = setting;
+                    _services.SaveSettings();
+                }
+
+                LightField.Mode = LightField.Resolve(setting);
+            }));
+        }
+
+        LightingChoices.First(c => c.Value == (_services.Settings.Lighting ?? "auto")).IsSelected = true;
         OpenHistory = new RelayCommand(() => Note = ShellLauncher.OpenFolder(_services.Store.HistoryFolder) ?? "");
         OpenCatalogs = new RelayCommand(() => Note = ShellLauncher.OpenFolder(CatalogFiles.SharedFolder) ?? "");
         CopyCatalogs = new RelayCommand(DoCopyCatalogs, () => MissingCatalogs.Count > 0);
@@ -62,6 +79,9 @@ public sealed class SettingsViewModel : Observable
     }
 
     public ObservableCollection<FilterChoice> Languages { get; } = [];
+
+    /// <summary>Automatic, full, reduced or off: how much interactive light the window draws (docs/redesign-2026-11.md §4).</summary>
+    public ObservableCollection<FilterChoice> LightingChoices { get; } = [];
 
     /// <summary>The update channels (stable, preview) and the update state the Updates section shows.</summary>
     public ObservableCollection<FilterChoice> Channels { get; } = [];
@@ -98,16 +118,32 @@ public sealed class SettingsViewModel : Observable
     /// <summary>What the start-up switch does here: in a per-user install it does nothing (Mesura never elevates from a user folder), and says so.</summary>
     public string ElevateHintText => Loc.Get(Loc.AdminKey("Settings.ElevateHint"));
 
-    public bool ElevateAtStart
+    /// <summary>Ask each time, always as you are, or always restart as administrator (the last only where the program folder is protected).</summary>
+    public ObservableCollection<FilterChoice> StartupModes { get; } = [];
+
+    private void BuildStartupModes()
     {
-        // Shown off where it cannot take effect, so the switch never claims a prompt that will not come.
-        get => ShellLauncher.ElevationBlockedReason is null && _services.Settings.ElevateAtStart;
-        set
+        var blocked = ShellLauncher.ElevationBlockedReason is not null;
+        foreach (var (code, key) in new[] { ("ask", "Settings.ModeAsk"), ("normal", "Settings.ModeNormal"), ("admin", "Settings.ModeAdmin") })
         {
-            _services.Settings.ElevateAtStart = value;
-            _services.SaveSettings();
-            Raise();
+            if (blocked && code == "admin")
+            {
+                continue; // never offered from a folder any program can change
+            }
+
+            StartupModes.Add(new FilterChoice(code, () => Loc.Get(key), chosen =>
+            {
+                if (_services.Settings.StartupMode != chosen)
+                {
+                    _services.Settings.StartupMode = chosen;
+                    _services.Settings.ElevateAtStart = chosen != "normal";
+                    _services.SaveSettings();
+                }
+            }));
         }
+
+        var current = _services.Settings.EffectiveStartupMode;
+        (StartupModes.FirstOrDefault(c => c.Value == (blocked && current == "admin" ? "ask" : current)) ?? StartupModes[0]).IsSelected = true;
     }
 
     /// <summary>Why administrator mode is unavailable in this install and how to get it (who can change this program folder); empty when the folder is protected.</summary>
@@ -131,6 +167,9 @@ public sealed class SettingsViewModel : Observable
     /// save to that account's and never change the prompt, so it is off.
     /// </summary>
     public bool CanChangeElevation => _services.SameUser && ShellLauncher.ElevationBlockedReason is null;
+
+    /// <summary>Whether the start-up mode can be chosen: a choice saved by another account would never be read at start.</summary>
+    public bool CanChangeStartupMode => _services.SameUser;
 
     public string StartupNote => Services.RunsFromRemovableDrive
         ? Loc.Format("Settings.Removable", Path.GetPathRoot(Services.Executable) ?? "", DefaultInstallFolder)

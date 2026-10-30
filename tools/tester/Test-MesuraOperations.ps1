@@ -246,21 +246,21 @@ if (Wants 'MemoryAgent') {
 
 # ---- Adapter ------------------------------------------------------------------------------------------------------------
 if (Wants 'Adapter') {
-  Section 'Per-adapter setting (flow control)'
-  $props = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*FlowControl' -ErrorAction SilentlyContinue)
-  if ($props.Count -eq 0) { Add-Result 'candidate adapter' 'SKIPPED' 'no network adapter on this PC declares the *FlowControl keyword (typical for virtual adapters): per-adapter settings cannot be tested here' }
-  elseif ($props | Where-Object { "$($_.RegistryValue)" -eq '0' }) { Add-Result 'precondition' 'SKIPPED' 'an adapter already has flow control off' }
-  elseif (Can-Run 'turn flow control off on every adapter that declares it (adapters restart: a brief network drop) and revert') {
+  Section 'Per-adapter setting (Energy-Efficient Ethernet)'
+  $props = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*EEE' -ErrorAction SilentlyContinue)
+  if ($props.Count -eq 0) { Add-Result 'candidate adapter' 'SKIPPED' 'no network adapter on this PC declares the *EEE keyword (typical for virtual adapters): per-adapter settings cannot be tested here' }
+  elseif ($props | Where-Object { "$($_.RegistryValue)" -eq '0' }) { Add-Result 'precondition' 'SKIPPED' 'an adapter already has EEE off' }
+  elseif (Can-Run 'turn Energy-Efficient Ethernet off on every adapter that declares it (adapters restart: a brief network drop) and revert') {
     $beforeVals = $props | ForEach-Object { "$($_.Name)=$($_.RegistryValue)" }
-    $ap = Invoke-Mesura @('windows', 'apply', '--id', 'network.nic-flow-control-off', '--apply', '--no-restore-point')
+    $ap = Invoke-Mesura @('windows', 'apply', '--id', 'network.ethernet-eee-off', '--apply', '--no-restore-point')
     $run = Run-Id $ap.Text
     Start-Sleep -Seconds 5
-    $now = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*FlowControl' -ErrorAction SilentlyContinue) | ForEach-Object { "$($_.Name)=$($_.RegistryValue)" }
+    $now = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*EEE' -ErrorAction SilentlyContinue) | ForEach-Object { "$($_.Name)=$($_.RegistryValue)" }
     Add-Result 'apply sets the keyword on the adapters that declare it' $(if (-not ($now -notmatch '=0$') -and $run) { 'PASS' } else { 'FAIL' }) ("before: " + ($beforeVals -join ', ') + "; now: " + ($now -join ', '))
     if ($run) {
       Invoke-Mesura @('windows', 'revert', '--run', $run, '--apply') | Out-Null
       Start-Sleep -Seconds 5
-      $back = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*FlowControl' -ErrorAction SilentlyContinue) | ForEach-Object { "$($_.Name)=$($_.RegistryValue)" }
+      $back = @(Get-NetAdapterAdvancedProperty -RegistryKeyword '*EEE' -ErrorAction SilentlyContinue) | ForEach-Object { "$($_.Name)=$($_.RegistryValue)" }
       Add-Result 'revert restores every adapter' $(if (($back -join ',') -eq ($beforeVals -join ',')) { 'PASS' } else { 'FAIL' }) ("after revert: " + ($back -join ', '))
     }
   }

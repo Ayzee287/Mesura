@@ -1,4 +1,4 @@
-using Mesura.Core.Licensing;
+﻿using Mesura.Core.Licensing;
 using Mesura.Core.Windows;
 
 namespace Mesura.Core.Tests.Windows;
@@ -13,7 +13,7 @@ public sealed class QualityPassTests
     private static readonly WindowsCatalog Catalog = WindowsCatalog.Default;
     private const string Ipv6 = @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\DisabledComponents";
 
-    private static WindowsOperation Op(string id) => Catalog.ById(id) ?? throw new InvalidOperationException(id);
+    private static WindowsOperation Op(string id) => EngineFixtures.Op(id);
 
     [Fact]
     public void Tcp_repairs_read_apply_read_back_record_and_revert()
@@ -125,11 +125,11 @@ public sealed class QualityPassTests
     }
 
     [Fact]
-    public void Network_entries_carry_the_network_impact_and_their_benefit()
+    public void Repair_entries_are_maintenance_and_carry_their_benefit()
     {
         foreach (var id in new[] { "manual.restore-tcp-autotuning", "repair.tcp-rss", "repair.tcp-rsc", "repair.ipv6-components", "repair.ncsi-active-probing", "updates.no-p2p-delivery" })
         {
-            Assert.Equal(OperationImpact.Network, Op(id).Impact);
+            Assert.Equal(OperationImpact.Maintenance, Op(id).Impact);
         }
 
         Assert.All(new[] { "manual.restore-tcp-autotuning", "repair.tcp-rss", "repair.tcp-rsc", "repair.ipv6-components" },
@@ -137,7 +137,7 @@ public sealed class QualityPassTests
         Assert.Equal(OperationBenefit.Preference, Op("updates.no-p2p-delivery").Evidence); // a choice, not a speed-up
 
         // Without a benefit in the catalog it follows the risk class.
-        Assert.Equal(OperationBenefit.Preference, Op("taskbar.hide-task-view").Evidence);
+        Assert.Equal(OperationBenefit.Preference, Op("explorer.show-extensions").Evidence);
         Assert.Equal(OperationBenefit.Unverified, Op("explorer.classic-context-menu").Evidence);
         Assert.Equal(OperationBenefit.Documented, Op("system.fast-startup-off").Evidence);
     }
@@ -147,7 +147,7 @@ public sealed class QualityPassTests
     {
         const string key = @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\SystemResponsiveness";
         var op = Op("repair.mmcss-responsiveness");
-        Assert.Equal(OperationImpact.Performance, op.Impact);
+        Assert.Equal(OperationImpact.Maintenance, op.Impact);
         Assert.Equal(OperationBenefit.Documented, op.Evidence);
 
         var untouched = new FakeWindows(); // no value stored: 20 is Windows' default
@@ -162,29 +162,6 @@ public sealed class QualityPassTests
         Assert.Equal(("10", "20"), (outcome.Changes[0].Before, outcome.Changes[0].After));
         Assert.All(new WindowsConfigurator(tweaked, tweaked).Revert([outcome]), r => Assert.Equal(WindowsOpStatus.Reverted, r.Status));
         Assert.Equal("10", tweaked.Registry[key].Value);
-    }
-
-    [Fact]
-    public void The_fast_key_repeat_preference_writes_only_what_differs_and_reverts()
-    {
-        const string delay = @"HKCU\Control Panel\Keyboard\KeyboardDelay";
-        const string speed = @"HKCU\Control Panel\Keyboard\KeyboardSpeed";
-        var op = Op("input.keyboard-repeat-fast");
-        Assert.Equal(OperationImpact.Interface, op.Impact);
-        Assert.Equal(RiskClass.UserPreference, op.Risk);
-
-        var pc = new FakeWindows();
-        pc.Registry[delay] = (RegistryKind.String, "1");
-        pc.Registry[speed] = (RegistryKind.String, "31"); // already fastest: left alone
-
-        var outcome = new WindowsConfigurator(pc, pc).Apply([op], TestContext.Current.CancellationToken).Single();
-        Assert.Equal(WindowsOpStatus.Applied, outcome.Status);
-        Assert.Equal("0", pc.Registry[delay].Value);
-        var change = Assert.Single(outcome.Changes); // only the delay differed
-        Assert.Equal(("KeyboardDelay", "1", "0"), (change.Name, change.Before, change.After));
-
-        Assert.All(new WindowsConfigurator(pc, pc).Revert([outcome]), r => Assert.Equal(WindowsOpStatus.Reverted, r.Status));
-        Assert.Equal("1", pc.Registry[delay].Value);
     }
 
     private const string LastAccess = @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\NtfsDisableLastAccessUpdate";
@@ -284,7 +261,11 @@ public sealed class QualityPassTests
             // 0.2.0: the boot-timer overrides and the scheduler value put back to Windows' own (all no-ops on an untouched PC)
             "cpu.platform-clock-default", "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default"], Catalog.PresetById("system-defaults")!.OperationIds);
         Assert.Equal(["privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking",
-            "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences"],
+            "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences",
+            // 0.4: the documented policies of the old privacy-policies collection moved in, and its duplicates and harmful switches were dropped by the audit.
+            "privacy.no-inking-typing-data-upload", "privacy.no-cross-device-clipboard", "privacy.no-settings-sync", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
+            "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection", "telemetry.inventory-collector-off", "telemetry.onesettings-downloads-off", "search.no-box-suggestions",
+            "search.no-cloud-content", "search.no-location", "edge.diagnostic-data-required", "ai.click-to-do-off"],
             Catalog.PresetById("less-data-sharing")!.OperationIds);
         Assert.All(new[] { "system-defaults", "less-data-sharing", "network-defaults" }, id =>
         {
@@ -299,13 +280,17 @@ public sealed class QualityPassTests
 
         // Preferences and unmeasured settings stay Optional: outside Recommended and Maximum performance, by decision.
         var primary = Catalog.Presets.Where(p => p.Tier == PresetTier.Primary).SelectMany(p => p.OperationIds.Concat(p.OptionalIds)).ToHashSet();
-        Assert.All(new[] { "input.keyboard-repeat-fast", "repair.mmcss-responsiveness" }, id => Assert.DoesNotContain(id, primary));
+        Assert.All(new[] { "explorer.show-extensions", "repair.mmcss-responsiveness" }, id => Assert.DoesNotContain(id, primary));
 
-        // The 2026-10-25 profile review moved the documented background reduction into Maximum performance, and the
-        // unmeasured or unofficial ones into its unticked extras: never into the preset itself.
+        // The 0.4 audit took the privacy extras out of Maximum performance (it is about performance and desktop power now) and left them in
+        // the Less data sharing collection; the unmeasured ones are its unticked extras: never in the preset itself.
         var maximum = Catalog.PresetById("maximum-performance")!;
-        Assert.All(new[] { "privacy.no-error-reporting", "privacy.no-cross-device-experiences" }, id => Assert.Contains(id, maximum.OperationIds));
-        Assert.All(new[] { "system.ntfs-last-access-off", "services.telemetry-off", "tasks.telemetry-off" }, id =>
+        Assert.All(new[] { "privacy.no-error-reporting", "privacy.no-cross-device-experiences" }, id =>
+        {
+            Assert.DoesNotContain(id, maximum.OperationIds);
+            Assert.Contains(id, Catalog.PresetById("less-data-sharing")!.OperationIds);
+        });
+        Assert.All(new[] { "system.ntfs-last-access-off", "gpu.hardware-scheduling-on" }, id =>
         {
             Assert.Contains(id, maximum.OptionalIds);
             Assert.DoesNotContain(id, maximum.OperationIds);
@@ -320,20 +305,17 @@ public sealed class QualityPassTests
         Assert.All(Catalog.Resolve(preset), op =>
         {
             Assert.Equal(WindowsCatalog.DefaultsCategory, op.Category);
-            Assert.Equal(OperationImpact.Network, op.Impact);
+            Assert.Equal(OperationImpact.Maintenance, op.Impact);
             Assert.Equal(RiskClass.SystemConfiguration, op.Risk);
         });
 
         // The network repairs stay opt-in (the one in Recommended is the connectivity check, shared with this collection).
         // Recommended is the list of the 2026-10-25 profile review (docs/profile-review-2026-10.md): pinned exactly, so a
         // change to it is a decision, not a side effect.
-        Assert.Equal(["input.accessibility-shortcuts-off", "notifications.no-feedback-prompts", "privacy.no-language-list", "repair.ncsi-active-probing", "repair.threaded-dpc",
-                      "privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "notifications.no-tips-and-suggestions",
-                      "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "gaming.game-mode-on",
-                      // 0.2.0: Microsoft-documented policies and one Windows default, each read against its ADMX or Learn page and then placed by a sceptical second review.
-                      "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection",
-                      "privacy.no-inking-typing-data-upload", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
-                      "edge.diagnostic-data-required", "system.long-paths-on"],
+        Assert.Equal(["gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
+                      "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "notifications.no-feedback-prompts",
+                      "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations",
+                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc"],
             Catalog.PresetById("recommended-gaming")!.OperationIds);
     }
 

@@ -157,14 +157,14 @@ public sealed class RedesignBackendTests : IDisposable
         var catalog = WindowsCatalog.Default;
         var maximum = catalog.PresetById("maximum-performance")!;
         var laptop = catalog.Operations.Select(op => Eval(op,
-            op.Id is "power.high-performance" or "power.pcie-aspm-off" ? OperationState.Inapplicable
-            : maximum.OperationIds.Contains(op.Id) || op.Id == "appearance.dark-mode" ? OperationState.Applied
+            op.Requirements.Contains(DeviceRequirement.NoBattery) ? OperationState.Inapplicable
+            : maximum.OperationIds.Contains(op.Id) || op.Id == "explorer.show-extensions" ? OperationState.Applied
             : OperationState.NotApplied)).ToList();
 
         Assert.True(SetupProfile.PresetSatisfied(maximum, laptop));
         var profile = SetupProfile.FromMachine("pc", "", [], laptop, null, [maximum]);
         Assert.Equal(["maximum-performance"], profile.WindowsPresets);
-        Assert.Equal(["appearance.dark-mode"], profile.Windows); // the preset's own entries aren't listed again
+        Assert.Equal(["explorer.show-extensions"], profile.Windows); // the preset's own entries aren't listed again
 
         // One entry undone since: the outcome isn't in place any more, so the profile lists what is applied instead.
         var partly = laptop.Select(e => e.Operation.Id == "privacy.no-language-list" ? Eval(e.Operation, OperationState.NotApplied) : e).ToList();

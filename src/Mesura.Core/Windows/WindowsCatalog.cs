@@ -25,7 +25,7 @@ public sealed partial class WindowsCatalog
     /// 4 since 0.2.0 (binary values, per-adapter registry settings, tool-backed system settings, a stated level, sources):
     /// the same rule holds between 3 and 4.
     /// </summary>
-    public const int CurrentSchema = 4;
+    public const int CurrentSchema = 5;
     public const string FileName = "windows.catalog.json";
 
     /// <summary>The categories of the Debloat page (bundled apps, AI features) and its generated startup entries; Tweaks leaves them out.</summary>
@@ -38,7 +38,11 @@ public sealed partial class WindowsCatalog
     /// <summary>The category of entries that put a Windows default back after a tweak tool changed it.</summary>
     public const string DefaultsCategory = "Restore Windows defaults";
 
+    public const string RetiredFileName = "windows.retired.json";
+
     private static readonly Lazy<WindowsCatalog> BuiltIn = new(() => Parse(BuiltInJson()));
+
+    private static readonly Lazy<WindowsCatalog> BuiltInRetired = new(() => Parse(ReadResource(RetiredFileName)));
 
     private WindowsCatalog(IReadOnlyList<WindowsOperation> operations, IReadOnlyList<WindowsPreset> presets)
     {
@@ -47,6 +51,12 @@ public sealed partial class WindowsCatalog
     }
 
     public static WindowsCatalog Default => BuiltIn.Value;
+
+    /// <summary>
+    /// The operations earlier versions had and this one dropped (0.4 removed 103), reduced to the settings they changed. They are never listed
+    /// or applied; an undo of a history record an earlier version wrote still needs to know what those operations declared (<see cref="RevertTrust"/>).
+    /// </summary>
+    public static WindowsCatalog Retired => BuiltInRetired.Value;
 
     public IReadOnlyList<WindowsOperation> Operations { get; }
 
@@ -64,10 +74,12 @@ public sealed partial class WindowsCatalog
         return [.. preset.OperationIds.Select(ById).OfType<WindowsOperation>()];
     }
 
-    public static string BuiltInJson()
+    public static string BuiltInJson() => ReadResource(FileName);
+
+    private static string ReadResource(string name)
     {
-        using var stream = typeof(WindowsCatalog).Assembly.GetManifestResourceStream(FileName)
-            ?? throw new InvalidOperationException($"The built-in {FileName} resource is missing from this build.");
+        using var stream = typeof(WindowsCatalog).Assembly.GetManifestResourceStream(name)
+            ?? throw new InvalidOperationException($"The built-in {name} resource is missing from this build.");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
@@ -272,18 +284,22 @@ public sealed partial class WindowsCatalog
             "nobattery" => DeviceRequirement.NoBattery,
             "nomodernstandby" => DeviceRequirement.NoModernStandby,
             "proedition" => DeviceRequirement.ProEdition,
-            _ => throw new FormatException(Where($"unknown requirement '{r}' (noBattery, noModernStandby or proEdition).")),
+            "ram16gb" => DeviceRequirement.Ram16Gb,
+            "hybridcpu" => DeviceRequirement.HybridCpu,
+            _ => throw new FormatException(Where($"unknown requirement '{r}' (noBattery, noModernStandby, proEdition, ram16Gb or hybridCpu).")),
         }).Distinct().ToList();
 
         var impact = e.Impact?.ToLowerInvariant() switch
         {
-            null or "system" => OperationImpact.System,
+            null or "maintenance" => OperationImpact.Maintenance,
             "performance" => OperationImpact.Performance,
-            "network" => OperationImpact.Network,
-            "privacy" => OperationImpact.Privacy,
-            "interface" => OperationImpact.Interface,
+            "gaming" => OperationImpact.Gaming,
             "power" => OperationImpact.Power,
-            _ => throw new FormatException(Where($"unknown impact '{e.Impact}' (performance, network, privacy, interface, system or power).")),
+            "privacy" => OperationImpact.Privacy,
+            "components" => OperationImpact.Components,
+            "convenience" => OperationImpact.Convenience,
+            "experimental" => OperationImpact.Experimental,
+            _ => throw new FormatException(Where($"unknown impact '{e.Impact}' (performance, gaming, power, privacy, components, maintenance, convenience or experimental).")),
         };
 
         OperationBenefit? benefit = e.Benefit?.ToLowerInvariant() switch

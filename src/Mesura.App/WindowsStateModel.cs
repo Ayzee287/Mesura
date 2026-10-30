@@ -217,6 +217,16 @@ public sealed class SettingRow : Observable
             return Loc.Get("Reason.Edition");
         }
 
+        if (Operation.Requirements.Contains(DeviceRequirement.Ram16Gb) && reader.PhysicalMemoryBytes < 15UL * 1024 * 1024 * 1024)
+        {
+            return Loc.Get("Reason.Memory");
+        }
+
+        if (Operation.Requirements.Contains(DeviceRequirement.HybridCpu) && reader.HybridCpu == false)
+        {
+            return Loc.Get("Reason.Hybrid");
+        }
+
         return Loc.Get("Reason.Absent");
     }
 

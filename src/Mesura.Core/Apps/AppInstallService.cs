@@ -41,6 +41,12 @@ public sealed class AppInstallService
     private readonly IWingetRunner _winget;
     private readonly IReadOnlyDictionary<string, Func<InstallState>> _detectors;
 
+    /// <summary>
+    /// The folder the user chose for a package (read when its install starts, so a choice made after the plan was built still counts); consulted only
+    /// for a package whose installer takes one (<see cref="AppPackage.InstallLocation"/>).
+    /// </summary>
+    public Func<AppPackage, string?>? InstallFolderFor { get; set; }
+
     /// <param name="detectors">
     /// Detectors by name (<see cref="AppPackage.Detector"/>) for apps winget can't see; each reads the app's own files.
     /// </param>
@@ -134,6 +140,11 @@ public sealed class AppInstallService
         CancellationToken cancellationToken)
     {
         var package = item.Package;
+        if (package.InstallLocation && InstallFolderFor?.Invoke(package) is { Length: > 0 } folder)
+        {
+            package = package with { InstallFolder = folder };
+        }
+
         InstallOutcome Outcome(InstallStatus status, string detail) => new(package.Id, package.WingetId, status, detail);
 
         if (package.Source == AppSource.Manual)

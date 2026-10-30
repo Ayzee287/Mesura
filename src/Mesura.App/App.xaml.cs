@@ -85,12 +85,12 @@ public partial class App : Application
         var preferences = AppSettings.Load(new Mesura.Setup.Windows.SetupStore());
         StartupLog.Note("stage: preferences read");
         Loc.Instance.Use(PreviewLanguage() ?? preferences.Language ?? Loc.DefaultLanguage());
-        if (ShellLauncher.ElevationBlockedReason is { } exposed && preferences.ElevateAtStart)
+        if (ShellLauncher.ElevationBlockedReason is { } exposed)
         {
             StartupLog.Note($"administrator mode is not offered from this folder: {exposed}");
         }
 
-        if (!Has("--tray") && !relaunched && !Has(NoElevateArgument) && preferences.ElevateAtStart && !IsElevated() && ShellLauncher.ElevationBlockedReason is null)
+        if (!Has("--tray") && !relaunched && !Has(NoElevateArgument) && !IsElevated() && StartupChoice.WantsAdministrator(preferences, new Mesura.Setup.Windows.SetupStore()))
         {
             _elevationAsked = true;
             if (ShellLauncher.RelaunchElevated(e.Args) is null)
@@ -368,10 +368,10 @@ public partial class App : Application
         if (_window is null)
         {
             // The tray instance started at sign-in runs unelevated: its window asks once, like a normal start.
-            if (_tray is not null && !_elevationAsked && !_services.Changing && _services.Settings.ElevateAtStart && !IsElevated() && ShellLauncher.ElevationBlockedReason is null)
+            if (_tray is not null && !_elevationAsked && !_services.Changing && !IsElevated())
             {
                 _elevationAsked = true;
-                if (ShellLauncher.RelaunchElevated(["--tray"]) is null)
+                if (StartupChoice.WantsAdministrator(_services.Settings, _services.Store) && ShellLauncher.RelaunchElevated(["--tray"]) is null)
                 {
                     Shutdown(); // the elevated instance shows the window and keeps the tray
                     return;

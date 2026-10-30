@@ -128,4 +128,50 @@ public sealed class RevertTrustTests
             }
         }
     }
+
+    [Fact]
+    public void The_operations_0_4_retired_are_never_listed_and_none_is_also_in_the_catalog()
+    {
+        var retired = WindowsCatalog.Retired;
+        Assert.Equal(96, retired.Operations.Count);
+        Assert.Empty(retired.Presets);
+        Assert.All(retired.Operations, op =>
+        {
+            Assert.Null(WindowsCatalog.Default.ById(op.Id));
+            Assert.Equal("Retired", op.Category);
+            Assert.True(op.Registry.Count + op.Services.Count + op.Features.Count + op.Tasks.Count + op.TcpSettings.Count + op.SystemSettings.Count + op.AppxSettings.Count
+                + op.PowerSettings.Count + op.RegistryEachSettings.Count > 0 || op.PowerPlan is not null, op.Id);
+        });
+    }
+
+    [Fact]
+    public void A_record_written_by_an_earlier_version_for_an_operation_0_4_removed_still_undoes()
+    {
+        // 0.3 users may have applied entries that 0.4 no longer ships; without the retired declarations their Undo would be refused as "not in this version".
+        var op = WindowsCatalog.Retired.Operations.First(o => o.Registry.Any(r => r.Hive == "HKLM" && r.Kind == RegistryKind.DWord));
+        var setting = op.Registry.First(r => r.Hive == "HKLM" && r.Kind == RegistryKind.DWord);
+        var key = $@"HKLM\{setting.Path}\{setting.Name}";
+        var pc = new FakeWindows { IsElevated = true };
+        pc.Registry[key] = (RegistryKind.DWord, setting.Value);
+        var change = new RecordedChange(ChangeKind.Registry, key, "HKLM", setting.Path, setting.Name, RegistryKind.DWord, "7", setting.Value, RegistryKind.DWord);
+        var record = new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, "", Activation.Immediate, [change]);
+
+        var outcome = new WindowsConfigurator(pc, pc, WindowsCatalog.Default).Revert([record]).Single();
+
+        Assert.Equal(WindowsOpStatus.Reverted, outcome.Status);
+        Assert.Equal("7", pc.Registry[key].Value);
+    }
+
+    [Fact]
+    public void A_retired_operations_record_is_still_refused_for_a_target_that_operation_never_declared()
+    {
+        var op = WindowsCatalog.Retired.Operations.First();
+        var pc = new FakeWindows { IsElevated = true };
+        var record = new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, "", Activation.Immediate, [ForgedRunEntry()]);
+
+        var outcome = new WindowsConfigurator(pc, pc, WindowsCatalog.Default).Revert([record]).Single();
+
+        Assert.Equal(WindowsOpStatus.Blocked, outcome.Status);
+        Assert.DoesNotContain(pc.Registry.Keys, k => k.Contains("updater", StringComparison.OrdinalIgnoreCase));
+    }
 }

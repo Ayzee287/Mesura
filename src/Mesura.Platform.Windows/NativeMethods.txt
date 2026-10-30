@@ -74,3 +74,8 @@ GlobalMemoryStatusEx
 MEMORYSTATUSEX
 GetFirmwareType
 FIRMWARE_TYPE
+
+// whether the cores are of more than one efficiency class (hybrid CPUs), read from the processor-core records
+GetLogicalProcessorInformationEx
+LOGICAL_PROCESSOR_RELATIONSHIP
+SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX

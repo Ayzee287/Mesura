@@ -1,0 +1,712 @@
+{
+  "kind": "Mesura.FirmwareKnowledge",
+  "schemaVersion": 1,
+  "reviewed": "2026-10-30",
+  "note": {
+    "en": "Menu names are those the makers' boards commonly use; they change between boards and BIOS versions, and none was checked on hardware by Mesura. The settings and their risks are the point; use the board's manual for the exact path.",
+    "ru": "Названия меню — те, что обычно используют платы производителей; они различаются между платами и версиями BIOS, и Mesura не проверяла их на оборудовании. Главное здесь — сами параметры и их риски; точный путь смотрите в руководстве платы."
+  },
+  "settings": [
+    {
+      "id": "memory-profile",
+      "title": {
+        "en": "Memory profile (XMP / EXPO)",
+        "ru": "Профиль памяти (XMP / EXPO)"
+      },
+      "what": {
+        "en": "Memory kits are sold at a speed above the base speed a board starts them at. The kit stores that speed as a profile: XMP on Intel boards, EXPO on AMD (many boards accept either, and call it DOCP or A-XMP). Until the profile is switched on in the BIOS, the memory runs at its base speed, for example DDR5-4800.",
+        "ru": "Комплекты памяти продаются на скорости выше базовой, на которой их запускает плата. Комплект хранит эту скорость в виде профиля: XMP на платах Intel, EXPO на AMD (многие платы принимают оба и называют его DOCP или A-XMP). Пока профиль не включён в BIOS, память работает на базовой скорости, например DDR5-4800."
+      },
+      "why": {
+        "en": "A higher memory speed raises memory bandwidth and, on Ryzen, usually the speed of the fabric between cores and memory. How much a game gains depends on the game and the CPU, so Mesura promises no figure.",
+        "ru": "Более высокая скорость памяти увеличивает пропускную способность и, на Ryzen, обычно частоту шины между ядрами и памятью. Насколько это ускоряет игру, зависит от игры и процессора, поэтому Mesura не обещает цифр."
+      },
+      "risk": {
+        "en": "A profile is a factory overclock of the memory and its controller. With some kits, four modules or an old BIOS it can fail to start (the board then falls back to safe settings or asks to enter setup) or cause crashes that look like software faults. If the PC won't start, power it off and let the board recover by itself, or clear the CMOS (a jumper or button on the board; see its manual). Start with Profile 1 and run a memory test afterwards.",
+        "ru": "Профиль — это заводской разгон памяти и её контроллера. С некоторыми комплектами, при четырёх модулях или старом BIOS ПК может не запуститься (плата вернётся к безопасным настройкам или предложит войти в BIOS) или давать сбои, похожие на программные. Если ПК не стартует, выключите его и дайте плате восстановиться самой либо сбросьте CMOS (перемычка или кнопка на плате; см. руководство). Начните с профиля 1 и после запустите тест памяти."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Find the memory profile setting (called XMP, A-XMP, EXPO, DOCP or Extreme Memory Profile) and choose the profile (Profile 1 is the kit's main one).",
+            "ru": "Найдите параметр профиля памяти (XMP, A-XMP, EXPO, DOCP или Extreme Memory Profile) и выберите профиль (профиль 1 — основной у комплекта)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "gigabyte": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Tweaker → Extreme Memory Profile (X.M.P.): choose Profile 1 (on AMD AM5 boards the list holds the kit's EXPO profile).",
+            "ru": "Tweaker → Extreme Memory Profile (X.M.P.): выберите Profile 1 (на платах AMD AM5 в списке профиль EXPO комплекта)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asus": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced Mode (F7) → Ai Tweaker → Ai Overclock Tuner → XMP I or EXPO I (the name follows the processor); EZ Mode has the same switch in the DRAM panel.",
+            "ru": "Advanced Mode (F7) → Ai Tweaker → Ai Overclock Tuner → XMP I или EXPO I (название зависит от процессора); в EZ Mode такой же переключатель на панели DRAM."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "msi": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "The A-XMP / EXPO switch at the top of the screen, or OC → Extreme Memory Profile (X.M.P.) / EXPO → Profile 1.",
+            "ru": "Переключатель A-XMP / EXPO вверху экрана или OC → Extreme Memory Profile (X.M.P.) / EXPO → Profile 1."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asrock": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "OC Tweaker → Load XMP Setting (or Load EXPO Setting) → Profile 1.",
+            "ru": "OC Tweaker → Load XMP Setting (или Load EXPO Setting) → Profile 1."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ]
+      },
+      "verify": {
+        "en": "After the restart Mesura reads the memory's configured speed again and says whether it changed.",
+        "ru": "После перезагрузки Mesura снова считывает настроенную скорость памяти и сообщает, изменилась ли она."
+      },
+      "links": [
+        {
+          "title": {
+            "en": "AMD EXPO memory profiles",
+            "ru": "Профили памяти AMD EXPO"
+          },
+          "url": "https://www.amd.com/en/products/processors/technologies/expo.html"
+        },
+        {
+          "title": {
+            "en": "Intel XMP memory profiles",
+            "ru": "Профили памяти Intel XMP"
+          },
+          "url": "https://www.intel.com/content/www/us/en/gaming/extreme-memory-profile-xmp.html"
+        }
+      ]
+    },
+    {
+      "id": "memory-channels",
+      "title": {
+        "en": "Memory channels (dual channel)",
+        "ru": "Каналы памяти (двухканальный режим)"
+      },
+      "what": {
+        "en": "A desktop processor reads memory over two channels at once when modules sit in the right slots. One module, or two modules on the same channel, leaves half the bandwidth unused.",
+        "ru": "Настольный процессор читает память по двум каналам одновременно, когда модули стоят в нужных слотах. Один модуль или два модуля на одном канале оставляют половину пропускной способности неиспользованной."
+      },
+      "why": {
+        "en": "This is the one memory setting that is a matter of where the modules are, not of a menu. It matters most with integrated graphics and in games that are limited by memory.",
+        "ru": "Это единственный параметр памяти, который решается расположением модулей, а не меню. Он важнее всего со встроенной графикой и в играх, упирающихся в память."
+      },
+      "risk": {
+        "en": "None to the PC, but modules are handled with the PC off and unplugged, touching bare metal first.",
+        "ru": "Для ПК риска нет, но модули трогают при выключенном и отключённом от сети ПК, предварительно коснувшись металла."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Power off, unplug the PC and press the power button once to drain it.",
+            "ru": "Выключите ПК, отсоедините от сети и один раз нажмите кнопку питания, чтобы снять остаточный заряд."
+          },
+          {
+            "en": "Open the board's manual and find the slots it names for two modules (on most four-slot boards they are the second and fourth slot from the processor, A2 and B2).",
+            "ru": "В руководстве платы найдите слоты для двух модулей (на большинстве плат с четырьмя слотами это второй и четвёртый слоты от процессора, A2 и B2)."
+          },
+          {
+            "en": "Seat the modules fully until the clips click, close the case, start the PC and open this page again.",
+            "ru": "Вставьте модули до щелчка защёлок, закройте корпус, включите ПК и снова откройте эту страницу."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura reads which slots are filled and how the firmware names their channels.",
+        "ru": "Mesura считывает, какие слоты заняты и как прошивка называет их каналы."
+      },
+      "links": []
+    },
+    {
+      "id": "resizable-bar",
+      "title": {
+        "en": "Resizable BAR (Smart Access Memory)",
+        "ru": "Resizable BAR (Smart Access Memory)"
+      },
+      "what": {
+        "en": "Lets the processor address all of the graphics card's memory at once instead of through a 256 MB window. NVIDIA calls it Resizable BAR, AMD Smart Access Memory. It needs UEFI boot, Above 4G Decoding on, a card that supports it (NVIDIA RTX 30 series and later, AMD RX 6000 and later, Intel Arc) and a current graphics driver.",
+        "ru": "Позволяет процессору обращаться ко всей памяти видеокарты сразу, а не через окно в 256 МБ. NVIDIA называет это Resizable BAR, AMD — Smart Access Memory. Нужны загрузка в UEFI, включённый Above 4G Decoding, поддерживающая карта (NVIDIA RTX 30 и новее, AMD RX 6000 и новее, Intel Arc) и свежий драйвер."
+      },
+      "why": {
+        "en": "The gain is usually small and differs by game; NVIDIA keeps a per-game list because a few games run slower with it. Mesura promises no figure.",
+        "ru": "Прирост обычно небольшой и зависит от игры; NVIDIA ведёт список по играм, потому что в некоторых играх с ним медленнее. Mesura не обещает цифр."
+      },
+      "risk": {
+        "en": "Turning CSM off while Windows is installed in legacy (MBR) mode makes Windows unable to start: check the Boot mode item first. On a card with an old video BIOS the setting does nothing until its maker's update is installed.",
+        "ru": "Отключение CSM при установке Windows в режиме legacy (MBR) не даст Windows запуститься: сначала проверьте пункт «Режим загрузки». На карте со старой видео-BIOS параметр ничего не делает, пока не установлено обновление от производителя."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Set CSM (Compatibility Support Module) to Disabled, then turn on Above 4G Decoding, then Re-Size BAR Support, in that order.",
+            "ru": "Отключите CSM (Compatibility Support Module), затем включите Above 4G Decoding, потом Re-Size BAR Support — именно в таком порядке."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "gigabyte": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Boot → CSM Support = Disabled; Settings → IO Ports → Above 4G Decoding = Enabled, then Re-Size BAR Support = Enabled (or Auto).",
+            "ru": "Boot → CSM Support = Disabled; Settings → IO Ports → Above 4G Decoding = Enabled, затем Re-Size BAR Support = Enabled (или Auto)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asus": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Boot → CSM → Launch CSM = Disabled; Advanced → PCI Subsystem Settings → Above 4G Decoding = Enabled, then Re-Size BAR Support = Enabled.",
+            "ru": "Boot → CSM → Launch CSM = Disabled; Advanced → PCI Subsystem Settings → Above 4G Decoding = Enabled, затем Re-Size BAR Support = Enabled."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "msi": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Settings → Advanced → Windows OS Configuration → Re-Size BAR Support = Enabled, and Settings → Advanced → PCI Subsystem Settings → Above 4G Memory = Enabled (the names move between BIOS versions).",
+            "ru": "Settings → Advanced → Windows OS Configuration → Re-Size BAR Support = Enabled и Settings → Advanced → PCI Subsystem Settings → Above 4G Memory = Enabled (названия различаются между версиями BIOS)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asrock": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Boot → CSM = Disabled; Advanced → PCI Configuration → Above 4G Decoding = Enabled, then Re-Size BAR Support = Enabled (or Auto).",
+            "ru": "Boot → CSM = Disabled; Advanced → PCI Configuration → Above 4G Decoding = Enabled, затем Re-Size BAR Support = Enabled (или Auto)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura reads the size of the memory window Windows assigned to the card: about the size of its memory means on, 256 MB means off. The graphics driver's own control panel shows the same.",
+        "ru": "Mesura считывает размер окна памяти, выделенного Windows видеокарте: размер порядка её памяти — включено, 256 МБ — выключено. То же показывает панель управления драйвера."
+      },
+      "links": [
+        {
+          "title": {
+            "en": "NVIDIA: Resizable BAR on GeForce RTX 30 series",
+            "ru": "NVIDIA: Resizable BAR на GeForce RTX 30"
+          },
+          "url": "https://www.nvidia.com/en-us/geforce/news/geforce-rtx-30-series-resizable-bar-support/"
+        }
+      ]
+    },
+    {
+      "id": "bios-update",
+      "title": {
+        "en": "BIOS / UEFI version",
+        "ru": "Версия BIOS / UEFI"
+      },
+      "what": {
+        "en": "The firmware of the board. Mesura reads its version and date; it cannot see whether a newer one exists, and it never flashes firmware. The maker's support page for your exact board lists the versions and what each changes.",
+        "ru": "Прошивка платы. Mesura считывает её версию и дату; она не видит, есть ли новее, и никогда не прошивает BIOS. Страница поддержки производителя для вашей платы перечисляет версии и их изменения."
+      },
+      "why": {
+        "en": "Updates add support for new processors, fix memory compatibility and sometimes serious faults (for 13th and 14th generation Intel desktop processors, a microcode update of 0x12B or later addresses the instability Intel described). An old BIOS is not a problem by itself: update for a reason.",
+        "ru": "Обновления добавляют поддержку новых процессоров, исправляют совместимость памяти и иногда серьёзные неисправности (для настольных процессоров Intel 13-го и 14-го поколений микрокод 0x12B и новее устраняет нестабильность, о которой писала Intel). Старый BIOS сам по себе не проблема: обновляйтесь по причине."
+      },
+      "risk": {
+        "en": "Flashing has a real risk: a power cut in the middle can leave a board unable to start. Do it on stable power (a laptop plugged in and charged), never interrupt it, use the maker's flash tool inside the BIOS (Q-Flash, EZ Flash, M-Flash, Instant Flash) and read the release notes first: some versions cannot be rolled back. Mesura doesn't do it for you on purpose.",
+        "ru": "Прошивка действительно рискованна: отключение питания посреди процесса может оставить плату неработоспособной. Делайте это при стабильном питании (ноутбук подключён и заряжен), не прерывайте, используйте фирменный инструмент прошивки внутри BIOS (Q-Flash, EZ Flash, M-Flash, Instant Flash) и сначала прочитайте примечания к выпуску: некоторые версии нельзя откатить. Mesura намеренно не делает этого за вас."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Note this page's BIOS version and date, and the board's name above.",
+            "ru": "Запомните версию и дату BIOS на этой странице и название платы выше."
+          },
+          {
+            "en": "Open the maker's support page for that exact board and read the notes of every version newer than yours.",
+            "ru": "Откройте страницу поддержки производителя для этой платы и прочитайте примечания всех версий новее вашей."
+          },
+          {
+            "en": "Update only if a version fixes something you have or supports hardware you are adding. Put the file on a FAT32 USB stick and use the flash tool in the BIOS, not a tool inside Windows.",
+            "ru": "Обновляйтесь, только если версия исправляет то, что у вас есть, или поддерживает добавляемое железо. Положите файл на флешку FAT32 и используйте инструмент прошивки в BIOS, а не программу в Windows."
+          }
+        ]
+      },
+      "verify": {
+        "en": "After the update Mesura shows the new version and date, and for the Intel microcode case the new revision.",
+        "ru": "После обновления Mesura покажет новую версию и дату, а для случая с микрокодом Intel — новую ревизию."
+      },
+      "links": []
+    },
+    {
+      "id": "boot-mode",
+      "title": {
+        "en": "Boot mode (UEFI or Legacy)",
+        "ru": "Режим загрузки (UEFI или Legacy)"
+      },
+      "what": {
+        "en": "Windows starts either through UEFI (GPT disk) or through the old BIOS mode (MBR disk). Resizable BAR, Secure Boot and Windows 11 need UEFI.",
+        "ru": "Windows запускается либо через UEFI (диск GPT), либо через старый режим BIOS (диск MBR). Resizable BAR, Secure Boot и Windows 11 требуют UEFI."
+      },
+      "why": {
+        "en": "A PC that boots in legacy mode can't use those features. It can be converted without reinstalling.",
+        "ru": "ПК в режиме legacy не может использовать эти функции. Его можно преобразовать без переустановки."
+      },
+      "risk": {
+        "en": "Do not change the boot mode in the BIOS before the disk is converted: Windows will not start. Back up first.",
+        "ru": "Не меняйте режим загрузки в BIOS до преобразования диска: Windows не запустится. Сначала сделайте резервную копию."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Back up what matters.",
+            "ru": "Сделайте резервную копию важных данных."
+          },
+          {
+            "en": "In an administrator Command Prompt run mbr2gpt /validate /allowFullOS; if it passes, run mbr2gpt /convert /allowFullOS.",
+            "ru": "В командной строке от администратора выполните mbr2gpt /validate /allowFullOS; если проверка пройдена, выполните mbr2gpt /convert /allowFullOS."
+          },
+          {
+            "en": "Restart into the BIOS, switch the boot mode to UEFI (turn CSM off) and save.",
+            "ru": "Перезагрузитесь в BIOS, переключите режим загрузки на UEFI (отключите CSM) и сохраните."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura reads the boot mode Windows is running in.",
+        "ru": "Mesura считывает режим загрузки, в котором работает Windows."
+      },
+      "links": [
+        {
+          "title": {
+            "en": "Microsoft: convert an MBR disk to GPT (MBR2GPT)",
+            "ru": "Microsoft: преобразование диска MBR в GPT (MBR2GPT)"
+          },
+          "url": "https://learn.microsoft.com/en-us/windows/deployment/mbr-to-gpt"
+        }
+      ]
+    },
+    {
+      "id": "secure-boot-tpm",
+      "title": {
+        "en": "Secure Boot and TPM",
+        "ru": "Secure Boot и TPM"
+      },
+      "what": {
+        "en": "Secure Boot makes the firmware check the signature of what starts Windows. The TPM (a chip, or the processor's firmware TPM: fTPM on AMD, PTT on Intel) holds keys. Windows 11 requires both, and some games' anti-cheat systems do too (Riot Vanguard and EA's Javelin publish it as a requirement; check the game's own page).",
+        "ru": "Secure Boot заставляет прошивку проверять подпись того, что запускает Windows. TPM (микросхема или встроенный в процессор программный TPM: fTPM у AMD, PTT у Intel) хранит ключи. Для Windows 11 нужны оба, как и для античитов некоторых игр (Riot Vanguard и EA Javelin указывают это в требованиях; проверьте страницу самой игры)."
+      },
+      "why": {
+        "en": "Turn them on only if something you use asks for them. They are not a speed setting.",
+        "ru": "Включайте их, только если этого требует что-то из используемого. Это не параметр скорости."
+      },
+      "risk": {
+        "en": "Secure Boot needs UEFI boot and a GPT disk (see Boot mode). Some old drivers and non-Windows boot loaders stop working with it; the keys can be reset in the BIOS if needed.",
+        "ru": "Для Secure Boot нужны загрузка UEFI и диск GPT (см. «Режим загрузки»). Некоторые старые драйверы и загрузчики не-Windows с ним не работают; при необходимости ключи можно сбросить в BIOS."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Turn on the TPM (named fTPM, PTT, TPM Device or Security Device Support), then turn Secure Boot on with the standard (Windows) keys.",
+            "ru": "Включите TPM (fTPM, PTT, TPM Device или Security Device Support), затем включите Secure Boot со стандартными (Windows) ключами."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "gigabyte": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Settings → Miscellaneous → AMD CPU fTPM or Intel Platform Trust Technology (PTT) = Enabled; Boot → Secure Boot → Secure Boot Enable = Enabled (Standard mode, install the default keys).",
+            "ru": "Settings → Miscellaneous → AMD CPU fTPM или Intel Platform Trust Technology (PTT) = Enabled; Boot → Secure Boot → Secure Boot Enable = Enabled (режим Standard, установить ключи по умолчанию)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asus": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced → AMD fTPM configuration (or PCH-FW Configuration → PTT) = Enabled; Boot → Secure Boot → OS Type = Windows UEFI mode, then install the default Secure Boot keys.",
+            "ru": "Advanced → AMD fTPM configuration (или PCH-FW Configuration → PTT) = Enabled; Boot → Secure Boot → OS Type = Windows UEFI mode, затем установите ключи Secure Boot по умолчанию."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "msi": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Settings → Security → Trusted Computing → Security Device Support = Enabled; Settings → Security → Secure Boot → Secure Boot = Enabled, Secure Boot Mode = Standard.",
+            "ru": "Settings → Security → Trusted Computing → Security Device Support = Enabled; Settings → Security → Secure Boot → Secure Boot = Enabled, Secure Boot Mode = Standard."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asrock": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced → CPU Configuration → AMD fTPM switch (or Intel PTT) = Enabled; Security → Secure Boot = Enabled, then install the default keys.",
+            "ru": "Advanced → CPU Configuration → AMD fTPM switch (или Intel PTT) = Enabled; Security → Secure Boot = Enabled, затем установите ключи по умолчанию."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura reads the Secure Boot state and whether Windows sees a TPM.",
+        "ru": "Mesura считывает состояние Secure Boot и видит ли Windows TPM."
+      },
+      "links": [
+        {
+          "title": {
+            "en": "Microsoft: Windows 11 requirements",
+            "ru": "Microsoft: требования Windows 11"
+          },
+          "url": "https://www.microsoft.com/en-us/windows/windows-11-specifications"
+        },
+        {
+          "title": {
+            "en": "Microsoft: how Windows uses the TPM",
+            "ru": "Microsoft: как Windows использует TPM"
+          },
+          "url": "https://learn.microsoft.com/en-us/windows/security/hardware-security/tpm/tpm-fundamentals"
+        },
+        {
+          "title": {
+            "en": "Microsoft: Secure Boot",
+            "ru": "Microsoft: Secure Boot"
+          },
+          "url": "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/oem-secure-boot"
+        }
+      ]
+    },
+    {
+      "id": "virtualization",
+      "title": {
+        "en": "Virtualization (SVM / VT-x)",
+        "ru": "Виртуализация (SVM / VT-x)"
+      },
+      "what": {
+        "en": "Lets the processor run virtual machines efficiently. Windows needs it for WSL 2, Hyper-V, Windows Sandbox, Android emulators and virtualization-based security (Memory integrity); VirtualBox and VMware use it too.",
+        "ru": "Позволяет процессору эффективно запускать виртуальные машины. Windows нужна она для WSL 2, Hyper-V, Windows Sandbox, эмуляторов Android и защиты на основе виртуализации (Целостность памяти); VirtualBox и VMware тоже её используют."
+      },
+      "why": {
+        "en": "Turn it on only if you use one of those. It does not change how fast games run by itself.",
+        "ru": "Включайте, только если используете что-то из перечисленного. Сама по себе она не меняет скорость игр."
+      },
+      "risk": {
+        "en": "None for stability.",
+        "ru": "Для стабильности риска нет."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Find the processor's virtualization switch (SVM Mode on AMD, Intel Virtualization Technology on Intel) and enable it.",
+            "ru": "Найдите переключатель виртуализации процессора (SVM Mode на AMD, Intel Virtualization Technology на Intel) и включите его."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "gigabyte": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Tweaker → Advanced CPU Settings → SVM Mode (AMD) or Intel Virtualization Technology (Intel) = Enabled.",
+            "ru": "Tweaker → Advanced CPU Settings → SVM Mode (AMD) или Intel Virtualization Technology (Intel) = Enabled."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asus": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced → CPU Configuration → SVM Mode (AMD) or Intel Virtualization Technology = Enabled.",
+            "ru": "Advanced → CPU Configuration → SVM Mode (AMD) или Intel Virtualization Technology = Enabled."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "msi": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "OC → Advanced CPU Configuration → SVM Mode (AMD) or Intel Virtualization Tech = Enabled.",
+            "ru": "OC → Advanced CPU Configuration → SVM Mode (AMD) или Intel Virtualization Tech = Enabled."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asrock": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced → CPU Configuration → SVM Mode (AMD) or Intel Virtualization Technology = Enabled.",
+            "ru": "Advanced → CPU Configuration → SVM Mode (AMD) или Intel Virtualization Technology = Enabled."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura reads whether virtualization is enabled in the firmware.",
+        "ru": "Mesura считывает, включена ли виртуализация в прошивке."
+      },
+      "links": [
+        {
+          "title": {
+            "en": "Microsoft: enable virtualization",
+            "ru": "Microsoft: включение виртуализации"
+          },
+          "url": "https://support.microsoft.com/en-us/windows/enable-virtualization-on-windows-c5578302-6e43-4b4b-a449-8ced115f58e1"
+        }
+      ]
+    },
+    {
+      "id": "cpu-boost",
+      "title": {
+        "en": "Processor boost (PBO, Curve Optimizer, power limits)",
+        "ru": "Разгон процессора (PBO, Curve Optimizer, лимиты мощности)"
+      },
+      "what": {
+        "en": "On AMD Ryzen: Precision Boost Overdrive lets the processor boost within the board's power and temperature limits, and Curve Optimizer lowers the voltage per core so it can boost higher at the same power. On Intel: Turbo Boost is on by default; what boards add is power limits and 'multi-core enhancement' options. Windows cannot read any of these, so Mesura cannot say what is set.",
+        "ru": "На AMD Ryzen: Precision Boost Overdrive позволяет процессору разгоняться в пределах лимитов питания и температуры платы, а Curve Optimizer снижает напряжение на каждом ядре, чтобы оно разгонялось выше при той же мощности. На Intel: Turbo Boost включён по умолчанию, а платы добавляют лимиты мощности и опции «multi-core enhancement». Windows не может прочитать ничего из этого, поэтому Mesura не может сказать, что установлено."
+      },
+      "why": {
+        "en": "These are overclocking features. The gains are small and differ by chip and cooler; they are not a recommendation, and Mesura makes none.",
+        "ru": "Это функции разгона. Прирост небольшой и зависит от экземпляра чипа и охлаждения; это не рекомендация, и Mesura её не даёт."
+      },
+      "risk": {
+        "en": "They can make the PC unstable, often at idle or light load (Curve Optimizer faults show up there), and AMD's own notes say using PBO may void the processor warranty. Change one thing at a time, in small steps (for example −10 on all cores), run a long load test (a game for an hour, then a stress test) and leave the PC idle for a while; undo at the first crash or restart. On 13th and 14th generation Intel desktop processors use the board's 'Intel Default Settings' profile unless you know what you are changing.",
+        "ru": "Они могут сделать ПК нестабильным, часто в простое или на лёгкой нагрузке (сбои Curve Optimizer проявляются именно там), а в собственных примечаниях AMD сказано, что использование PBO может лишить гарантии на процессор. Меняйте одно за раз, небольшими шагами (например, −10 на всех ядрах), запускайте долгий тест нагрузки (час игры, затем стресс-тест) и оставляйте ПК в простое; при первом сбое или перезагрузке верните как было. На настольных процессорах Intel 13-го и 14-го поколений используйте профиль платы «Intel Default Settings», если не знаете, что меняете."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Find the processor's boost or overclocking menu (AMD: Precision Boost Overdrive and Curve Optimizer; Intel: the power limits and the default-settings profile).",
+            "ru": "Найдите меню разгона процессора (AMD: Precision Boost Overdrive и Curve Optimizer; Intel: лимиты мощности и профиль настроек по умолчанию)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "gigabyte": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Tweaker → Advanced CPU Settings → AMD Overclocking → Precision Boost Overdrive; Curve Optimizer is inside it (per core).",
+            "ru": "Tweaker → Advanced CPU Settings → AMD Overclocking → Precision Boost Overdrive; Curve Optimizer внутри него (по ядрам)."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asus": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced Mode (F7) → Ai Tweaker → Precision Boost Overdrive → Curve Optimizer.",
+            "ru": "Advanced Mode (F7) → Ai Tweaker → Precision Boost Overdrive → Curve Optimizer."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "msi": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "OC → Advanced CPU Configuration → Precision Boost Overdrive; Curve Optimizer is inside it.",
+            "ru": "OC → Advanced CPU Configuration → Precision Boost Overdrive; Curve Optimizer внутри него."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ],
+        "asrock": [
+          {
+            "en": "Restart and open the BIOS/UEFI setup: press Delete or F2 right after power-on (the button on this page restarts straight into it).",
+            "ru": "Перезагрузитесь и откройте настройки BIOS/UEFI: нажмите Delete или F2 сразу после включения (кнопка на этой странице перезагружает сразу в них)."
+          },
+          {
+            "en": "Advanced → AMD Overclocking → Precision Boost Overdrive → Curve Optimizer.",
+            "ru": "Advanced → AMD Overclocking → Precision Boost Overdrive → Curve Optimizer."
+          },
+          {
+            "en": "Save and exit (usually F10), then open this page again: it shows what changed.",
+            "ru": "Сохраните и выйдите (обычно F10), затем снова откройте эту страницу: она покажет, что изменилось."
+          }
+        ]
+      },
+      "verify": {
+        "en": "Mesura can't read these settings; the check is a stability test of your own.",
+        "ru": "Mesura не может прочитать эти параметры; проверка — собственный тест стабильности."
+      },
+      "links": []
+    },
+    {
+      "id": "pcie-link",
+      "title": {
+        "en": "Graphics card link (PCIe)",
+        "ru": "Линия видеокарты (PCIe)"
+      },
+      "what": {
+        "en": "The card should run at the link its slot and the card support (usually x16, and Gen 4 or Gen 5 where both support it). Windows reports what the card can do, not always what it is doing now, and a card at idle lowers its link on purpose, so Mesura gives no verdict here.",
+        "ru": "Карта должна работать на линии, которую поддерживают слот и сама карта (обычно x16 и Gen 4 или Gen 5, где поддерживают оба). Windows сообщает, на что способна карта, а не всегда что она делает сейчас, а в простое карта нарочно снижает линию, поэтому Mesura здесь вердикта не выносит."
+      },
+      "why": {
+        "en": "A card in a slot that is wired x4, or set to a lower generation in the BIOS, loses bandwidth. It is worth a look when you've moved cards or a riser is involved.",
+        "ru": "Карта в слоте, подключённом как x4, или с пониженным в BIOS поколением теряет пропускную способность. Стоит проверить, если карты переставляли или используется райзер."
+      },
+      "risk": {
+        "en": "Forcing a generation in the BIOS can cause instability with a riser or an old card; leave it on Auto unless you have a reason.",
+        "ru": "Принудительное поколение в BIOS может вызвать нестабильность с райзером или старой картой; оставьте Auto без причины."
+      },
+      "steps": {
+        "common": [
+          {
+            "en": "Install GPU-Z, open it, click the question mark next to Bus Interface and run the render test.",
+            "ru": "Установите GPU-Z, откройте его, нажмите вопросительный знак рядом с Bus Interface и запустите тест рендера."
+          },
+          {
+            "en": "While the test runs, Bus Interface must show the card's full link (for example PCIe x16 4.0 @ x16 4.0). At idle it shows less on purpose.",
+            "ru": "Пока идёт тест, Bus Interface должен показывать полную линию карты (например, PCIe x16 4.0 @ x16 4.0). В простое он показывает меньше намеренно."
+          },
+          {
+            "en": "If it stays lower under load, check the card is in the slot the manual names for it, reseat it, and look at the slot's speed setting in the BIOS (Auto is right).",
+            "ru": "Если под нагрузкой он остаётся ниже, проверьте, что карта в слоте, указанном в руководстве, переустановите её и посмотрите параметр скорости слота в BIOS (правильно — Auto)."
+          }
+        ]
+      },
+      "verify": {
+        "en": "The render test above is the check.",
+        "ru": "Проверка — тест рендера выше."
+      },
+      "links": []
+    }
+  ]
+}

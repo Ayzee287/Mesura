@@ -40,9 +40,9 @@ public sealed class SetupProfileTests
     public void A_profile_naming_an_operation_the_catalog_has_since_made_guided_still_loads()
     {
         // Saved by the 0.1.0 build, when the Widgets button was still written (it is guided since the 2026-10-22 audit).
-        var profile = SetupProfile.Parse(Profile("\"windows\": [\"taskbar.hide-task-view\", \"taskbar.hide-widgets\"]"), AppCatalog.Default);
+        var profile = SetupProfile.Parse(Profile("\"windows\": [\"explorer.show-extensions\", \"security.firewall-status\"]"), AppCatalog.Default);
 
-        Assert.Equal(["taskbar.hide-task-view", "taskbar.hide-widgets"], profile.Windows);
+        Assert.Equal(["explorer.show-extensions", "security.firewall-status"], profile.Windows);
     }
 
     [Theory]
@@ -69,8 +69,8 @@ public sealed class SetupProfileTests
             new AppPlanItem(catalog.ById("vencord")!, InstallState.Unknown),
         };
         var applied = windows.ById("explorer.show-extensions")!;
-        var pending = windows.ById("taskbar.align-left")!;
-        var partial = windows.ById("start.no-recent-items")!;
+        var pending = windows.ById("start.no-recommendations")!;
+        var partial = windows.ById("notifications.no-tips-and-suggestions")!;
         var guided = windows.Operations.First(o => !o.Applicable);
         Mesura.Core.Windows.OperationEvaluation Eval(Mesura.Core.Windows.WindowsOperation op, Mesura.Core.Windows.OperationState state) => new(op, state, "", []);
 

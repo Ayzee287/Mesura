@@ -1,5 +1,7 @@
 # How the stored values of Recommended were checked (2026-10-25)
 
+> **Describes the 0.3 catalog.** 0.4 re-audited every entry and removed 103 of the 251 (see CHANGELOG.md); the numbers and lists below are those of 0.3. This document stays as the record of how those entries were built and checked.
+
 Mesura's two main profiles apply only settings whose stored value is **documented** by Microsoft or **verified** as
 described here. A setting known only from community sources (`community` in the catalog) can still be chosen one by one,
 but is never part of a profile's automatic selection. This page says what "verified" means, what was checked for each

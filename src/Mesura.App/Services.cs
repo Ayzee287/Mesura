@@ -37,6 +37,7 @@ public sealed class Services
         Startup = startup;
         SameUser = sameUser;
         Settings = AppSettings.Load(store);
+        installer.InstallFolderFor = package => Settings.InstallFolders is { } folders && folders.TryGetValue(package.Id, out var folder) ? folder : null;
     }
 
     public AppInstallService Installer { get; }

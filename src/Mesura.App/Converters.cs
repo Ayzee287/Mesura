@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -129,6 +129,27 @@ public sealed class HalfWidthConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is double width && width > 2 ? Math.Floor(width / 2) : double.NaN;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>
+/// The width of one card in a grid of cards: one column in a narrow container, two up to 1180 px, three beyond, so a card keeps its
+/// proportions at every window size instead of stretching with it.
+/// </summary>
+public sealed class CardColumnsConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not double width || width < 40)
+        {
+            return double.NaN;
+        }
+
+        var columns = width < 640 ? 1 : width < 1180 ? 2 : 3;
+        return Math.Floor(width / columns);
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

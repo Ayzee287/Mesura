@@ -32,8 +32,21 @@ public sealed class AppSettings
     /// <summary>The interface language (<c>en</c>, <c>ru</c>); <c>null</c> follows Windows' display language.</summary>
     public string? Language { get; set; }
 
-    /// <summary>Whether the window asks for administrator rights when it opens (one UAC prompt).</summary>
+    /// <summary>How much interactive light the window draws: <c>full</c>, <c>reduced</c>, <c>off</c>; <c>null</c> decides by this PC (<see cref="LightField.Resolve"/>).</summary>
+    public string? Lighting { get; set; }
+
+    /// <summary>
+    /// What Mesura does at start about administrator rights: <c>ask</c> (a choice each time: continue as you are, or restart as administrator),
+    /// <c>normal</c> (never ask, run as you are) or <c>admin</c> (restart as administrator without asking). <c>null</c> is <c>ask</c>, or <c>normal</c>
+    /// for a user who had turned the older <see cref="ElevateAtStart"/> switch off. It never makes an install in a user-writable folder elevate.
+    /// </summary>
+    public string? StartupMode { get; set; }
+
+    /// <summary>The 0.1-0.3 switch for the prompt at start; kept so a saved choice carries over, replaced by <see cref="StartupMode"/>.</summary>
     public bool ElevateAtStart { get; set; } = true;
+
+    /// <summary>The start-up mode in effect: the chosen one, else what the older switch implies.</summary>
+    public string EffectiveStartupMode => StartupMode is "ask" or "normal" or "admin" ? StartupMode : ElevateAtStart ? "ask" : "normal";
 
     /// <summary>Whether Mesura makes a Windows restore point before it changes settings for the whole PC (when it runs as administrator).</summary>
     public bool RestorePointBeforeChanges { get; set; } = true;
@@ -61,6 +74,9 @@ public sealed class AppSettings
 
     /// <summary>The outcome last applied on Optimize (a primary preset id), which a saved profile records.</summary>
     public string? Outcome { get; set; }
+
+    /// <summary>The install folder the user chose per app (catalog id: folder), for apps whose installer takes one; an app not listed installs where its installer decides.</summary>
+    public Dictionary<string, string>? InstallFolders { get; set; }
 
     /// <summary>How apps are set up after an install: <c>defaults</c>, <c>saved</c> or <c>none</c>.</summary>
     public string ConfigureAfterInstall { get; set; } = "defaults";

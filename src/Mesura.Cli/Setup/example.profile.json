@@ -23,5 +23,5 @@
   // Windows configuration: presets from 'windows presets' and operations from 'windows list'. Operations marked
   // "needs admin" in the preview run only when Mesura runs as administrator; the rest apply either way.
   "windowsPresets": [ "ghost-spectre-superlite" ],
-  "windows": [ "explorer.no-recent-files" ]
+  "windows": [ "explorer.show-extensions" ]
 }

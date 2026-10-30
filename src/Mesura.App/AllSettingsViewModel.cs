@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -347,8 +347,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
     }
 
     /// <summary>
-    /// Groups the list: by impact when every category is shown, otherwise by the catalog's own categories (Taskbar and
-    /// Start, File Explorer…); inside a group, the catalog's order with the sort rank first.
+    /// Groups the list: by group when every category is shown, flat inside one group; the catalog's order with the sort rank first.
     /// </summary>
     private void Regroup()
     {
@@ -361,11 +360,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
                 View.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SettingRow.ImpactText)));
                 View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.ImpactOrder), ListSortDirection.Ascending));
             }
-            else
-            {
-                View.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SettingRow.Category)));
-                View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.CategoryIndex), ListSortDirection.Ascending));
-            }
+            // Inside one group the list is flat (0.4): a second level of headings (Taskbar and Start, File Explorer…) said nothing the names don't.
 
             View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.SortRank), ListSortDirection.Ascending));
             View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.CatalogIndex), ListSortDirection.Ascending));

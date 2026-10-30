@@ -34,7 +34,11 @@ public static class SystemReportBuilder
             device.Type.IsKnown ? MemoryTypeName(device.Type.Value) : null,
             device.ConfiguredSpeedMts.Value is > 0 ? device.ConfiguredSpeedMts.Value : device.MaxSpeedMts.Value is > 0 ? device.MaxSpeedMts.Value : null,
             Clean(device.Manufacturer.Value),
-            device.FormFactor.IsKnown ? FormFactorName(device.FormFactor.Value) : null)).ToList();
+            device.FormFactor.IsKnown ? FormFactorName(device.FormFactor.Value) : null,
+            device.ConfiguredSpeedMts.Value is > 0 ? device.ConfiguredSpeedMts.Value : null,
+            device.MaxSpeedMts.Value is > 0 ? device.MaxSpeedMts.Value : null,
+            Clean(device.PartNumber.Value),
+            Clean(device.BankLocator.Value))).ToList();
         var installed = modules.Count > 0 && modules.All(m => m.SizeBytes is not null) ? modules.Sum(m => (long)m.SizeBytes!.Value) : 0;
         var total = extras.MemoryTotalBytes ?? (installed > 0 ? (ulong)installed : null);
 
@@ -93,7 +97,7 @@ public static class SystemReportBuilder
                 extras.Uptime),
             new SystemFirmware(extras.BiosVendor, extras.BiosVersion, extras.BiosDate, extras.BootMode, extras.SecureBoot),
             processors,
-            new SystemMemory(total, extras.MemoryAvailableBytes, modules),
+            new SystemMemory(total, extras.MemoryAvailableBytes, modules, Known(facts.MemoryDevices) is { Count: > 0 } devices ? devices.Count : null),
             gpus,
             disks,
             volumes,

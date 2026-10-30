@@ -78,6 +78,50 @@ public sealed class AppMod(AppPackage package, AppItem parent, Func<bool> winget
 /// <summary>A package Setup's Apps card shows: an app or a customisation, by its own name and icon (<see cref="AppGlyph"/>).</summary>
 public sealed record PlanAppChip(string Name, string Id);
 
+/// <summary>The folder choice of the Apps page, kept out of the item so the item stays about what it shows.</summary>
+internal static class InstallFolderDialog
+{
+    public static void Choose(Services services, string id, string? current)
+    {
+        var title = Loc.Get("Apps.FolderTitle");
+        if (current is { Length: > 0 })
+        {
+            var pick = ConfirmDialog.Choose(title, Loc.Format("Apps.FolderChosen", current), Loc.Get("Apps.FolderChange"), Loc.Get("Apps.FolderReset"), "", out _);
+            if (pick == false)
+            {
+                services.Settings.InstallFolders?.Remove(id);
+                services.SaveSettings();
+                return;
+            }
+
+            if (pick is null)
+            {
+                return;
+            }
+        }
+
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = title, Multiselect = false };
+        if (current is { Length: > 0 } && Directory.Exists(current))
+        {
+            dialog.InitialDirectory = current;
+        }
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        if (Mesura.Setup.Windows.Apps.InstallFolders.Valid(dialog.FolderName) is not { } folder)
+        {
+            ConfirmDialog.Tell(title, Loc.Get("Apps.FolderRefused"));
+            return;
+        }
+
+        (services.Settings.InstallFolders ??= [])[id] = folder;
+        services.SaveSettings();
+    }
+}
+
 /// <summary>One app in the Apps list: its icon, its state here, whether it is ticked, and its customisations.</summary>
 public sealed class AppItem : Observable
 {
@@ -86,12 +130,39 @@ public sealed class AppItem : Observable
     private InstallState _state = InstallState.Unknown;
     private bool _checking = true;
 
-    public AppItem(AppPackage package, Func<bool> wingetMissing, Func<AppPackage, bool> canDetect)
+    public AppItem(AppPackage package, Func<bool> wingetMissing, Func<AppPackage, bool> canDetect, Func<string, string?>? folderOf = null, Action<string, string?>? chooseFolder = null)
     {
         Package = package;
         _wingetMissing = wingetMissing;
         Detectable = canDetect(package);
+        _folderOf = folderOf;
+        ChooseFolder = new RelayCommand(() =>
+        {
+            if (chooseFolder is not null)
+            {
+                chooseFolder(package.Id, _folderOf?.Invoke(package.Id));
+                Raise(nameof(InstallFolder));
+                Raise(nameof(FolderTip));
+                Raise(nameof(Note));
+            }
+        }, () => package.InstallLocation && CanSelect);
     }
+
+    private readonly Func<string, string?>? _folderOf;
+
+    /// <summary>Chooses (or, from the dialog's Reset, clears) the folder this app installs to; only where its installer takes one.</summary>
+    public RelayCommand ChooseFolder { get; }
+
+    /// <summary>The folder the user chose for the next install, or empty for the installer's own default.</summary>
+    public string InstallFolder => Package.InstallLocation ? _folderOf?.Invoke(Package.Id) ?? "" : "";
+
+    /// <summary>Whether the card offers a folder at all: only for installers that take one.</summary>
+    public bool CanChooseFolder => Package.InstallLocation && !_checking && _state != InstallState.Installed;
+
+    /// <summary>What the folder button says: the chosen folder, the default, or why there is no choice (the honest limit).</summary>
+    public string FolderTip => !Package.InstallLocation ? Loc.Get("Apps.FolderNone")
+        : InstallFolder.Length > 0 ? Loc.Format("Apps.FolderChosen", InstallFolder)
+        : Loc.Get("Apps.FolderDefault");
 
     public AppPackage Package { get; }
 
@@ -115,7 +186,7 @@ public sealed class AppItem : Observable
     /// The app's note, which says what an install would do. Once the app is installed and carried by Mesura, the card has
     /// the Installed pill and the link to Configurations, so a sentence repeating both is dropped.
     /// </summary>
-    public string Note => ShowConfigureLink ? "" : Loc.AppNote(Package.Id, Package.Note);
+    public string Note => ShowConfigureLink ? "" : InstallFolder.Length > 0 && !_checking && _state != InstallState.Installed ? Loc.Format("Apps.InstallsTo", InstallFolder) : Loc.AppNote(Package.Id, Package.Note);
 
     /// <summary>Whether the card offers the way to Configurations: the app is installed and Mesura carries its settings.</summary>
     public bool ShowConfigureLink => !_checking && _state == InstallState.Installed && Port is not null;
@@ -211,7 +282,7 @@ public sealed class AppsViewModel : Observable, IPageState
         {
             foreach (var package in catalog.Packages.Where(p => p.Listed && p.Customizes.Length == 0))
             {
-                var item = new AppItem(package, () => _wingetMissing, services.Installer.CanDetect);
+                var item = new AppItem(package, () => _wingetMissing, services.Installer.CanDetect, id => services.Settings.InstallFolders?.GetValueOrDefault(id), (id, current) => InstallFolderDialog.Choose(services, id, current));
                 item.PropertyChanged += OnItemChanged;
                 foreach (var mod in catalog.Packages.Where(p => p.Customizes.Equals(package.Id, StringComparison.OrdinalIgnoreCase)))
                 {

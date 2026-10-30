@@ -9,7 +9,7 @@ namespace Mesura.App;
 /// </summary>
 public partial class ConfirmDialog : Window
 {
-    private ConfirmDialog(string title, string message, IReadOnlyList<string> items, string note, string confirm, string? cancel)
+    private ConfirmDialog(string title, string message, IReadOnlyList<string> items, string note, string confirm, string? cancel, string? remember = null)
     {
         InitializeComponent();
         Title = Branding.Name;
@@ -23,6 +23,24 @@ public partial class ConfirmDialog : Window
         OkButton.Content = confirm;
         CancelButton.Content = cancel ?? Loc.Get("Common.Cancel");
         CancelButton.Visibility = cancel == "" ? Visibility.Collapsed : Visibility.Visible;
+        RememberBox.Content = remember;
+        RememberBox.Visibility = remember is { Length: > 0 } ? Visibility.Visible : Visibility.Collapsed;
+        if (remember is { Length: > 0 })
+        {
+            System.Windows.Automation.AutomationProperties.SetName(RememberBox, remember);
+        }
+    }
+
+    /// <summary>
+    /// A choice between two actions with an optional "remember my choice" box: <c>true</c> is the primary (confirm) button, <c>false</c> the other, <c>null</c>
+    /// closing the dialog (Escape) without choosing. Used at start, before the main window exists.
+    /// </summary>
+    public static bool? Choose(string title, string message, string primary, string secondary, string remember, out bool remembered, string note = "")
+    {
+        var dialog = new ConfirmDialog(title, message, [], note, primary, secondary, remember);
+        var result = dialog.ShowOver();
+        remembered = dialog.RememberBox.IsChecked == true && result is not null;
+        return result;
     }
 
     /// <summary>Asks to confirm; true when the user confirmed.</summary>

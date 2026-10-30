@@ -544,7 +544,7 @@ public sealed class WindowsConfigurator
 
     private string? Undeclared(WindowsOpOutcome step)
     {
-        var operation = _trusted!.ById(step.OperationId);
+        var operation = _trusted!.ById(step.OperationId) ?? WindowsCatalog.Retired.ById(step.OperationId);
         foreach (var change in step.Changes)
         {
             if (operation is null || !operation.Declares(change))
