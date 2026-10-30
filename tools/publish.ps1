@@ -83,9 +83,9 @@ New-Item -ItemType Directory -Force -Path $current | Out-Null
 # restore resolves, so the committed lock files stay as they are). No debug files means no build paths in the output.
 # The file version (what Windows Installer compares to decide whether to replace an installed file) must go up with every build: the release candidate
 # number is not part of it ("0.3.0-rc2" is file version 0.3.0.0 otherwise), and an upgrade that installs the new files before it removes the old product
-# (installer\Package.wxs, docs/installing.md) leaves a same-versioned file in place. The count of commits is monotonic and fits in 16 bits.
-$commitCount = [int](git -C $repo rev-list --count HEAD).Trim()
-$fileVersion = "$version.$commitCount"
+# (installer\Package.wxs, docs/installing.md) leaves a same-versioned file in place. Hours since 2026-10-01 (UTC) are monotonic whichever repository or machine builds (a commit count is not: the public repository has a different history), and fit in 16 bits for years.
+$buildHours = [int](([datetime]::UtcNow - [datetime]'2026-10-01').TotalHours)
+$fileVersion = "$version.$buildHours"
 $versionArgs = @("-p:FileVersion=$fileVersion"; if ($Label) { "-p:Version=$stamp" })
 # Every publish starts from a clean Release build: an incremental WPF build once left out the compiled pages after only
 # a localization file had changed, and that app stopped at start ("Cannot locate resource 'mainwindow.xaml'").
