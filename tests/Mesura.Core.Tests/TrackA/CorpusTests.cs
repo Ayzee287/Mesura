@@ -22,6 +22,8 @@ public sealed class CorpusTests
     private static readonly string Root = Path.Combine(AppContext.BaseDirectory, "TrackA", "Corpus");
     private static readonly string Cohort = Path.Combine(Root, Corpus.CohortFolder);
 
+    private const string NoSession = "There is no accepted Track A session in this tree (the corpus is kept in the private repository, or holds none yet).";
+
     private const string Private = "The Track A corpus (track-a/) holds other people's scrubbed hardware snapshots and is kept in the private repository; this tree doesn't carry it.";
 
     public static TheoryData<string, string> Sessions()
@@ -30,6 +32,11 @@ public sealed class CorpusTests
         foreach (var (cohortId, sessionId) in SessionFolders())
         {
             data.Add(cohortId, sessionId);
+        }
+
+        if (data.Count == 0)
+        {
+            data.Add("", ""); // no corpus in this tree, or no accepted session yet: each test below skips with its reason
         }
 
         return data;
@@ -82,10 +89,11 @@ public sealed class CorpusTests
         Assert.Empty(ShareableAudit.AuditJson(Corpus.IndexFile, generated));
     }
 
-    [Theory(SkipTestWithoutData = true)] // the corpus may hold no session yet
+    [Theory]
     [MemberData(nameof(Sessions))]
     public void A_session_reads_strictly_and_its_files_are_unchanged(string cohortId, string sessionId)
     {
+        Assert.SkipUnless(cohortId.Length > 0, NoSession);
         var (session, files) = Read(cohortId, sessionId);
 
         Assert.Equal(PackageStatus.Ready, session.Manifest.Package.Status);
@@ -95,19 +103,21 @@ public sealed class CorpusTests
         Assert.All(files, pair => Assert.DoesNotContain((byte)'\r', pair.Value)); // hashed byte for byte: LF only
     }
 
-    [Theory(SkipTestWithoutData = true)]
+    [Theory]
     [MemberData(nameof(Sessions))]
     public void A_session_s_readme_is_the_generated_one(string cohortId, string sessionId)
     {
+        Assert.SkipUnless(cohortId.Length > 0, NoSession);
         var (session, files) = Read(cohortId, sessionId);
 
         Assert.Equal(SessionReadme.Render(session), Encoding.UTF8.GetString(files[Corpus.ReadmeFile]));
     }
 
-    [Theory(SkipTestWithoutData = true)]
+    [Theory]
     [MemberData(nameof(Sessions))]
     public void Every_file_of_a_session_passes_the_privacy_audit(string cohortId, string sessionId)
     {
+        Assert.SkipUnless(cohortId.Length > 0, NoSession);
         var (session, files) = Read(cohortId, sessionId);
 
         foreach (var (name, bytes) in files.Where(pair => pair.Key != Corpus.ReadmeFile && pair.Key != PackageFiles.ScrubbedRaw))
@@ -129,10 +139,11 @@ public sealed class CorpusTests
         }
     }
 
-    [Theory(SkipTestWithoutData = true)]
+    [Theory]
     [MemberData(nameof(Sessions))]
     public void A_current_schema_session_still_replays_deterministically(string cohortId, string sessionId)
     {
+        Assert.SkipUnless(cohortId.Length > 0, NoSession);
         var (session, files) = Read(cohortId, sessionId);
         if (session.Manifest.Producer.Schemas.Raw != RawSnapshot.CurrentSchemaVersion)
         {
