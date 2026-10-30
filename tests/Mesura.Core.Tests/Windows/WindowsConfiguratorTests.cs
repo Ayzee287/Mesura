@@ -152,6 +152,55 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     /// <summary>Keys the fake knows exist without a value in them (e.g. a policy key created by a write).</summary>
     public HashSet<string> Keys { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public IReadOnlyList<string> EnumerateSubKeys(string hive, string path)
+    {
+        var prefix = $@"{hive}\{path}\";
+        return [.. Registry.Keys.Concat(Keys).Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(k => k[prefix.Length..].Split('\\')[0]).Where(n => n.Length > 0 && !Registry.ContainsKey(prefix + n)).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>Tool-backed settings by "kind:name"; one not listed can't be read.</summary>
+    public Dictionary<string, string> System { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public string? ReadSystemSetting(string kind, string name) => System.TryGetValue($"{kind}:{name}", out var v) ? v : null;
+
+    public void SetSystemSetting(string kind, string name, string value)
+    {
+        if (!SystemSetting.IsAllowed(kind, name, value))
+        {
+            throw new ArgumentException($"not allowed: {kind}:{name}={value}");
+        }
+
+        Writes.Add($"system {kind}:{name}={value}");
+        System[$"{kind}:{name}"] = value;
+    }
+
+    /// <summary>Installed packaged apps by full name; staged ones (still on the PC after a removal) by family.</summary>
+    public HashSet<string> Apps { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public HashSet<string> StagedFamilies { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyList<string>? ReadAppxPackages(string name) =>
+        [.. Apps.Where(a => a.StartsWith(name + "_", StringComparison.OrdinalIgnoreCase))];
+
+    public void RemoveAppx(string packageFullName)
+    {
+        Writes.Add("remove " + packageFullName);
+        Apps.Remove(packageFullName);
+        StagedFamilies.Add(AppxSetting.FamilyOf(packageFullName)!);
+    }
+
+    public void RestoreAppx(string packageFamilyName)
+    {
+        Writes.Add("restore " + packageFamilyName);
+        if (!StagedFamilies.Contains(packageFamilyName))
+        {
+            throw new InvalidOperationException("no staged copy");
+        }
+
+        Apps.Add($"{packageFamilyName.Split('_')[0]}_4.1.0.0_x64__{packageFamilyName.Split('_')[1]}");
+    }
+
     public bool KeyExists(string hive, string path) =>
         Keys.Contains($@"{hive}\{path}") || Registry.Keys.Any(k => k.StartsWith($@"{hive}\{path}\", StringComparison.OrdinalIgnoreCase));
 
@@ -797,7 +846,9 @@ public sealed class WindowsConfiguratorTests
             Assert.DoesNotContain(DeviceRequirement.NoModernStandby, o.Requirements);
 
             // A machine policy is there only where Windows honours it, so it is never written and ignored (Home).
-            if (o.Registry.Any(r => r.Machine && r.Path.Contains("Policies", StringComparison.OrdinalIgnoreCase)))
+            // (Edge and OneDrive read their own policy keys on every edition, so those need no Windows edition.)
+            if (o.Registry.Any(r => r.Machine && r.Path.Contains("Policies", StringComparison.OrdinalIgnoreCase)
+                    && !r.Path.Contains(@"Policies\Microsoft\Edge", StringComparison.OrdinalIgnoreCase) && !r.Path.Contains(@"Policies\Microsoft\OneDrive", StringComparison.OrdinalIgnoreCase)))
             {
                 Assert.Contains(DeviceRequirement.ProEdition, o.Requirements);
             }

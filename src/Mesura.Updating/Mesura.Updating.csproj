@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The update component (0.3, docs/updates.md): asks the update server what is new, downloads and verifies a package, and
+       applies it by running the Windows Installer. It is its own project so its two side effects have named owners the
+       banned-API list knows: UpdateStore (files, only under the data folder's updates\ folder) and InstallerLauncher (starting
+       msiexec, the updater copy and the restarted app). The trust decisions themselves are pure code in Core (UpdatePolicy). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Mesura.Updating</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mesura.Core\Mesura.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Mesura.Updating.Tests" />
+  </ItemGroup>
+
+</Project>

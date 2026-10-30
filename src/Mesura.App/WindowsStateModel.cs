@@ -54,6 +54,9 @@ public sealed class SettingRow : Observable
 
     public Recommendation Recommendation { get; }
 
+    /// <summary>Whether it belongs to the Debloat page (bundled apps, AI features, startup apps) rather than Tweaks.</summary>
+    public bool InDebloat => Operation.Category is WindowsCatalog.BundledAppsCategory or WindowsCatalog.AiCategory or WindowsCatalog.StartupCategory;
+
     public OperationState State => _eval.State;
 
     public bool Checking => _checking;
@@ -114,6 +117,9 @@ public sealed class SettingRow : Observable
             return _eval.State switch
             {
                 OperationState.Applied when session == WindowsOpStatus.Applied => "AppliedNow",
+                OperationState.Applied when Operation.AppxSettings.Count > 0 => "NotInstalled",
+                OperationState.Applied when Operation.Category == WindowsCatalog.StartupCategory => "TurnedOff",
+                OperationState.NotApplied when Operation.Category == WindowsCatalog.StartupCategory => "StartsUp",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.Failed => "Failed",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.NeedsElevation => "NeedsAdmin",
                 var state => state.ToString(),
@@ -126,7 +132,7 @@ public sealed class SettingRow : Observable
     public string StateTone => StatusKey switch
     {
         "Checking" or "Inapplicable" => Tone.Muted,
-        "Applied" or "AppliedNow" => Tone.Ok,
+        "Applied" or "AppliedNow" or "NotInstalled" or "TurnedOff" => Tone.Ok,
         "NotApplied" => Tone.Neutral,
         "Partial" or "NeedsAdmin" or "Blocked" or "Unknown" => Tone.Warn,
         "Failed" => Tone.Danger,
@@ -136,6 +142,7 @@ public sealed class SettingRow : Observable
     /// <summary>How much it can affect the PC (shown only when it isn't low).</summary>
     public RiskLevel Risk =>
         !Operation.Applicable ? RiskLevel.Low
+        : Operation.Level is { } stated ? stated switch { OperationLevel.Safe => RiskLevel.Low, OperationLevel.Moderate => RiskLevel.Moderate, _ => RiskLevel.High }
         : Operation.Risk == RiskClass.Undocumented || TurnsOff ? RiskLevel.High
         : Operation.Category == WindowsCatalog.DefaultsCategory || !Operation.MachineWide ? RiskLevel.Low
         : RiskLevel.Moderate;
@@ -148,6 +155,17 @@ public sealed class SettingRow : Observable
     public string RiskText => Loc.Get($"Risk.{Risk}");
 
     public string RiskTone => Risk == RiskLevel.High ? Tone.Warn : Tone.Neutral;
+
+    /// <summary>The colour of the risk label on a card: green for low, amber for moderate, red for higher.</summary>
+    public string RiskLabelTone => Risk switch { RiskLevel.High => Tone.Danger, RiskLevel.Moderate => Tone.Warn, _ => Tone.Ok };
+
+    /// <summary>The risk label, shown on every card for an entry that can be applied (guides carry none).</summary>
+    public bool ShowRiskLabel => Operation.Applicable;
+
+    /// <summary>Guides carry no risk label, so their card names its category instead.</summary>
+    public bool ShowCategoryLabel => !Operation.Applicable;
+
+    public bool IsRecommended => Recommendation == Recommendation.Recommended;
 
     /// <summary>Why it has that risk, in one sentence.</summary>
     public string RiskWhy => Risk switch
@@ -205,8 +223,11 @@ public sealed class SettingRow : Observable
     /// <summary>Needs a restart to take effect.</summary>
     public bool NeedsRestart => Operation.Applicable && Operation.Activation == Activation.Reboot;
 
-    /// <summary>"Needs administrator", shown only when Mesura runs without elevation (the prompt was declined or turned off).</summary>
+    /// <summary>"Needs administrator", shown only when Mesura runs without elevation (the prompt was declined, or a per-user install never asks).</summary>
     public bool NeedsAdmin => Operation.Applicable && Operation.NeedsElevation && !_services.Reader.IsElevated;
+
+    /// <summary>Why it needs administrator rights and how to get them (the tag's tooltip): restart as administrator, or, in a per-user install, install for all users.</summary>
+    public string NeedsAdminWhy => Loc.Get(Loc.AdminKey("Common.NeedsAdminWhy"));
 
     /// <summary>A caution where it matters: undocumented, or it turns part of Windows off. Empty otherwise.</summary>
     public string Caution =>
@@ -294,7 +315,8 @@ public sealed class WindowsStateModel : Observable
         _services = services;
         if (Catalog is { } catalog)
         {
-            var recommended = catalog.Presets.Where(p => p.Tier == PresetTier.Primary).SelectMany(p => p.OperationIds)
+            // "Recommended" is the first primary preset's list (Recommended), not Maximum performance's: what only Maximum adds is Optional.
+            var recommended = (catalog.Presets.FirstOrDefault(p => p.Tier == PresetTier.Primary)?.OperationIds ?? [])
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var categoryIndex = new Dictionary<string, int>(StringComparer.Ordinal);
             for (var i = 0; i < catalog.Operations.Count; i++)

@@ -49,6 +49,12 @@ public sealed class Loc : INotifyPropertyChanged
 
     public static string Get(string key) => Instance[key];
 
+    /// <summary>
+    /// The key of a message that tells the user how to get administrator rights: in a per-user install (where Mesura never elevates) the <c>.PerUser</c> variant,
+    /// which says to install for all users instead of "restart as administrator".
+    /// </summary>
+    public static string AdminKey(string key) => ShellLauncher.ElevationBlockedReason is null ? key : key + ".PerUser";
+
     public static string Format(string key, params object[] args) => string.Format(Instance.Culture, Instance[key], args);
 
     /// <summary>

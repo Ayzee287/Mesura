@@ -19,6 +19,21 @@ namespace Mesura.Platform.Windows.Windows;
 /// </summary>
 public sealed partial class SystemStateReader : ISystemReader
 {
+    private readonly ISystemSettingSource? _tools;
+
+    /// <summary>The tool-backed reader this instance was given (so a writer can share it), if any.</summary>
+    public ISystemSettingSource? Tools => _tools;
+
+    public SystemStateReader()
+    {
+    }
+
+    /// <param name="tools">
+    /// Where tool-backed settings (<see cref="SystemSetting"/>: boot entry, hibernation, memory agent) are read from. Those
+    /// need a Windows tool, which only the setup layer may start, so it hands its reader in; without one they read as unknown.
+    /// </param>
+    public SystemStateReader(ISystemSettingSource tools) => _tools = tools;
+
     private const string ServicesKey = @"SYSTEM\CurrentControlSet\Services";
     private const string PowerSchemesKey = @"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes";
 
@@ -107,8 +122,63 @@ public sealed partial class SystemStateReader : ISystemReader
         (RegistryValueKind.DWord, int dword) => new RegistryReading(true, true, RegistryKind.DWord,
             unchecked((uint)dword).ToString(CultureInfo.InvariantCulture)),
         (RegistryValueKind.String, string text) => new RegistryReading(true, true, RegistryKind.String, text),
+        (RegistryValueKind.Binary, byte[] bytes) => new RegistryReading(true, true, RegistryKind.Binary,
+            string.Join(',', bytes.Select(b => b.ToString("x2", CultureInfo.InvariantCulture)))),
         _ => new RegistryReading(true, true, null, Convert.ToString(value, CultureInfo.InvariantCulture)),
     };
+
+    public IReadOnlyList<string> EnumerateSubKeys(string hive, string path)
+    {
+        if (hive == "HKCU" && !User.Resolved)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var root = RegistryKey.OpenBaseKey(hive == "HKLM" ? RegistryHive.LocalMachine : RegistryHive.Users, RegistryView.Registry64);
+            using var key = root.OpenSubKey(hive == "HKLM" ? path : User.Sid + @"\" + path);
+            return key is null ? [] : [.. key.GetSubKeyNames().Order(StringComparer.OrdinalIgnoreCase)];
+        }
+        catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return [];
+        }
+    }
+
+    public string? ReadSystemSetting(string kind, string name) => _tools?.Read(kind, name);
+
+    private const string AppxRepositoryKey = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+
+    /// <summary>
+    /// The packaged apps registered for the signed-in user, from the package repository's keys (named
+    /// <c>Name_Version_Arch_ResourceId_PublisherId</c>), which is what <c>Get-AppxPackage</c> lists. A package matches on its
+    /// exact name; none installed is an empty list; an unreadable repository is <c>null</c>.
+    /// </summary>
+    public IReadOnlyList<string>? ReadAppxPackages(string name)
+    {
+        if (!User.Resolved)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var root = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Registry64);
+            using var key = root.OpenSubKey(User.Sid + @"\" + AppxRepositoryKey);
+            if (key is null)
+            {
+                return null;
+            }
+
+            var prefix = name + "_";
+            return [.. key.GetSubKeyNames().Where(n => n.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && n.Split('_').Length == 5)];
+        }
+        catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return null;
+        }
+    }
 
     public ServiceReading ReadService(string name)
     {
@@ -250,7 +320,11 @@ public sealed partial class SystemStateReader : ISystemReader
     };
 
     /// <summary>Forgets what was read before (optional feature states), so the next reads see the system as it is now.</summary>
-    public void Refresh() => _features = null;
+    public void Refresh()
+    {
+        _features = null;
+        _tools?.Refresh();
+    }
 
     /// <summary>Every optional feature on this image and its state, or <c>null</c> when WMI couldn't be read.</summary>
     private static Dictionary<string, FeatureState>? ReadFeatures()

@@ -45,15 +45,26 @@ try {
       elseif ($n -match '^[A-Za-z_]+(\.[A-Za-z_]+)+$') { $problems.Add("${label}: $t is named after a type, '$n'") }
     }
   }
-  foreach ($page in 'Nav.Optimize', 'Nav.Apps', 'Nav.Configurations', 'Nav.Profiles', 'Nav.Activation', 'Nav.Activity', 'Nav.Settings') {
+  foreach ($page in 'Nav.Optimize', 'Nav.Tweaks', 'Nav.Debloat', 'Nav.Apps', 'Nav.Configurations', 'Nav.Profiles', 'Nav.Activation', 'Nav.Activity', 'Nav.Settings') {
     $nav = Pick $strings.$page $CT::RadioButton
+    if (-not $nav) {
+      # Configurations and Activation sit under the dock's "More" menu: open it, then look again.
+      $more = Pick $strings.'Nav.More' $CT::Button
+      if ($more) {
+        $o = $null
+        if ($more.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$o)) { $o.Toggle(); Start-Sleep -Milliseconds 700 }
+        $nav = Pick $strings.$page $CT::RadioButton
+      }
+    }
     if (-not $nav) { $problems.Add("$page : navigation item not found"); continue }
     $nav.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Seconds $(if ($page -eq 'Nav.Apps') { 20 } else { 3 }) # Apps checks every app with winget first
     Scan $page
-    if ($page -eq 'Nav.Optimize') {
-      $all = Pick $strings.'Optimize.AllSettings' $CT::Button
-      if ($all) { $all.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 2500; Scan 'All settings' }
+    if ($page -eq 'Nav.Debloat') {
+      foreach ($tab in 'Debloat.Tab.ai', 'Debloat.Tab.startup') {
+        $chip = Pick $strings.$tab $CT::RadioButton
+        if ($chip) { $chip.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1500; Scan "Debloat ($tab)" }
+      }
     }
   }
 }

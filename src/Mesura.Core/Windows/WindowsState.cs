@@ -79,6 +79,38 @@ public interface ISystemReader
     /// setting template that reports a level is read, and the value is <c>normal</c> only when all of them are.
     /// </summary>
     string? ReadTcpGlobal(string name) => null;
+
+    /// <summary>
+    /// The names of the subkeys of a key (empty when it doesn't exist or can't be read), for settings that apply to every
+    /// subkey, such as every network adapter (<see cref="RegistryEachSetting"/>).
+    /// </summary>
+    IReadOnlyList<string> EnumerateSubKeys(string hive, string path) => [];
+
+    /// <summary>
+    /// A <see cref="SystemSetting"/> as the tool reports it, in the words of its allowed values (<c>absent</c>,
+    /// <c>on</c>, <c>enabled</c>), or <c>null</c> when it couldn't be read (a tool that needs administrator rights, or
+    /// isn't there).
+    /// </summary>
+    string? ReadSystemSetting(string kind, string name) => null;
+
+    /// <summary>
+    /// The full names of the packaged apps installed for the signed-in user whose package name is <paramref name="name"/>
+    /// (none when it isn't installed), or <c>null</c> when the list couldn't be read.
+    /// </summary>
+    IReadOnlyList<string>? ReadAppxPackages(string name) => null;
+}
+
+/// <summary>
+/// Reads the settings that only a Windows tool can report (<see cref="SystemSetting"/>). The setup layer owns the tools, so
+/// it implements this and hands it to the state reader.
+/// </summary>
+public interface ISystemSettingSource
+{
+    /// <summary>The setting in the words of its allowed values, or <c>null</c> when it can't be read here.</summary>
+    string? Read(string kind, string name);
+
+    /// <summary>Forgets what was read before.</summary>
+    void Refresh();
 }
 
 /// <summary>What an operation's settings look like on this machine right now.</summary>
@@ -176,7 +208,7 @@ public static class WindowsEvaluator
 
         var items = new List<ItemState>();
         var unknown = false;
-        foreach (var setting in op.Registry)
+        foreach (var setting in op.ResolveRegistry(reader))
         {
             var reading = reader.ReadRegistry(setting.Hive, setting.Path, setting.Name);
             unknown |= reading.Unreadable;
@@ -207,6 +239,22 @@ public static class WindowsEvaluator
             unknown |= current is null;
             items.Add(new ItemState(tcp.Target, current ?? "unknown", tcp.Value,
                 string.Equals(current, tcp.Value, StringComparison.OrdinalIgnoreCase), true));
+        }
+
+        foreach (var app in op.AppxSettings)
+        {
+            var installed = reader.ReadAppxPackages(app.Name);
+            unknown |= installed is null;
+            items.Add(new ItemState(app.Target, installed is null ? "unknown" : installed.Count == 0 ? "not installed" : "installed", "removed",
+                installed is { Count: 0 }, true));
+        }
+
+        foreach (var system in op.SystemSettings)
+        {
+            var current = reader.ReadSystemSetting(system.Kind, system.Name);
+            unknown |= current is null;
+            items.Add(new ItemState(system.Target, current ?? "unknown", system.Value,
+                string.Equals(current, system.Value, StringComparison.OrdinalIgnoreCase), true));
         }
 
         if (op.PowerSettings.Count > 0)
@@ -270,10 +318,13 @@ public static class WindowsEvaluator
             return false; // a value of another type isn't the target, even when its text is the same
         }
 
-        return kind == RegistryKind.DWord
-            ? uint.TryParse(reading.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var a)
-              && uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b) && a == b
-            : string.Equals(reading.Value, value, StringComparison.Ordinal);
+        return kind switch
+        {
+            RegistryKind.DWord => uint.TryParse(reading.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var a)
+                && uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b) && a == b,
+            RegistryKind.Binary => string.Equals(NormalizeHex(reading.Value), NormalizeHex(value), StringComparison.Ordinal),
+            _ => string.Equals(reading.Value, value, StringComparison.Ordinal),
+        };
     }
 
     /// <summary>
@@ -301,6 +352,10 @@ public static class WindowsEvaluator
 
         return Matches(reading, setting.Kind, setting.Value) || (setting.AbsentMatches && !reading.ValueExists);
     }
+
+    /// <summary>Hex bytes in one spelling (lower case, comma-separated, no spaces) so two readings of the same bytes compare equal.</summary>
+    public static string NormalizeHex(string hex) =>
+        string.Join(',', hex.Split([',', ' ', '-'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(b => b.ToLowerInvariant().PadLeft(2, '0')));
 
     /// <summary>A value read as a number (a DWORD, or a decimal string), or <c>null</c> when it isn't one.</summary>
     public static uint? BitField(RegistryReading reading)

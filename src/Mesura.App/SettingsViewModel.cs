@@ -17,9 +17,30 @@ public sealed class SettingsViewModel : Observable
 {
     private readonly Services _services;
 
-    public SettingsViewModel(Services services)
+    public SettingsViewModel(Services services, UpdateViewModel update)
     {
         _services = services;
+        Update = update;
+        Loc.Instance.LanguageChanged += () =>
+        {
+            Raise(nameof(ElevationFolderNote));
+            Raise(nameof(ElevateHintText));
+        };
+        foreach (var (code, key) in new[] { ("stable", "Update.ChannelStable"), ("preview", "Update.ChannelPreview") })
+        {
+            Channels.Add(new FilterChoice(code, () => Loc.Get(key), chosen =>
+            {
+                if (_services.Settings.UpdateChannel != chosen)
+                {
+                    _services.Settings.UpdateChannel = chosen;
+                    _services.Settings.SkippedUpdate = null;
+                    _services.SaveSettings();
+                    Update.CheckNow.Execute(null);
+                }
+            }));
+        }
+
+        Channels.First(c => c.Value == _services.Settings.UpdateChannel).IsSelected = true;
         foreach (var (code, name) in Loc.Languages)
         {
             Languages.Add(new FilterChoice(code, () => name, chosen =>
@@ -42,6 +63,22 @@ public sealed class SettingsViewModel : Observable
 
     public ObservableCollection<FilterChoice> Languages { get; } = [];
 
+    /// <summary>The update channels (stable, preview) and the update state the Updates section shows.</summary>
+    public ObservableCollection<FilterChoice> Channels { get; } = [];
+
+    public UpdateViewModel Update { get; }
+
+    public bool CheckForUpdates
+    {
+        get => _services.Settings.CheckForUpdates;
+        set
+        {
+            _services.Settings.CheckForUpdates = value;
+            _services.SaveSettings();
+            Raise();
+        }
+    }
+
     public RelayCommand OpenHistory { get; }
 
     public RelayCommand OpenCatalogs { get; }
@@ -58,12 +95,30 @@ public sealed class SettingsViewModel : Observable
         private set => Set(ref _note, value);
     }
 
+    /// <summary>What the start-up switch does here: in a per-user install it does nothing (Mesura never elevates from a user folder), and says so.</summary>
+    public string ElevateHintText => Loc.Get(Loc.AdminKey("Settings.ElevateHint"));
+
     public bool ElevateAtStart
     {
-        get => _services.Settings.ElevateAtStart;
+        // Shown off where it cannot take effect, so the switch never claims a prompt that will not come.
+        get => ShellLauncher.ElevationBlockedReason is null && _services.Settings.ElevateAtStart;
         set
         {
             _services.Settings.ElevateAtStart = value;
+            _services.SaveSettings();
+            Raise();
+        }
+    }
+
+    /// <summary>Why administrator mode is unavailable in this install and how to get it (who can change this program folder); empty when the folder is protected.</summary>
+    public string ElevationFolderNote => ShellLauncher.ElevationBlockedReason is { } why ? Loc.Format("Settings.ElevateExposed", AppContext.BaseDirectory, why) : "";
+
+    public bool RestorePointBeforeChanges
+    {
+        get => _services.Settings.RestorePointBeforeChanges;
+        set
+        {
+            _services.Settings.RestorePointBeforeChanges = value;
             _services.SaveSettings();
             Raise();
         }
@@ -75,7 +130,7 @@ public sealed class SettingsViewModel : Observable
     /// The prompt at start is decided from the signed-in user's own preferences; as another account, this switch would
     /// save to that account's and never change the prompt, so it is off.
     /// </summary>
-    public bool CanChangeElevation => _services.SameUser;
+    public bool CanChangeElevation => _services.SameUser && ShellLauncher.ElevationBlockedReason is null;
 
     public string StartupNote => Services.RunsFromRemovableDrive
         ? Loc.Format("Settings.Removable", Path.GetPathRoot(Services.Executable) ?? "", DefaultInstallFolder)

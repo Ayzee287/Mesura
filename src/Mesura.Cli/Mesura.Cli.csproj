@@ -34,6 +34,7 @@
     <ProjectReference Include="..\Mesura.Core\Mesura.Core.csproj" />
     <ProjectReference Include="..\Mesura.Platform.Windows\Mesura.Platform.Windows.csproj" />
     <ProjectReference Include="..\Mesura.Setup.Windows\Mesura.Setup.Windows.csproj" />
+    <ProjectReference Include="..\Mesura.Updating\Mesura.Updating.csproj" />
   </ItemGroup>
 
 </Project>

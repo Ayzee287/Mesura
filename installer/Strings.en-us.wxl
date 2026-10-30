@@ -1,0 +1,12 @@
+<WixLocalization Culture="en-US" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="LanguageId" Value="1033" />
+  <String Id="LanguageCode" Value="en" />
+  <String Id="ProductName" Value="Mesura" />
+  <String Id="Description" Value="Mesura: set up Windows and restore your environment" />
+  <String Id="DowngradeError" Value="A newer version of Mesura is already installed. Uninstall it first if you really want to go back." />
+  <String Id="FeatureMain" Value="Mesura" />
+  <String Id="FeatureMainDescription" Value="The Mesura app, its command line and its documentation. Your settings, history and profiles are kept apart from the program and are never removed." />
+  <String Id="FeatureDesktop" Value="Desktop shortcut" />
+  <String Id="FeatureDesktopDescription" Value="Adds a Mesura shortcut to the desktop." />
+  <String Id="LaunchMesura" Value="Start Mesura" />
+</WixLocalization>

@@ -33,15 +33,21 @@
       "mesura.platform.windows": {
         "type": "Project",
         "dependencies": {
-          "Mesura.Core": "[0.1.0, )",
+          "Mesura.Core": "[0.2.0, )",
           "System.Management": "[10.0.12, )"
         }
       },
       "mesura.setup.windows": {
         "type": "Project",
         "dependencies": {
-          "Mesura.Core": "[0.1.0, )",
+          "Mesura.Core": "[0.2.0, )",
           "System.Management": "[10.0.12, )"
+        }
+      },
+      "mesura.updating": {
+        "type": "Project",
+        "dependencies": {
+          "Mesura.Core": "[0.2.0, )"
         }
       }
     },

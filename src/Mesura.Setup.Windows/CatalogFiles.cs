@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mesura.Core.Apps;
+using Mesura.Core.Support;
 using Mesura.Core.Windows;
 
 namespace Mesura.Setup.Windows;
@@ -9,7 +10,7 @@ namespace Mesura.Setup.Windows;
 /// The path of an edited copy this build doesn't use because an older Mesura made it (an older schema): the built-in
 /// catalog is used instead, and the app and the CLI say so. <c>null</c> when there is none.
 /// </param>
-public sealed record LoadedCatalog<T>(T? Catalog, string Source, string? Error, string? SetAside = null) where T : class;
+public sealed record LoadedCatalog<T>(T? Catalog, string Source, string? Error, string? SetAside = null, bool IgnoredWhileElevated = false) where T : class;
 
 /// <summary>
 /// Loads the catalogs: an edited copy in <c>%LOCALAPPDATA%\Mesura</c> when there is one, else the copy built into Core.
@@ -24,13 +25,30 @@ public static class CatalogFiles
 {
     /// <summary>The shared folder for edited catalogs, beside the setup history.</summary>
     public static string SharedFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mesura");
+        DataFolder.Local(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
 
-    public static LoadedCatalog<AppCatalog> Apps() =>
-        Load(AppCatalog.FileName, AppCatalog.Default, AppCatalog.Parse, DefaultFolders, AppCatalog.CurrentSchema);
+    /// <param name="elevated">
+    /// Whether this process runs as administrator. The apps catalog names the winget package each entry installs, and an edited copy is a file any program
+    /// running as the user can change: an elevated install of "7-Zip" could become an install of anything as administrator. So, as for the Windows catalog, an
+    /// elevated Mesura uses the built-in catalog only and says an edited copy was left unused (docs/security.md).
+    /// </param>
+    public static LoadedCatalog<AppCatalog> Apps(bool elevated = false) =>
+        IgnoreEditedWhenElevated(Load(AppCatalog.FileName, AppCatalog.Default, AppCatalog.Parse, DefaultFolders, AppCatalog.CurrentSchema), AppCatalog.Default, elevated);
 
-    public static LoadedCatalog<WindowsCatalog> Windows() =>
-        Load(WindowsCatalog.FileName, WindowsCatalog.Default, WindowsCatalog.Parse, DefaultFolders, WindowsCatalog.CurrentSchema);
+    /// <summary>The built-in catalog instead of an edited (or broken) copy, remembering which copy was left unused, when elevated.</summary>
+    internal static LoadedCatalog<T> IgnoreEditedWhenElevated<T>(LoadedCatalog<T> loaded, T builtIn, bool elevated) where T : class =>
+        elevated && loaded.Source != "built-in" ? new LoadedCatalog<T>(builtIn, "built-in", null, loaded.Source, IgnoredWhileElevated: true) : loaded;
+
+    /// <param name="elevated">
+    /// Whether this process runs as administrator. The Windows catalog says which registry values, services and tasks Mesura writes, and an
+    /// edited copy is a file in the user's data folder that any program running as the user can change: an elevated Mesura that read it
+    /// would write whatever that program put there as administrator. So an elevated Mesura uses the built-in catalog only and says an
+    /// edited copy was left unused (docs/security.md); edited copies still work in a normal session, where machine settings are skipped.
+    /// </param>
+    public static LoadedCatalog<WindowsCatalog> Windows(bool elevated = false)
+    {
+        return IgnoreEditedWhenElevated(Load(WindowsCatalog.FileName, WindowsCatalog.Default, WindowsCatalog.Parse, DefaultFolders, WindowsCatalog.CurrentSchema), WindowsCatalog.Default, elevated);
+    }
 
     private static IEnumerable<string> DefaultFolders => [SharedFolder];
 
@@ -73,6 +91,7 @@ public static class CatalogFiles
     {
         ArgumentNullException.ThrowIfNull(loaded);
         return loaded.SetAside is not { } path ? "" :
+            loaded.IgnoredWhileElevated ? $"Your edited {file} ({path}) isn't used while Mesura runs as administrator, because any program you run could have changed it. Mesura uses its built-in catalog. Run without administrator rights to use your copy." :
             $"Your edited {file} ({path}) was made by an older Mesura, so this version doesn't use it: it uses its built-in catalog, which has the 2026-10 catalog audit. To edit the catalog again, delete or rename that copy and copy the catalog again (Settings > Catalogs > Copy to edit).";
     }
 

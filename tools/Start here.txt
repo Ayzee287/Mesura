@@ -26,6 +26,11 @@ The window, the tray and the command line share one history and, if you edit the
 Security settings (Defender, SmartScreen, firewall, memory integrity) are shown with what turning them off means and
 how to restore them, and Mesura opens the Windows page; you make that change yourself.
 
+If Mesura doesn't start: double-click "Diagnose Mesura.cmd" in this folder. It reads (and changes nothing), then writes
+Mesura-diagnostics-<time>.txt to the Desktop; send that file to whoever gave you Mesura. Mesura also keeps a short log of each
+start in %LOCALAPPDATA%\Mesura\logs\mesura-startup.log. Keep the whole folder together: Mesura.exe needs the .dll files
+beside it. Windows 10 1607 or later, 64-bit, is required.
+
 Before you rely on it: nothing has been applied to a clean PC by its author, only previewed (README.md, "Limits you
 should know about"). Read the plan Setup shows before you apply it, and use Activity to undo.
 

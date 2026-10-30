@@ -4,7 +4,7 @@
         Width="500" SizeToContent="Height" MaxHeight="640" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" WindowStyle="None" AllowsTransparency="True"
         KeyDown="OnKeyDown" Style="{StaticResource AppWindow}" Background="Transparent">
-    <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource StrokeStrong}" BorderThickness="1" CornerRadius="12" Margin="12">
+    <Border Background="{StaticResource Popover}" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" CornerRadius="18" Margin="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="6" Opacity="0.45" Color="Black" />
         </Border.Effect>

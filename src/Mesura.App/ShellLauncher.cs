@@ -49,6 +49,14 @@ public static class ShellLauncher
             : Loc.Get("Shell.FolderMissing");
     }
 
+    private static readonly Lazy<string?> FolderExposure = new(() => Mesura.Core.Support.ProgramFolderTrust.Why(AppContext.BaseDirectory));
+
+    /// <summary>
+    /// Why administrator mode is never offered from this folder (who can write there), or <c>null</c> when the folder is protected (docs/security.md). There is no setting
+    /// that overrides it: a per-user install runs without administrator rights, an all-users install (Program Files) has them.
+    /// </summary>
+    public static string? ElevationBlockedReason => FolderExposure.Value;
+
     /// <summary>
     /// Starts this executable again elevated (a UAC prompt), with the same arguments plus
     /// <see cref="App.RelaunchedArgument"/>, so the new instance waits for this one to close instead of handing over to it.
@@ -56,6 +64,11 @@ public static class ShellLauncher
     /// <returns>An error to show (including a declined prompt), or <c>null</c> when the elevated instance started.</returns>
     public static string? RelaunchElevated(IEnumerable<string> arguments)
     {
+        if (ElevationBlockedReason is { } why)
+        {
+            return Loc.Format("Shell.ElevationBlocked", why);
+        }
+
         var exe = Environment.ProcessPath;
         if (exe is null)
         {

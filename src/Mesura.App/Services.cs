@@ -47,6 +47,17 @@ public sealed class Services
 
     public WindowsConfigurator Windows { get; }
 
+    /// <summary>Windows restore points (made before a run that changes the whole PC, listed on Activity).</summary>
+    public IRestorePoints RestorePoints { get; } = new Mesura.Setup.Windows.Windows.RestorePoints();
+
+    /// <summary>What the last restore point attempt said (empty when it worked or none was asked for), for the result of that run.</summary>
+    public string RestoreNote { get; set; } = "";
+
+    private IStartupSource? _startupApps;
+
+    /// <summary>The programs registered to start with Windows (the Debloat page's third tab).</summary>
+    public IStartupSource StartupApps => _startupApps ??= new Mesura.Platform.Windows.Windows.StartupScanner(Reader.User);
+
     public LoadedCatalog<WindowsCatalog> WindowsCatalog { get; }
 
     public SetupStore Store { get; }
@@ -312,7 +323,7 @@ public sealed class Services
     public (string Text, string Tone) AppsCatalogNote => CatalogNote(Apps, AppCatalog.FileName, CatalogFiles.NewSinceCopied(Apps));
 
     private static (string Text, string Tone) CatalogNote<T>(LoadedCatalog<T> loaded, string file, IReadOnlyList<string> missing) where T : class =>
-        loaded.SetAside is { } aside ? (Loc.Format("Catalog.SetAside", file, aside), Tone.Warn)
+        loaded.SetAside is { } aside ? (Loc.Format(loaded.IgnoredWhileElevated ? "Catalog.IgnoredElevated" : "Catalog.SetAside", file, aside), Tone.Warn)
         : loaded.Catalog is null || loaded.Source == "built-in" ? ("", Tone.Neutral)
         : missing.Count > 0 ? (Loc.Plural("Catalog.Stale", missing.Count, file, string.Join(", ", missing.Take(4)) + (missing.Count > 4 ? ", …" : "")), Tone.Warn)
         : (Loc.Format("Catalog.Edited", file, loaded.Source), Tone.Info);
@@ -324,15 +335,17 @@ public sealed class Services
 
     public static Services Create()
     {
-        var reader = new SystemStateReader();
-        var writer = new WindowsWriter(reader.User);
+        var tools = new SystemTools();
+        var reader = new SystemStateReader(tools);
+        var writer = new WindowsWriter(reader.User, tools);
         var sameUser = ProcessUser.Is(reader.User);
+        var windows = CatalogFiles.Windows(reader.IsElevated);
         return new Services(
             AppDetectors.Installer(reader.User, reader.IsElevated),
-            CatalogFiles.Apps(),
+            CatalogFiles.Apps(reader.IsElevated),
             reader,
-            new WindowsConfigurator(reader, writer),
-            CatalogFiles.Windows(),
+            new WindowsConfigurator(reader, writer, windows.Catalog),
+            windows,
             new SetupStore(),
             new StartupEntry(reader, writer),
             sameUser);

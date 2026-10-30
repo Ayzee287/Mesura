@@ -27,9 +27,8 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="40,30,40,28" MaxWidth="1040">
-            <TextBlock Text="{l:T Nav.Profiles}" Style="{StaticResource PageTitle}" />
-            <TextBlock Text="{l:T Profiles.Subtitle}" Style="{StaticResource PageSubtitle}" />
+        <StackPanel Margin="36,0,36,28">
+            <l:PageHero Title="{l:T Nav.Profiles}" Subtitle="{l:T Profiles.Subtitle}" Eyebrow="{l:T Eyebrow.Profiles}" HeroMargin="0,28,0,12" />
 
             <Border Style="{StaticResource Banner}" Background="{StaticResource DangerSubtle}" Margin="0,14,0,0"
                     Visibility="{Binding Unavailable, Converter={StaticResource Presence}}">

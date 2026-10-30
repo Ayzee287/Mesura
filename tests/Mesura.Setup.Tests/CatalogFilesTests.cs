@@ -53,4 +53,58 @@ public sealed class CatalogFilesTests : IDisposable
         Assert.Null(loaded.Catalog);
         Assert.StartsWith("Could not load", loaded.Error, StringComparison.Ordinal);
     }
+    // --- an elevated Mesura never reads an edited copy (docs/security.md) ---
+
+    private static LoadedCatalog<Mesura.Core.Apps.AppCatalog> LoadApps(string folder) =>
+        CatalogFiles.Load(Mesura.Core.Apps.AppCatalog.FileName, Mesura.Core.Apps.AppCatalog.Default, Mesura.Core.Apps.AppCatalog.Parse, [folder]);
+
+    [Fact]
+    public void An_elevated_Mesura_uses_the_built_in_catalogs_and_remembers_which_edited_copy_it_left_alone()
+    {
+        var folder = Folder("edited");
+        File.WriteAllText(Path.Combine(folder, WindowsCatalog.FileName), WindowsCatalog.BuiltInJson());
+        File.WriteAllText(Path.Combine(folder, Mesura.Core.Apps.AppCatalog.FileName), Mesura.Core.Apps.AppCatalog.BuiltInJson());
+
+        var windows = CatalogFiles.IgnoreEditedWhenElevated(Load(folder), WindowsCatalog.Default, elevated: true);
+        var apps = CatalogFiles.IgnoreEditedWhenElevated(LoadApps(folder), Mesura.Core.Apps.AppCatalog.Default, elevated: true);
+
+        Assert.Same(WindowsCatalog.Default, windows.Catalog);
+        Assert.Equal(("built-in", true, Path.Combine(folder, WindowsCatalog.FileName)), (windows.Source, windows.IgnoredWhileElevated, windows.SetAside));
+        Assert.Same(Mesura.Core.Apps.AppCatalog.Default, apps.Catalog);
+        Assert.True(apps.IgnoredWhileElevated);
+        Assert.Contains("administrator", CatalogFiles.SetAsideNote(WindowsCatalog.FileName, windows), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Without_elevation_the_edited_copy_is_used_as_before()
+    {
+        var folder = Folder("edited2");
+        File.WriteAllText(Path.Combine(folder, WindowsCatalog.FileName), WindowsCatalog.BuiltInJson());
+
+        var loaded = CatalogFiles.IgnoreEditedWhenElevated(Load(folder), WindowsCatalog.Default, elevated: false);
+
+        Assert.Equal(Path.Combine(folder, WindowsCatalog.FileName), loaded.Source);
+        Assert.False(loaded.IgnoredWhileElevated);
+    }
+
+    [Fact]
+    public void A_broken_edited_copy_cannot_block_or_steer_an_elevated_Mesura()
+    {
+        var folder = Folder("broken-elevated");
+        File.WriteAllText(Path.Combine(folder, WindowsCatalog.FileName), "not json");
+
+        var loaded = CatalogFiles.IgnoreEditedWhenElevated(Load(folder), WindowsCatalog.Default, elevated: true);
+
+        Assert.Null(loaded.Error);
+        Assert.Same(WindowsCatalog.Default, loaded.Catalog);
+    }
+
+    [Fact]
+    public void The_built_in_catalog_is_left_as_it_is_when_elevated()
+    {
+        var loaded = CatalogFiles.IgnoreEditedWhenElevated(Load(Folder("none")), WindowsCatalog.Default, elevated: true);
+
+        Assert.False(loaded.IgnoredWhileElevated);
+        Assert.Null(loaded.SetAside);
+    }
 }

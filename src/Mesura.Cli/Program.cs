@@ -13,6 +13,7 @@ using Mesura.Cli.Apps;
 using Mesura.Cli.Config;
 using Mesura.Cli.Setup;
 using Mesura.Cli.TrackA;
+using Mesura.Cli.Update;
 using Mesura.Platform.Windows;
 
 namespace Mesura.Cli;
@@ -45,6 +46,7 @@ internal static partial class Program
         {WindowsCli.Usage}
         {ProfileCli.Usage}
         {SetupCli.Usage}
+        {UpdateCli.Usage}
         {TrackACli.Usage}
 
         scan             Collects a raw machine snapshot (no diagnosis) and writes it as JSON to
@@ -57,6 +59,7 @@ internal static partial class Program
         check            Reads a raw snapshot, normalises it and writes the results of the checks
                          implemented so far (1 and 2) as JSON to stdout, or to <path> with --out.
                          Verdicts and evidence only: no explanations, no recommendations.
+        {UpdateCli.Help}
         {ConfigCli.Help}
         {AppsCli.Help}
         {WindowsCli.Help}
@@ -121,6 +124,7 @@ internal static partial class Program
                 ProfileCommand profile => ProfileCli.RunProfile(profile.Args),
                 HistoryCommand history => ProfileCli.RunHistory(history.Args),
                 SetupCommand setup => SetupCli.Run(setup.Args),
+                UpdateCommand update => UpdateCli.Run(update.Args),
                 _ => throw new InvalidOperationException("Unknown command."),
             };
         }
@@ -293,6 +297,11 @@ internal static partial class Program
         if (args[0] == "history")
         {
             return new HistoryCommand(args[1..]);
+        }
+
+        if (args[0] == "update")
+        {
+            return new UpdateCommand(args[1..]);
         }
 
         if (args[0] == "setup")
@@ -519,6 +528,8 @@ internal static partial class Program
     private sealed record HistoryCommand(string[] Args) : Command("history");
 
     private sealed record SetupCommand(string[] Args) : Command("setup");
+
+    private sealed record UpdateCommand(string[] Args) : Command("update");
 
     private static class ExitCode
     {

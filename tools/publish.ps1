@@ -81,7 +81,12 @@ New-Item -ItemType Directory -Force -Path $current | Out-Null
 
 # Single-file is set in each project; only self-contained and "no debug files" are given here (neither changes what
 # restore resolves, so the committed lock files stay as they are). No debug files means no build paths in the output.
-$versionArgs = @(if ($Label) { "-p:Version=$stamp" }) # always an array: splatting a lone string would pass its characters
+# The file version (what Windows Installer compares to decide whether to replace an installed file) must go up with every build: the release candidate
+# number is not part of it ("0.3.0-rc2" is file version 0.3.0.0 otherwise), and an upgrade that installs the new files before it removes the old product
+# (installer\Package.wxs, docs/installing.md) leaves a same-versioned file in place. The count of commits is monotonic and fits in 16 bits.
+$commitCount = [int](git -C $repo rev-list --count HEAD).Trim()
+$fileVersion = "$version.$commitCount"
+$versionArgs = @("-p:FileVersion=$fileVersion"; if ($Label) { "-p:Version=$stamp" })
 # Every publish starts from a clean Release build: an incremental WPF build once left out the compiled pages after only
 # a localization file had changed, and that app stopped at start ("Cannot locate resource 'mainwindow.xaml'").
 foreach ($project in 'src\Mesura.App\Mesura.App.csproj', 'src\Mesura.Cli\Mesura.Cli.csproj') {
@@ -118,6 +123,10 @@ foreach ($doc in 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md', 'CHANGELOG.md
   if (-not (Test-Path $source)) { throw "$doc is missing from the repository root; a build without it can't be released." }
   Copy-Item -LiteralPath $source -Destination (Join-Path $app $doc)
 }
+# The diagnostic collector for a PC where Mesura doesn't start: double-click, read-only, writes one text file to the Desktop.
+foreach ($d in 'Diagnose Mesura.cmd', 'Diagnose-Mesura.ps1') { Copy-Item -LiteralPath (Join-Path $repo "tools\diagnose\$d") -Destination (Join-Path $app $d) }
+foreach ($d in 'Test Mesura operations.cmd', 'Test-MesuraOperations.ps1') { Copy-Item -LiteralPath (Join-Path $repo "tools\tester\$d") -Destination (Join-Path $app $d) }
+Copy-Item -LiteralPath (Join-Path $repo 'docs\for-testers.md') -Destination (Join-Path $app 'FOR-TESTERS.md')
 # The executables' hashes inside the folder (the zip's own hash can only sit beside the zip: SHA256SUMS.txt).
 $inside = foreach ($rel in 'Mesura.exe', 'cli\mesura.exe') { '{0}  {1}' -f (Get-FileHash (Join-Path $app $rel) -Algorithm SHA256).Hash.ToLowerInvariant(), $rel.Replace('\', '/') }
 [System.IO.File]::WriteAllText((Join-Path $app 'EXE-SHA256.txt'), (($inside -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))

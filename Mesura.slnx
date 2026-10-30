@@ -5,10 +5,15 @@
     <Project Path="src/Mesura.Core/Mesura.Core.csproj" />
     <Project Path="src/Mesura.Platform.Windows/Mesura.Platform.Windows.csproj" />
     <Project Path="src/Mesura.Setup.Windows/Mesura.Setup.Windows.csproj" />
+    <Project Path="src/Mesura.Updating/Mesura.Updating.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Mesura.Core.Tests/Mesura.Core.Tests.csproj" />
     <Project Path="tests/Mesura.Platform.Tests/Mesura.Platform.Tests.csproj" />
     <Project Path="tests/Mesura.Setup.Tests/Mesura.Setup.Tests.csproj" />
+    <Project Path="tests/Mesura.Updating.Tests/Mesura.Updating.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Mesura.ReleaseTool/Mesura.ReleaseTool.csproj" />
   </Folder>
 </Solution>

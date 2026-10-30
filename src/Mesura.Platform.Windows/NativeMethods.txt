@@ -68,3 +68,9 @@ SYSTEM_POWER_CAPABILITIES
 WTSQuerySessionInformation
 WTSFreeMemory
 WTS_INFO_CLASS
+
+// the System page: physical memory now (GlobalMemoryStatusEx only reads) and whether the PC booted through UEFI or BIOS
+GlobalMemoryStatusEx
+MEMORYSTATUSEX
+GetFirmwareType
+FIRMWARE_TYPE

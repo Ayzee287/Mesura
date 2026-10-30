@@ -27,7 +27,7 @@ public sealed partial class SetupStore
     public SetupStore(string? root = null, string? legacyRoot = null)
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        Root = Path.GetFullPath(root ?? Path.Combine(localAppData, "Mesura", "Setup"));
+        Root = Path.GetFullPath(root ?? Path.Combine(DataFolder.Local(localAppData), "Setup"));
         var legacy = legacyRoot ?? (root is null ? Path.Combine(localAppData, LegacyIdentity.CodeName, "Setup") : null);
         LegacyRoot = legacy is null ? null : Path.GetFullPath(legacy);
     }

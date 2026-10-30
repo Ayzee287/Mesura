@@ -25,6 +25,15 @@ public partial class AllSettingsPage : UserControl
         }
     }
 
+    /// <summary>Closing the drawer clears the selection (a ticked setting stays ticked).</summary>
+    private void OnCloseDetails(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is AllSettingsViewModel vm)
+        {
+            vm.SelectedRow = null;
+        }
+    }
+
     private void OnCollectionChosen(object sender, RoutedEventArgs e) => CollectionsButton.IsChecked = false;
 
     private void OnCollectionsClosed(object? sender, EventArgs e) => CollectionsButton.IsChecked = false;

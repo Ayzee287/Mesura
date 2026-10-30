@@ -22,9 +22,18 @@ public sealed partial class WindowsCatalog
     /// and this build sets aside an edited copy of an older schema (<c>CatalogFiles</c>), so neither runs on the other's
     /// definitions. 3 since the quality pass of 2026-10-24 (global TCP settings, the network impact, an operation's
     /// benefit): a schema 2 build refuses a schema 3 copy, and this build sets a schema 2 edited copy aside the same way.
+    /// 4 since 0.2.0 (binary values, per-adapter registry settings, tool-backed system settings, a stated level, sources):
+    /// the same rule holds between 3 and 4.
     /// </summary>
-    public const int CurrentSchema = 3;
+    public const int CurrentSchema = 4;
     public const string FileName = "windows.catalog.json";
+
+    /// <summary>The categories of the Debloat page (bundled apps, AI features) and its generated startup entries; Tweaks leaves them out.</summary>
+    public const string BundledAppsCategory = "Bundled apps";
+
+    public const string AiCategory = "AI features";
+
+    public const string StartupCategory = "Startup apps";
 
     /// <summary>The category of entries that put a Windows default back after a tweak tool changed it.</summary>
     public const string DefaultsCategory = "Restore Windows defaults";
@@ -209,6 +218,20 @@ public sealed partial class WindowsCatalog
                 ? throw new FormatException(Where($"task '{t.Path}' must be a full path under \\Microsoft\\Windows\\ (only Windows' own tasks)."))
                 : new ScheduledTaskSetting(t.Path, t.Enabled ?? throw new FormatException(Where($"task '{t.Path}' needs 'enabled'.")))).ToList();
 
+        var registryEach = (e.RegistryEach ?? []).Select(r => ToRegistryEach(r, Where)).ToList();
+
+        var system = (e.System ?? []).Select(t =>
+            t.Kind is null || t.Name is null || t.Value is null || !SystemSetting.IsAllowed(t.Kind, t.Name, t.Value)
+                ? throw new FormatException(Where($"system setting '{t.Kind}:{t.Name}' = '{t.Value}' isn't one Mesura writes."))
+                : new SystemSetting(t.Kind.ToLowerInvariant(), t.Name.ToLowerInvariant(), t.Value.ToLowerInvariant())).ToList();
+
+        var appx = (e.Appx ?? []).Select(a =>
+            string.IsNullOrWhiteSpace(a.Name) || !AppxSetting.IsPlain(a.Name)
+                ? throw new FormatException(Where($"app '{a.Name}' needs a plain package name such as Microsoft.BingNews."))
+                : AppxSetting.IsProtected(a.Name)
+                    ? throw new FormatException(Where($"app '{a.Name}' is a package Windows depends on; Mesura never removes it."))
+                    : new AppxSetting(a.Name)).ToList();
+
         var tcp = (e.Tcp ?? []).Select(t =>
             t.Name is null || t.Value is null || !TcpGlobalSetting.IsAllowed(t.Name, t.Value)
                 ? throw new FormatException(Where($"TCP setting '{t.Name}' = '{t.Value}' isn't one Mesura writes (autotuninglevel, rss or rsc, with one of netsh's values)."))
@@ -224,7 +247,7 @@ public sealed partial class WindowsCatalog
                 o.Consequence ?? "", o.Restore ?? "")
             : null;
 
-        var applyParts = (registry.Count > 0 ? 1 : 0) + (services.Count > 0 ? 1 : 0) + (features.Count > 0 ? 1 : 0) + (power is null ? 0 : 1)
+        var applyParts = (registry.Count > 0 || registryEach.Count > 0 ? 1 : 0) + (system.Count > 0 ? 1 : 0) + (appx.Count > 0 ? 1 : 0) + (services.Count > 0 ? 1 : 0) + (features.Count > 0 ? 1 : 0) + (power is null ? 0 : 1)
             + (powerSettings.Count > 0 ? 1 : 0) + (tasks.Count > 0 ? 1 : 0) + (tcp.Count > 0 ? 1 : 0);
         var kinds = (applyParts > 0 ? 1 : 0) + (manual is null ? 0 : 1) + (observe is null ? 0 : 1);
         if (kinds != 1)
@@ -282,9 +305,24 @@ public sealed partial class WindowsCatalog
             _ => throw new FormatException(Where($"unknown valueBasis '{e.ValueBasis}' (documented, verified or community).")),
         };
 
+        OperationLevel? level = e.Level?.ToLowerInvariant() switch
+        {
+            null => null,
+            "safe" => OperationLevel.Safe,
+            "moderate" => OperationLevel.Moderate,
+            "high" => OperationLevel.High,
+            _ => throw new FormatException(Where($"unknown level '{e.Level}' (safe, moderate or high).")),
+        };
+
+        var sources = e.Sources ?? [];
+        if (sources.FirstOrDefault(u => !Uri.TryCreate(u, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http")) is { } badSource)
+        {
+            throw new FormatException(Where($"source '{badSource}' isn't a web address."));
+        }
+
         return new WindowsOperation(e.Id, e.Name, e.Category ?? "Other", e.Description, risk, activation, e.MinBuild, e.MaxBuild,
             e.Limitations ?? "", e.Source ?? "", registry, services, features, power, powerSettings, tasks, manual, observe, requires,
-            impact, e.Summary ?? "", tcp, benefit, basis);
+            impact, e.Summary ?? "", tcp, benefit, basis, level, registryEach, system, sources, appx);
     }
 
     private static RegistrySetting ToRegistry(RegistryEntry r, Func<string, string> where)
@@ -300,23 +338,20 @@ public sealed partial class WindowsCatalog
             throw new FormatException(where($"registry path '{r.Path}' or name '{r.Name}' is malformed."));
         }
 
-        var kind = r.Type?.ToLowerInvariant() switch
-        {
-            "dword" => RegistryKind.DWord,
-            "string" => RegistryKind.String,
-            _ => throw new FormatException(where($"registry type '{r.Type}' must be dword or string.")),
-        };
+        var kind = ToKind(r.Type, where);
 
         // An empty name is the key's default value, which is valid; a default value must be a string.
-        if (r.Name.Length == 0 && kind == RegistryKind.DWord)
+        if (r.Name.Length == 0 && kind != RegistryKind.String)
         {
-            throw new FormatException(where("the key's default value (empty name) must be a string, not a dword."));
+            throw new FormatException(where("the key's default value (empty name) must be a string."));
         }
 
         var value = r.Value ?? "";
-        if (kind == RegistryKind.DWord && !uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+        CheckValue(kind, r.Name, value, where);
+
+        if (kind == RegistryKind.Binary && (r.ClearBits is not null || r.SetBits is not null))
         {
-            throw new FormatException(where($"'{r.Name}' is a dword but '{value}' is not a number."));
+            throw new FormatException(where($"'{r.Name}' is binary: clearBits and setBits work on numbers only."));
         }
 
         var clear = r.ClearBits ?? 0;
@@ -336,7 +371,57 @@ public sealed partial class WindowsCatalog
         return new RegistrySetting(r.Hive, r.Path, r.Name, kind, value, r.AbsentMatches ?? false, clear, set);
     }
 
-    /// <summary>A Windows scheduled task path: under \Microsoft\Windows\, plain folder and task names.</summary>
+    private static RegistryKind ToKind(string? type, Func<string, string> where) => type?.ToLowerInvariant() switch
+    {
+        "dword" => RegistryKind.DWord,
+        "string" => RegistryKind.String,
+        "binary" => RegistryKind.Binary,
+        _ => throw new FormatException(where($"registry type '{type}' must be dword, string or binary.")),
+    };
+
+    private static void CheckValue(RegistryKind kind, string name, string value, Func<string, string> where)
+    {
+        if (kind == RegistryKind.DWord && !uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+        {
+            throw new FormatException(where($"'{name}' is a dword but '{value}' is not a number."));
+        }
+
+        if (kind == RegistryKind.Binary && !HexBytes().IsMatch(value))
+        {
+            throw new FormatException(where($"'{name}' is binary: '{value}' must be comma-separated hex bytes such as \"00,0a,ff\"."));
+        }
+    }
+
+    private static RegistryEachSetting ToRegistryEach(RegistryEachEntry r, Func<string, string> where)
+    {
+        if (r.Hive is not ("HKCU" or "HKLM"))
+        {
+            throw new FormatException(where($"registryEach hive '{r.Hive}' must be HKCU or HKLM."));
+        }
+
+        if (string.IsNullOrWhiteSpace(r.PathPattern) || r.PathPattern.StartsWith('\\') || r.PathPattern.EndsWith('\\') || r.PathPattern.Contains(@"\\", StringComparison.Ordinal)
+            || r.PathPattern.Split('\\').Count(segment => segment == "*") != 1 || r.PathPattern.Count(c => c == '*') != 1 || r.PathPattern.StartsWith("*\\", StringComparison.Ordinal)
+            || r.Name is null || r.Name.Length == 0)
+        {
+            throw new FormatException(where($"registryEach path '{r.PathPattern}' needs exactly one '*' segment after a fixed parent key, and a named value."));
+        }
+
+        var kind = ToKind(r.Type, where);
+        var value = r.Value ?? "";
+        CheckValue(kind, r.Name, value, where);
+        var skip = r.Where?.ValueNotEquals;
+        if (skip is not null && (string.IsNullOrEmpty(skip.Name) || skip.Value is null))
+        {
+            throw new FormatException(where("registryEach 'where.valueNotEquals' needs a 'name' and a 'value'."));
+        }
+
+        return new RegistryEachSetting(r.Hive, r.PathPattern, r.Name, kind, value, r.AbsentMatches ?? false, r.Where?.SubkeyExists, skip?.Name, skip?.Value);
+    }
+
+    [GeneratedRegex(@"^[0-9a-fA-F]{2}(,[0-9a-fA-F]{2})*$", RegexOptions.CultureInvariant)]
+    private static partial Regex HexBytes();
+
+    /// <summary>A Windows scheduled task path: under \\Microsoft\\Windows\\, plain folder and task names.</summary>
     [GeneratedRegex(@"^\\Microsoft\\Windows(\\[A-Za-z0-9 ._()-]+)+$", RegexOptions.CultureInvariant)]
     private static partial Regex TaskPath();
 
@@ -347,7 +432,19 @@ public sealed partial class WindowsCatalog
         int? MinBuild, int? MaxBuild, string? Limitations, string? Source,
         List<RegistryEntry>? Registry, List<ServiceEntry>? Services, List<FeatureEntry>? Features,
         PowerPlanEntry? PowerPlan, List<PowerSettingEntry>? PowerSettings, List<TaskEntry>? Tasks, ManualEntry? Manual, ObserveEntry? Observe,
-        List<string?>? Requires = null, string? Impact = null, string? Summary = null, List<TcpEntry>? Tcp = null, string? Benefit = null, string? ValueBasis = null);
+        List<string?>? Requires = null, string? Impact = null, string? Summary = null, List<TcpEntry>? Tcp = null, string? Benefit = null, string? ValueBasis = null,
+        string? Level = null, List<RegistryEachEntry>? RegistryEach = null, List<SystemEntry>? System = null, List<string>? Sources = null,
+        List<AppxEntry>? Appx = null);
+
+    internal sealed record AppxEntry(string? Name);
+
+    internal sealed record RegistryEachEntry(string? Hive, string? PathPattern, string? Name, string? Type, string? Value, bool? AbsentMatches = null, EachWhere? Where = null);
+
+    internal sealed record EachWhere(string? SubkeyExists = null, EachValue? ValueNotEquals = null);
+
+    internal sealed record EachValue(string? Name, string? Value);
+
+    internal sealed record SystemEntry(string? Kind, string? Name, string? Value);
 
     internal sealed record TaskEntry(string? Path, bool? Enabled);
 

@@ -149,8 +149,8 @@ public sealed class AllSettingsViewModel : Observable, IPageState
         }
 
         Back = new RelayCommand(back);
-        Apply = new AsyncCommand(ApplyAsync, () => !_busy && !_services.Changing && state.Rows.Any(r => r.Selected), Fail);
-        Clear = new RelayCommand(() => SelectOnly([]), () => state.Rows.Any(r => r.Selected));
+        Apply = new AsyncCommand(ApplyAsync, () => !_busy && !_services.Changing && state.Rows.Any(r => r.Selected && !r.InDebloat), Fail);
+        Clear = new RelayCommand(() => SelectOnly([]), () => state.Rows.Any(r => r.Selected && !r.InDebloat));
         OpenTarget = new RelayCommand(() =>
         {
             if (SelectedRow?.OpenTarget is { } target && ShellLauncher.Open(target) is { } error)
@@ -280,7 +280,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
     {
         get
         {
-            var chosen = _state.Rows.Where(r => r.Selected).ToList();
+            var chosen = _state.Rows.Where(r => r.Selected && !r.InDebloat).ToList();
             if (chosen.Count == 0)
             {
                 return Loc.Get("AllSettings.NothingSelected");
@@ -303,7 +303,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
     }
 
     /// <summary>Whether a row belongs to the rail's category (guides only in their own).</summary>
-    private bool InRail(SettingRow row) => _rail switch
+    private bool InRail(SettingRow row) => !row.InDebloat && _rail switch
     {
         Guides => row.Recommendation == Recommendation.Guide,
         "all" => row.Recommendation != Recommendation.Guide,
@@ -377,7 +377,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
     {
         foreach (var item in Rail)
         {
-            var rows = _state.Rows.Where(r => item.Value switch
+            var rows = _state.Rows.Where(r => !r.InDebloat).Where(r => item.Value switch
             {
                 Guides => r.Recommendation == Recommendation.Guide,
                 "all" => r.Recommendation != Recommendation.Guide,
@@ -402,14 +402,14 @@ public sealed class AllSettingsViewModel : Observable, IPageState
     private void SelectOnly(IReadOnlyCollection<string> ids)
     {
         var set = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var row in _state.Rows)
+        foreach (var row in _state.Rows.Where(r => !r.InDebloat))
         {
             row.Selected = set.Contains(row.Id) && row.CanSelect;
         }
 
         if (ids.Count > 0)
         {
-            var ticked = _state.Rows.Count(r => r.Selected);
+            var ticked = _state.Rows.Count(r => r.Selected && !r.InDebloat);
             Result.Show(ticked == 0 ? Tone.Ok : Tone.Neutral,
                 ticked == 0 ? Loc.Get("AllSettings.CollectionDone") : Loc.Plural("AllSettings.CollectionSelected", ticked));
         }
@@ -417,7 +417,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
 
     private async Task ApplyAsync()
     {
-        var rows = _state.Rows.Where(r => r.Selected).ToList();
+        var rows = _state.Rows.Where(r => r.Selected && !r.InDebloat).ToList();
         var ops = rows.Select(r => r.Operation).ToList();
         if (RunActions.Conflicts(_services, ops) is { Count: > 0 } conflicts)
         {
@@ -438,7 +438,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
 
         if (rows.Count(r => r.NeedsAdmin) is var admin and > 0)
         {
-            notes.Add(Loc.Plural("Optimize.ConfirmAdmin", admin));
+            notes.Add(Loc.Plural(Loc.AdminKey("Optimize.ConfirmAdmin"), admin));
         }
 
         if (!ConfirmDialog.Ask(Loc.Plural("Optimize.ConfirmTitle", rows.Count), Loc.Get("Optimize.ConfirmMessage"),
@@ -453,7 +453,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState
             var (run, recorded, error) = await RunActions.ApplyWindowsAsync(_services, ops);
             var applied = run.WindowsSteps.Count(s => s.Status == WindowsOpStatus.Applied);
             var problems = run.WindowsSteps.Count(s => !s.Ok);
-            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Where(t => t.Length > 0));
+            var detail = string.Join("\n", RunActions.FollowUps(_services, run).Select(f => f.Text).Append(error ?? "").Append(_services.RestoreNote).Where(t => t.Length > 0));
             Result.Show(problems == 0 ? Tone.Ok : Tone.Warn,
                 problems == 0 ? Loc.Plural("Optimize.ResultDone", applied) : Loc.Format("Optimize.ResultPartial", applied, problems), detail,
                 recorded && error is null && RunActions.CanUndo(run) ? () => _ = UndoAsync(run) : null,

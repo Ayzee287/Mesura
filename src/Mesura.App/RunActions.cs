@@ -128,8 +128,15 @@ public static class RunActions
     {
         using var change = services.BeginChange();
         var started = DateTimeOffset.UtcNow;
+        services.RestoreNote = "";
+        var wantsPoint = services.Settings.RestorePointBeforeChanges && services.Reader.IsElevated && ops.Any(o => o.Applicable && o.MachineWide && o.NeedsElevation);
         var outcomes = await Task.Run(() =>
         {
+            if (wantsPoint && services.RestorePoints.Create(Loc.Format("Restore.Description", ops.Count)) is { } why)
+            {
+                services.RestoreNote = Loc.Format("Restore.NotMade", why);
+            }
+
             services.Reader.Refresh(); // before-images from the system as it is now
             return services.Windows.Apply(ops, CancellationToken.None);
         });
@@ -363,7 +370,7 @@ public static class RunActions
         var elevation = run.WindowsSteps.Where(w => w.Status == WindowsOpStatus.NeedsElevation).ToList();
         if (elevation.Count > 0)
         {
-            items.Add((Tone.Warn, Loc.Plural("FollowUp.NeedsAdmin", elevation.Count)));
+            items.Add((Tone.Warn, Loc.Plural(Loc.AdminKey("FollowUp.NeedsAdmin"), elevation.Count)));
         }
 
         foreach (var step in run.WindowsSteps.Where(w => w.Status is WindowsOpStatus.Failed or WindowsOpStatus.Blocked or WindowsOpStatus.Unknown))

@@ -13,13 +13,17 @@ it installs, and makes no promise that your games run faster: see [What it does 
 
 - **Setup** is the start page. Choose **Recommended** or **Maximum performance**, look at the plan, then apply it.
   - *Recommended*: everyday Windows with less promotion, ad profiling and nagging, and nothing you would miss
-    (14 settings, none that removes a feature).
+    (23 settings, none that removes a feature).
   - *Maximum performance*: Recommended plus fewer optional background functions and the desktop power settings, with the
-    price of each named (24 settings and 7 you tick yourself).
+    price of each named (44 settings and 7 you tick yourself).
   - [What is in them and why](docs/profile-review-2026-10.md), and
     [how their stored values were checked](docs/value-verification-2026-10.md).
-- **All settings** lists about a hundred Windows settings by category with what each writes, its risk, and what is known
-  about it (documented by Microsoft, verified, or community-only). You can pick any of them one by one.
+- **Tweaks** lists about 250 Windows settings as cards: a risk label, what each writes, its status, and what is known
+  about it (documented by Microsoft, verified, or community-only). Pick any of them one by one, or a collection (Edge
+  policies, less data sharing, fewer network discovery protocols, desktop performance and more).
+- **Debloat** removes bundled apps for your account, turns off Windows' AI features (Recall, Click to Do, Copilot,
+  Paint AI) and the programs that start with Windows. Nothing Windows itself depends on can be removed, and Undo
+  registers an app again where Windows still has its copy.
 - **Apps** installs apps through winget (browsers, Steam, Discord, Git, runtimes and the like), detecting what is there.
 - **Configurations** exports and restores a short allowlist of app settings (Steam, Brave, Discord, Vencord, Spotify).
 - **Profiles** saves a PC's setup and runs it again on a new one.
@@ -28,22 +32,38 @@ it installs, and makes no promise that your games run faster: see [What it does 
   back your own profiles around the install.
 - **Activation** shows the Windows and Office licence state, and installs a product key you own and activates it through
   Windows' own licensing service. Mesura doesn't store or log the key.
+- **System** shows this PC at a glance (processor, memory, graphics, drives, displays, power, firmware, Windows) and copies or saves the report.
 - **Activity** is the history of everything Mesura changed, with the exact previous value, and undoes it.
 - A command line, `cli\mesura.exe`, does the same from a terminal; anything that changes the PC previews by default and
   acts only with `--apply`.
 
 ## Install
 
-1. Download `Mesura-<version>-win-x64.zip` from the release and check its SHA-256 against `SHA256SUMS.txt`
-   (`Get-FileHash .\Mesura-<version>-win-x64.zip` in PowerShell).
-2. Unzip the whole folder somewhere permanent, for example `%LOCALAPPDATA%\Programs\Mesura`. There is no installer.
-3. Start `Mesura.exe`. Windows SmartScreen may warn that the app is unrecognised, because the file is not code-signed:
-   choose *More info*, then *Run anyway*, once you have checked the hash.
-4. Mesura asks once for administrator rights, because changes to the whole PC need them. You can decline (per-user
-   settings still work) or turn the question off in Settings. **Nothing changes until you confirm an Apply, Install, Undo
-   or profile run.**
+**With the installer (recommended).** Download `Mesura-<version>-x64.msi` (English wizard) or `Mesura-<version>-x64-ru.msi` from the release, check its SHA-256 against `SHA256SUMS.txt`
+(`Get-FileHash .\Mesura-<version>-x64.msi`), and run it. Choose the folder, and whether to add a desktop shortcut; by default it installs for you alone, without administrator rights.
+Windows SmartScreen may warn, because the installer is not code-signed: *More info*, then *Run anyway*, once you have checked the hash. Mesura then updates itself (see below).
+Details, silent install and all-users install: `docs/installing.md`.
+
+**Portable.** Unzip `Mesura-<version>-win-x64.zip` (the whole folder) anywhere and start `Mesura.exe`. A portable copy checks for updates too, and "Install" opens the verified installer.
+
+**Administrator rights depend on the install.** An **all-users** install (`Program Files`, `ALLUSERS=1`) asks once for administrator rights at start, because changes to the whole PC need them, and has every function.
+A **per-user** install (the default) lives in your profile, where any program you run could replace `Mesura.exe`, so Mesura never asks for administrator rights from there: functions that need none work, and the
+window says which ones are skipped and how to get full access (install for all users). There is no setting to override this. `docs/security.md`.
+**Nothing changes until you confirm an Apply, Install, Undo or profile run.**
+
+**Updates.** Mesura checks when it starts (Settings > Updates turns it off; Stable or Preview channel) and offers a new version in the sidebar. It downloads and installs only when you click,
+after checking a signature that only the author can make; if the installation fails, the previous version is restored. `docs/updates.md`.
 
 It needs Windows 10 (64-bit) or Windows 11 and no other software: the .NET runtime is inside `Mesura.exe`.
+
+## If Mesura doesn't start
+
+1. Unzip the **whole** archive and start `Mesura.exe` from the unzipped folder (it needs the `.dll` files beside it; Mesura says so if they are missing).
+2. Windows 11 with **Smart App Control** on blocks unsigned programs it doesn't know; Mesura isn't signed yet. Turn it off in Windows Security > App & browser control > Smart App Control (it cannot be turned back on without resetting Windows), or use a PC where it is off.
+3. Right-click the zip before unzipping > Properties > *Unblock*, or answer *More info > Run anyway* in SmartScreen.
+4. Double-click `Diagnose Mesura.cmd` in the folder: it reads (and changes nothing) and writes `Mesura-diagnostics-<time>.txt` on the Desktop. Send it with the report. Mesura's own start log is `%LOCALAPPDATA%\Mesura\logs\mesura-startup.log`.
+
+Requirements: Windows 10 1607 or later (64-bit) or Windows 11. No .NET or Visual C++ install is needed.
 
 ## Limits you should know about
 

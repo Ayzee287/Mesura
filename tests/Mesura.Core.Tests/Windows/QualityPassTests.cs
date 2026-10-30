@@ -280,7 +280,9 @@ public sealed class QualityPassTests
     [Fact]
     public void New_collections_hold_exactly_what_they_say_and_no_new_entry_reaches_a_primary_preset()
     {
-        Assert.Equal(["repair.threaded-dpc", "repair.mmcss-responsiveness", "repair.large-system-cache", "repair.prefetcher"], Catalog.PresetById("system-defaults")!.OperationIds);
+        Assert.Equal(["repair.threaded-dpc", "repair.mmcss-responsiveness", "repair.large-system-cache", "repair.prefetcher",
+            // 0.2.0: the boot-timer overrides and the scheduler value put back to Windows' own (all no-ops on an untouched PC)
+            "cpu.platform-clock-default", "cpu.dynamic-tick-default", "cpu.win32-priority-separation-default"], Catalog.PresetById("system-defaults")!.OperationIds);
         Assert.Equal(["privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking",
             "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences"],
             Catalog.PresetById("less-data-sharing")!.OperationIds);
@@ -327,7 +329,11 @@ public sealed class QualityPassTests
         // change to it is a decision, not a side effect.
         Assert.Equal(["input.accessibility-shortcuts-off", "notifications.no-feedback-prompts", "privacy.no-language-list", "repair.ncsi-active-probing", "repair.threaded-dpc",
                       "privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "notifications.no-tips-and-suggestions",
-                      "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "gaming.game-mode-on"],
+                      "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "gaming.game-mode-on",
+                      // 0.2.0: Microsoft-documented policies and one Windows default, each read against its ADMX or Learn page and then placed by a sceptical second review.
+                      "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection",
+                      "privacy.no-inking-typing-data-upload", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
+                      "edge.diagnostic-data-required", "system.long-paths-on"],
             Catalog.PresetById("recommended-gaming")!.OperationIds);
     }
 

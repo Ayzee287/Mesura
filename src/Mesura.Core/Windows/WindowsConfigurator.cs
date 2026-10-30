@@ -35,6 +35,18 @@ public interface IWindowsWriter
 
     /// <summary>Sets one global TCP/IP setting (<see cref="TcpGlobalSetting"/>: an allowed netsh name and value only).</summary>
     void SetTcpGlobal(string name, string value);
+
+    /// <summary>Changes one <see cref="SystemSetting"/> through its Windows tool (an allowed kind, name and value only).</summary>
+    void SetSystemSetting(string kind, string name, string value) =>
+        throw new NotSupportedException($"This writer can't change {kind} {name}.");
+
+    /// <summary>Removes one packaged app for the signed-in user, by its full package name.</summary>
+    void RemoveAppx(string packageFullName) =>
+        throw new NotSupportedException("This writer can't remove apps.");
+
+    /// <summary>Registers a removed app again from Windows' staged copy, by its package family name.</summary>
+    void RestoreAppx(string packageFamilyName) =>
+        throw new NotSupportedException("This writer can't restore apps.");
 }
 
 /// <summary>
@@ -47,9 +59,16 @@ public sealed class WindowsConfigurator
 {
     private readonly ISystemReader _reader;
     private readonly IWindowsWriter _writer;
+    private readonly WindowsCatalog? _trusted;
 
-    public WindowsConfigurator(ISystemReader reader, IWindowsWriter writer)
+    /// <param name="trustedCatalog">
+    /// When given, an undo only restores targets that the recorded operation declares in this catalog (<see cref="RevertTrust"/>): a history
+    /// record is a user-writable file and must not be able to point an elevated undo at a registry value, service or task the operation
+    /// never touches. The app and the command line always pass it; tests with synthetic records leave it out.
+    /// </param>
+    public WindowsConfigurator(ISystemReader reader, IWindowsWriter writer, WindowsCatalog? trustedCatalog = null)
     {
+        _trusted = trustedCatalog;
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         _writer = writer ?? throw new ArgumentNullException(nameof(writer));
     }
@@ -122,12 +141,14 @@ public sealed class WindowsConfigurator
         [.. operations.Where(o => WindowsEvaluator.Evaluate(o, reader).State is OperationState.Applied or OperationState.NotApplied or OperationState.Partial)];
 
     private static IEnumerable<(string Target, string Value)> Targets(WindowsOperation op) =>
-        op.Registry.Select(r => ($@"{r.Hive}\{r.Path}\{r.Name}".ToUpperInvariant(), r.ClearBits != 0 ? $"clear {r.ClearBits}" : r.SetBits != 0 ? $"set {r.SetBits}" : r.Value))
+        op.Registry.Concat(op.RegistryEachSettings.Select(e => new RegistrySetting(e.Hive, e.PathPattern, e.Name, e.Kind, e.Value))).Select(r => ($@"{r.Hive}\{r.Path}\{r.Name}".ToUpperInvariant(), r.ClearBits != 0 ? $"clear {r.ClearBits}" : r.SetBits != 0 ? $"set {r.SetBits}" : r.Value))
             .Concat(op.Services.Select(s => ($"SERVICE {s.Name}".ToUpperInvariant(), s.Start.ToString())))
             .Concat(op.Features.Select(f => ($"FEATURE {f.Name}".ToUpperInvariant(), f.Enabled.ToString())))
             .Concat(op.Tasks.Select(t => ($"TASK {t.Path}".ToUpperInvariant(), t.Enabled.ToString())))
             .Concat(op.PowerSettings.Select(p => ($"POWER {p.Subgroup} {p.Setting}".ToUpperInvariant(), p.AcValue.ToString(System.Globalization.CultureInfo.InvariantCulture))))
             .Concat(op.TcpSettings.Select(t => ($"TCP {t.Name}".ToUpperInvariant(), t.Value)))
+            .Concat(op.SystemSettings.Select(t => ($"SYSTEM {t.Kind} {t.Name}".ToUpperInvariant(), t.Value)))
+            .Concat(op.AppxSettings.Select(a => ($"APPX {a.Name}".ToUpperInvariant(), "removed")))
             .Concat(op.PowerPlan is { } plan ? [("ACTIVE POWER SCHEME", plan.SchemeGuid)] : []);
 
     /// <summary>Each setting written differently by two or more of the operations: the setting and the operations.</summary>
@@ -191,7 +212,7 @@ public sealed class WindowsConfigurator
         var restartNeeded = false;
         try
         {
-            foreach (var setting in op.Registry)
+            foreach (var setting in op.ResolveRegistry(_reader))
             {
                 var before = _reader.ReadRegistry(setting.Hive, setting.Path, setting.Name);
                 if (before.Unreadable)
@@ -295,6 +316,44 @@ public sealed class WindowsConfigurator
                 if (!string.Equals(_reader.ReadTcpGlobal(tcp.Name), tcp.Value, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException($"Windows didn't keep the TCP setting {tcp.Name} at {tcp.Value} (a policy or a TCP setting template may hold another value).");
+                }
+            }
+
+            foreach (var app in op.AppxSettings)
+            {
+                var installed = _reader.ReadAppxPackages(app.Name)
+                    ?? throw new InvalidOperationException($"The installed apps couldn't be read, so {app.Name} has no before-image; left alone.");
+                foreach (var fullName in installed)
+                {
+                    done.Add(new RecordedChange(ChangeKind.Appx, app.Target, null, fullName, app.Name, null, "installed", "removed"));
+                    _writer.RemoveAppx(fullName);
+                    if (_reader.ReadAppxPackages(app.Name) is not { } after || after.Contains(fullName, StringComparer.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Windows didn't remove {app.Name} (it may be a protected system app).");
+                    }
+                }
+            }
+
+            foreach (var system in op.SystemSettings)
+            {
+                var before = _reader.ReadSystemSetting(system.Kind, system.Name)
+                    ?? throw new InvalidOperationException($"{system.Target} couldn't be read, so it has no before-image; left alone.");
+                if (string.Equals(before, system.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!SystemSetting.IsAllowed(system.Kind, system.Name, before))
+                {
+                    // A reading the tool can't be given back would make the change impossible to undo.
+                    throw new InvalidOperationException($"{system.Target} reads '{before}', which Mesura can't restore; left alone.");
+                }
+
+                done.Add(new RecordedChange(ChangeKind.SystemSetting, system.Target, null, system.Kind, system.Name, null, before.ToLowerInvariant(), system.Value.ToLowerInvariant()));
+                _writer.SetSystemSetting(system.Kind, system.Name, system.Value);
+                if (!string.Equals(_reader.ReadSystemSetting(system.Kind, system.Name), system.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Windows didn't keep {system.Target} at {system.Value}.");
                 }
             }
 
@@ -414,6 +473,17 @@ public sealed class WindowsConfigurator
                 continue;
             }
 
+            if (_trusted is not null && Undeclared(step) is { } undeclared)
+            {
+                outcomes.Add(step with
+                {
+                    Status = WindowsOpStatus.Blocked,
+                    Detail = $"Not undone: the record names {undeclared}, which this operation does not change in this version of Mesura (the history file was altered, or comes from another version). Nothing was changed.",
+                    Changes = [],
+                });
+                continue;
+            }
+
             if (step.Changes.Any(c => c.NeedsElevation) && !_reader.IsElevated)
             {
                 outcomes.Add(step with { Status = WindowsOpStatus.NeedsElevation, Detail = "Reverting machine-wide settings needs administrator rights; nothing was changed.", Changes = [] });
@@ -472,6 +542,20 @@ public sealed class WindowsConfigurator
         return outcomes;
     }
 
+    private string? Undeclared(WindowsOpOutcome step)
+    {
+        var operation = _trusted!.ById(step.OperationId);
+        foreach (var change in step.Changes)
+        {
+            if (operation is null || !operation.Declares(change))
+            {
+                return change.Target;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Whether the setting a change targets still holds its before-image (the write didn't take effect).</summary>
     private bool AtBefore(RecordedChange change) => change.Kind switch
     {
@@ -481,6 +565,8 @@ public sealed class WindowsConfigurator
         ChangeKind.Service => _reader.ReadService(change.Name!).Start?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.Before,
         ChangeKind.Task => _reader.ReadTask(change.Path!).ToString() == change.Before,
         ChangeKind.TcpGlobal => string.Equals(_reader.ReadTcpGlobal(change.Name!), change.Before, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.SystemSetting => string.Equals(_reader.ReadSystemSetting(change.Path!, change.Name!), change.Before, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.Appx => _reader.ReadAppxPackages(change.Name!)?.Contains(change.Path!, StringComparer.OrdinalIgnoreCase) == true,
         ChangeKind.PowerSetting => change.Scheme is not null
             && _reader.ReadPowerSetting(change.Scheme, change.Path!, change.Name!)?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.Before,
         ChangeKind.PowerScheme => string.Equals(_reader.ReadPower().ActiveScheme, change.Before, StringComparison.OrdinalIgnoreCase),
@@ -503,6 +589,10 @@ public sealed class WindowsConfigurator
         ChangeKind.Feature => _reader.ReadFeature(change.Name!).ToString() == change.After,
         ChangeKind.Task => _reader.ReadTask(change.Path!).ToString() == change.After,
         ChangeKind.TcpGlobal => string.Equals(_reader.ReadTcpGlobal(change.Name!), change.After, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.SystemSetting => string.Equals(_reader.ReadSystemSetting(change.Path!, change.Name!), change.After, StringComparison.OrdinalIgnoreCase),
+        // Removed while no package of that name is installed; a revert records it the other way round (After "installed").
+        ChangeKind.Appx => (_reader.ReadAppxPackages(change.Name!) is { } apps)
+            && (change.After == "removed" ? !apps.Contains(change.Path!, StringComparer.OrdinalIgnoreCase) : apps.Count > 0),
         ChangeKind.PowerScheme => string.Equals(_reader.ReadPower().ActiveScheme, change.After, StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
@@ -533,6 +623,16 @@ public sealed class WindowsConfigurator
                 break;
             case ChangeKind.TcpGlobal when change.Name is not null && change.Before is not null && TcpGlobalSetting.IsAllowed(change.Name, change.Before):
                 _writer.SetTcpGlobal(change.Name, change.Before);
+                break;
+            case ChangeKind.SystemSetting when change.Path is not null && change.Name is not null && change.Before is not null
+                && SystemSetting.IsAllowed(change.Path, change.Name, change.Before):
+                _writer.SetSystemSetting(change.Path, change.Name, change.Before);
+                break;
+            case ChangeKind.Appx when change.Before == "installed" && change.Path is not null && AppxSetting.FamilyOf(change.Path) is { } family:
+                _writer.RestoreAppx(family);
+                break;
+            case ChangeKind.Appx when change.Before == "removed" && change.Path is not null:
+                _writer.RemoveAppx(change.Path); // reverting a revert: removed again
                 break;
             case ChangeKind.PowerScheme when change.Before is not null:
                 _writer.ActivatePowerScheme(change.Before);

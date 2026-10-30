@@ -46,14 +46,11 @@
         </Grid.RowDefinitions>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="40,30,40,28" MaxWidth="1040" HorizontalAlignment="Stretch">
+            <StackPanel Margin="36,0,36,24">
                 <!-- Header -->
                 <Grid>
-                    <StackPanel Margin="0,0,200,0">
-                        <TextBlock Text="{l:T Setup.Title}" Style="{StaticResource PageTitle}" />
-                        <TextBlock Text="{Binding Status}" Style="{StaticResource PageSubtitle}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <l:PageHero Title="{l:T Setup.Title}" Subtitle="{Binding Status}" Eyebrow="{l:T Eyebrow.Setup}" HeroMargin="0,28,200,12" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,28,0,0">
                         <Button Style="{StaticResource Ghost}" Command="{Binding OpenAllSettings}" AutomationProperties.Name="{l:T Optimize.AllSettings}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{l:T Optimize.AllSettings}" />
@@ -96,7 +93,7 @@
                 <ContentControl Content="{Binding Result}" ContentTemplate="{StaticResource BannerTemplate}" Margin="0,4,0,0" Focusable="False" />
 
                 <!-- An unfinished setup comes first: what is done, what is next, and the way on. -->
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0" BorderBrush="{StaticResource StrokeStrong}"
+                <Border Style="{StaticResource Card}" Margin="0,12,0,0"
                         Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel Style="{StaticResource Reveal}">
                         <Grid>
@@ -220,7 +217,7 @@
                 <TextBlock Text="{l:T Setup.PlanHint}" Style="{StaticResource Caption}" Margin="0,0,0,12" />
 
                 <!-- Windows settings -->
-                <Border Style="{StaticResource PlanCard}" DataContext="{Binding Windows}">
+                <l:GlowBorder Style="{StaticResource PlanGlow}" DataContext="{Binding Windows}">
                     <StackPanel>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SectionHead}" Focusable="False" />
                         <StackPanel Style="{StaticResource Reveal}" Margin="50,12,0,0" Visibility="{Binding Windows.Expanded, Converter={StaticResource BoolToVisibility}}"
@@ -269,10 +266,10 @@
                             </Expander>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </l:GlowBorder>
 
                 <!-- Apps -->
-                <Border Style="{StaticResource PlanCard}" DataContext="{Binding AppsSection}">
+                <l:GlowBorder Style="{StaticResource PlanGlow}" DataContext="{Binding AppsSection}">
                     <StackPanel>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SectionHead}" Focusable="False" />
                         <StackPanel Style="{StaticResource Reveal}" Margin="50,12,0,0" Visibility="{Binding AppsSection.Expanded, Converter={StaticResource BoolToVisibility}}"
@@ -301,10 +298,10 @@
                             </Button>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </l:GlowBorder>
 
                 <!-- Visual C++ runtimes -->
-                <Border Style="{StaticResource PlanCard}" DataContext="{Binding Runtimes}">
+                <l:GlowBorder Style="{StaticResource PlanGlow}" DataContext="{Binding Runtimes}">
                     <StackPanel>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SectionHead}" Focusable="False" />
                         <StackPanel Style="{StaticResource Reveal}" Margin="50,12,0,0" Visibility="{Binding Runtimes.Expanded, Converter={StaticResource BoolToVisibility}}"
@@ -341,10 +338,10 @@
                             </ItemsControl>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </l:GlowBorder>
 
                 <!-- NVIDIA driver and profiles -->
-                <Border Style="{StaticResource PlanCard}" DataContext="{Binding Nvidia}">
+                <l:GlowBorder Style="{StaticResource PlanGlow}" DataContext="{Binding Nvidia}">
                     <StackPanel>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SectionHead}" Focusable="False" />
                         <StackPanel Style="{StaticResource Reveal}" Margin="50,12,0,0" Visibility="{Binding Nvidia.Expanded, Converter={StaticResource BoolToVisibility}}"
@@ -517,13 +514,13 @@
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                </l:GlowBorder>
             </StackPanel>
         </ScrollViewer>
 
         <!-- Action bar -->
-        <Border Grid.Row="1" Background="{StaticResource Surface}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0">
-            <Grid Margin="40,12,40,12" MaxWidth="1040">
+        <Border Grid.Row="1" Style="{StaticResource ActionBar}">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />

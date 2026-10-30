@@ -186,7 +186,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,1,4,0">
                     <Border Style="{StaticResource Tag}" Background="{StaticResource WarningSubtle}" Margin="0,0,6,0"
-                            Visibility="{Binding Row.NeedsAdmin, Converter={StaticResource BoolToVisibility}}">
+                            Visibility="{Binding Row.NeedsAdmin, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding Row.NeedsAdminWhy}">
                         <TextBlock Text="{l:T Common.NeedsAdmin}" Style="{StaticResource TagText}" Foreground="{StaticResource Warning}" />
                     </Border>
                     <Border Style="{StaticResource Tag}" Margin="0,0,6,0" Visibility="{Binding Row.NeedsRestart, Converter={StaticResource BoolToVisibility}}">
@@ -229,4 +229,52 @@
         <RadioButton Style="{StaticResource Chip}" Content="{Binding Label}" IsChecked="{Binding IsSelected}"
                      GroupName="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
     </DataTemplate>
+
+    <!-- A setting as a card (Tweaks and Debloat): risk label, name, summary, status and the staged switch. -->
+    <DataTemplate x:Key="TweakCard" DataType="{x:Type l:SettingRow}">
+            <Grid Margin="18,15,18,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <!-- The risk, in the colour of the risk; what is notable about it on the right. -->
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Style="{StaticResource Tag}" Margin="6,0,0,0" Padding="6,0,6,1" ToolTip="{l:T Common.Restart}"
+                                Visibility="{Binding NeedsRestart, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{l:T Common.Restart}" Style="{StaticResource TagText}" FontSize="11" />
+                        </Border>
+                        <Border Style="{StaticResource Tag}" Margin="6,0,0,0" Padding="6,0,6,1" ToolTip="{Binding RecommendationText}"
+                                Background="{StaticResource AccentSubtle}"
+                                Visibility="{Binding IsRecommended, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding RecommendationText}" Style="{StaticResource TagText}" FontSize="11" Foreground="{StaticResource Accent}" />
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding RiskWhy}"
+                                Visibility="{Binding ShowRiskLabel, Converter={StaticResource BoolToVisibility}}">
+                        <Ellipse Width="6" Height="6" Fill="{Binding RiskLabelTone, Converter={StaticResource StateBrush}}" Margin="0,1,7,0" />
+                        <TextBlock Text="{Binding RiskText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{Binding RiskLabelTone, Converter={StaticResource StateBrush}}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Category}" Style="{StaticResource Tertiary}" FontSize="11.5"
+                               Visibility="{Binding ShowCategoryLabel, Converter={StaticResource BoolToVisibility}}" />
+                </DockPanel>
+                <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource Text}" TextWrapping="Wrap" Margin="0,9,0,0" />
+                <TextBlock Grid.Row="2" Text="{Binding Summary}" Style="{StaticResource Caption}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" MaxHeight="54"
+                           TextTrimming="CharacterEllipsis" Margin="0,6,0,12" VerticalAlignment="Top" />
+                <Border Grid.Row="3" BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0" Padding="0,11,0,0">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <Ellipse Width="6" Height="6" Fill="{Binding StateTone, Converter={StaticResource StateBrush}}" Margin="0,1,7,0" />
+                            <TextBlock Text="{Binding StateText}" Style="{StaticResource Caption}" FontSize="12.5"
+                                       Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
+                        </StackPanel>
+                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Selected}" HorizontalAlignment="Right"
+                                  AutomationProperties.Name="{Binding Name}"
+                                  Visibility="{Binding CanSelect, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </DataTemplate>
 </ResourceDictionary>

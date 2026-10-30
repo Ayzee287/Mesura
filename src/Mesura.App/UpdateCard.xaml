@@ -1,0 +1,46 @@
+<UserControl x:Class="Mesura.App.UpdateCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:Mesura.App" Focusable="False">
+    <!-- The sidebar's update notice: an update waiting, or what the last update did. One card, no pop-up. -->
+    <UserControl.Resources>
+        <Style x:Key="CompactHidden" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Path=(l:Chrome.Compact), RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Background="{StaticResource AccentSubtle}" BorderBrush="#40A99DFF" Padding="12,10" Cursor="Hand"
+                  MouseLeftButtonUp="OnCardClick" ToolTip="{Binding SidebarTitle}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconUpdate}" FontSize="16" Foreground="{StaticResource AccentHover}" VerticalAlignment="Top" Margin="0,2,10,0" />
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="{Binding SidebarTitle}" FontWeight="SemiBold" FontSize="12.5" TextWrapping="Wrap" Style="{StaticResource CompactHidden}" />
+                <TextBlock Text="{Binding SidebarText}" Style="{StaticResource CompactHidden}" FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,3,0,0" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="{StaticResource IconClose}" FontSize="10" Width="24" Height="24" MinHeight="0" VerticalAlignment="Top"
+                    Command="{Binding DismissNotice}" Margin="4,-4,-6,0" AutomationProperties.Name="{l:T Common.Dismiss}" ToolTip="{l:T Common.Dismiss}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasNotice}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+    </l:GlowBorder>
+</UserControl>

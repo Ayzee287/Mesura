@@ -48,9 +48,10 @@ public sealed class CatalogClassificationTests
         Assert.All(added, o =>
         {
             // What Maximum adds is documented by Microsoft (not merely verified), a power setting or a privacy/background
-            // reduction, never a service, task, feature removal or an undocumented knob.
+            // reduction (0.2.0 adds documented Edge, telemetry and sync policies and a few AC processor settings), never a service,
+            // task, feature removal or an undocumented knob.
             Assert.Equal(ValueBasis.Documented, o.Basis);
-            Assert.True(o.Impact is OperationImpact.Power or OperationImpact.Privacy or OperationImpact.Network or OperationImpact.Interface, o.Id);
+            Assert.True(o.Impact is OperationImpact.Power or OperationImpact.Privacy or OperationImpact.Network or OperationImpact.Interface or OperationImpact.Performance or OperationImpact.System, o.Id);
             Assert.True(o.Risk is RiskClass.SystemConfiguration or RiskClass.UserPreference, o.Id);
             Assert.True(o.Services.Count == 0 && o.Tasks.Count == 0 && o.Features.Count == 0, o.Id);
         });

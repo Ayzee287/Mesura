@@ -141,7 +141,20 @@ public sealed class WingetRunner : IWingetRunner
 
     private static RunResult RunDirect(IReadOnlyList<string> arguments, Action<string>? onLine, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var info = new ProcessStartInfo(Executable)
+        var program = Executable;
+        if (Environment.IsPrivilegedProcess)
+        {
+            // An elevated launch names the file itself and only takes a winget a non-administrator can't have planted (WingetLocator, docs/security.md).
+            var located = WingetLocator.ForElevatedLaunch();
+            if (located.Refusal is { } refusal)
+            {
+                return new RunResult(false, 0, "", refusal);
+            }
+
+            program = located.Path ?? Executable;
+        }
+
+        var info = new ProcessStartInfo(program)
         {
             UseShellExecute = false,
             CreateNoWindow = true,

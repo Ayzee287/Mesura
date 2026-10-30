@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Principal;
+using Mesura.Core.Support;
 using Microsoft.Win32;
 
 namespace Mesura.Setup.Windows.Nvidia;
@@ -45,6 +47,28 @@ public interface INvidiaTools
 /// </summary>
 public sealed class NvidiaTools : INvidiaTools
 {
+    /// <summary>
+    /// Why a tool must not be started from <paramref name="executable"/> with the rights of this process, or <c>null</c> when it may. An
+    /// elevated Mesura that started a program out of a folder any program the user runs can change (a per-user winget package) would give
+    /// whoever replaced that file administrator rights (docs/security.md); not elevated, the tool only has the user's own rights.
+    /// </summary>
+    public static string? Refusal(string toolName, string executable, bool elevated)
+    {
+        if (!elevated || ProgramFolderTrust.Why(Path.GetDirectoryName(executable) ?? executable) is not { } why)
+        {
+            return null;
+        }
+
+        return $"{toolName} at {executable} is in a folder that programs running as you can change ({why}), so Mesura won't start it with administrator rights. "
+            + "Install it for all users (winget install --scope machine) so it sits in Program Files, then try again.";
+    }
+
+    private static bool Elevated()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
     private const string NvCleanstallName = "NVCleanstall";
     private const string InspectorExe = "nvidiaProfileInspector.exe";
     private const string InspectorPackage = "Orbmu2k.nvidiaProfileInspector_";
@@ -88,6 +112,11 @@ public sealed class NvidiaTools : INvidiaTools
             return $"NVCleanstall isn't at {path}.";
         }
 
+        if (Refusal(NvCleanstallName, path, Elevated()) is { } refused)
+        {
+            return refused;
+        }
+
         try
         {
 #pragma warning disable RS0030 // The setup layer's NVIDIA tool owner: start NVCleanstall for the user, on their confirmed setup (class remarks).
@@ -114,7 +143,8 @@ public sealed class NvidiaTools : INvidiaTools
             .Select(d => Path.Combine(d, InspectorExe))
             .Where(File.Exists)
             .Select(p => new ProfileInspector(p, FileVersion(p)))
-            .OrderByDescending(i => i.Version)
+            .OrderBy(i => ProgramFolderTrust.IsUserWritable(Path.GetDirectoryName(i.Path)!) ? 1 : 0) // a protected copy first: it's the only one an elevated Mesura may run
+            .ThenByDescending(i => i.Version)
             .FirstOrDefault();
         return found;
     }
@@ -159,6 +189,11 @@ public sealed class NvidiaTools : INvidiaTools
     /// <returns>An error, or <c>null</c> when it ran and exited.</returns>
     private static string? Run(ProfileInspector inspector, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
+        if (Refusal("NVIDIA Profile Inspector", inspector.Path, Elevated()) is { } refused)
+        {
+            return refused;
+        }
+
         var info = new ProcessStartInfo(inspector.Path) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Path.GetDirectoryName(inspector.Path) };
         foreach (var argument in arguments)
         {

@@ -19,6 +19,15 @@ public enum ChangeKind
 
     /// <summary>A global TCP/IP setting (its netsh name in Name; netsh's words, such as <c>normal</c> or <c>enabled</c>).</summary>
     TcpGlobal,
+
+    /// <summary>A setting changed through a Windows tool (<see cref="SystemSetting"/>: kind in Path, name in Name, its allowed words in Before/After).</summary>
+    SystemSetting,
+
+    /// <summary>
+    /// A packaged app removed for the user (package name in Name, full name in Path). Undoing it registers the app again
+    /// from Windows' staged copy; where none is left, the Store has to reinstall it.
+    /// </summary>
+    Appx,
 }
 
 /// <summary>

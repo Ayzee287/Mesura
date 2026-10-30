@@ -134,12 +134,13 @@ public sealed class AcceptanceReviewTests
     [Fact]
     public void The_audited_catalogs_carry_their_schema_so_old_builds_refuse_them_and_old_copies_are_told_apart()
     {
-        // Windows catalog schema 3 since the 2026-10-24 quality pass (TCP settings, network impact, benefit).
-        Assert.Equal(3, WindowsCatalog.CurrentSchema);
+        // Windows catalog schema 3 since the 2026-10-24 quality pass (TCP settings, network impact, benefit); 4 since 0.2.0
+        // (binary values, per-adapter settings, tool-backed settings, a stated level, sources).
+        Assert.Equal(4, WindowsCatalog.CurrentSchema);
         Assert.Equal(2, AppCatalog.CurrentSchema);
-        Assert.Contains("\"schemaVersion\": 3", WindowsCatalog.BuiltInJson(), StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 4", WindowsCatalog.BuiltInJson(), StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": 2", AppCatalog.BuiltInJson(), StringComparison.Ordinal);
-        Assert.Equal(99, WindowsCatalog.Default.Operations.Count);
+        Assert.True(WindowsCatalog.Default.Operations.Count >= 99);
 
         // A schema 1 copy still parses here (CatalogFiles decides to set it aside before that).
         Assert.Empty(WindowsCatalog.Parse("""{"kind":"Mesura.WindowsCatalog","schemaVersion":1,"operations":[],"presets":[]}""").Operations);

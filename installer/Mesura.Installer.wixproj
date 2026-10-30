@@ -1,0 +1,24 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+
+  <!-- The installer (0.3, docs/installing.md): one Windows Installer package, English and Russian. Built by tools\build-release.ps1,
+       which passes the version, the folder of files to install and the licence text; it is not part of the solution so a plain
+       `dotnet build Mesura.slnx` doesn't need the WiX toolset. WiX 6 is the last release under the Microsoft Reciprocal License
+       (7 and later ask for a maintenance fee from commercial users), so the version is pinned. -->
+  <PropertyGroup>
+    <FailInstall Condition="'$(FailInstall)' == ''">0</FailInstall>
+    <OutputName>Mesura-$(MsiProductVersion)-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Cultures>en-US;ru-RU</Cultures>
+    <OutputType>Package</OutputType>
+    <SuppressValidation>false</SuppressValidation>
+    <!-- Per-user installs keep their files in the user's profile and their registry keys in HKCU; ICE 38/43/57/64/91 expect
+         per-machine rules and are about exactly that difference. -->
+    <SuppressIces>ICE38;ICE43;ICE57;ICE61;ICE64;ICE91</SuppressIces>
+    <DefineConstants>$(DefineConstants);PayloadDir=$(PayloadDir);LicenseRtf=$(LicenseRtf);IconFile=$(IconFile);MsiProductVersion=$(MsiProductVersion);AppVersion=$(AppVersion);FailInstall=$(FailInstall)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+
+</Project>

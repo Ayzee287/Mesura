@@ -22,9 +22,50 @@ public sealed partial class WindowsWriter : IWindowsWriter
 {
     private const int DismRestartRequired = 3010;
     private readonly UserContext _user;
+    private readonly SystemTools _tools;
 
     /// <param name="user">The signed-in user whose per-user settings are written (from the state reader).</param>
-    public WindowsWriter(UserContext user) => _user = user ?? throw new ArgumentNullException(nameof(user));
+    /// <param name="tools">The tool-backed settings (boot entry, hibernation, memory agent); the same instance the state reader reads through.</param>
+    public WindowsWriter(UserContext user, SystemTools? tools = null)
+    {
+        _user = user ?? throw new ArgumentNullException(nameof(user));
+        _tools = tools ?? new SystemTools();
+    }
+
+    public void SetSystemSetting(string kind, string name, string value) => _tools.Write(kind, name, value);
+
+    public void RemoveAppx(string packageFullName)
+    {
+        var name = packageFullName.Split('_')[0];
+        if (!FullPackageName().IsMatch(packageFullName) || AppxSetting.IsProtected(name))
+        {
+            throw new ArgumentException($"'{packageFullName}' isn't an app Mesura removes.", nameof(packageFullName));
+        }
+
+        // The name was checked against a plain pattern, so it is safe inside the quotes.
+        var code = Run("WindowsPowerShell\\v1.0\\powershell.exe",
+            ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", $"Remove-AppxPackage -Package '{packageFullName}' -ErrorAction Stop"]);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"Windows couldn't remove {name} (exit code {code}); it may be a system app.");
+        }
+    }
+
+    public void RestoreAppx(string packageFamilyName)
+    {
+        if (!FamilyPackageName().IsMatch(packageFamilyName))
+        {
+            throw new ArgumentException($"'{packageFamilyName}' isn't a package family name.", nameof(packageFamilyName));
+        }
+
+        var code = Run("WindowsPowerShell\\v1.0\\powershell.exe",
+            ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", $"Add-AppxPackage -RegisterByFamilyName -MainPackage '{packageFamilyName}' -ErrorAction Stop"]);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"Windows has no copy of {packageFamilyName} left to register; install it again from the Microsoft Store (exit code {code}).");
+        }
+    }
+
     private static readonly TimeSpan ToolTimeout = TimeSpan.FromMinutes(10);
 
     public void SetRegistry(string hive, string path, string name, RegistryKind kind, string value)
@@ -36,6 +77,10 @@ public sealed partial class WindowsWriter : IWindowsWriter
         if (kind == RegistryKind.DWord)
         {
             key.SetValue(name, unchecked((int)uint.Parse(value, CultureInfo.InvariantCulture)), RegistryValueKind.DWord);
+        }
+        else if (kind == RegistryKind.Binary)
+        {
+            key.SetValue(name, Convert.FromHexString(WindowsEvaluator.NormalizeHex(value).Replace(",", "", StringComparison.Ordinal)), RegistryValueKind.Binary);
         }
         else
         {
@@ -251,6 +296,13 @@ public sealed partial class WindowsWriter : IWindowsWriter
 
     [GeneratedRegex("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant)]
     private static partial Regex PlainName();
+
+    // Name_Version_Architecture_ResourceId_PublisherId, as Windows names an installed package.
+    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{2,99}_[0-9.]{1,40}_[A-Za-z0-9]{1,10}_[A-Za-z0-9-]{0,40}_[a-z0-9]{13}$", RegexOptions.CultureInvariant)]
+    private static partial Regex FullPackageName();
+
+    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{2,99}_[a-z0-9]{13}$", RegexOptions.CultureInvariant)]
+    private static partial Regex FamilyPackageName();
 
     // The same rule the catalog enforces: only Windows' own tasks, plain names.
     [GeneratedRegex(@"^\\Microsoft\\Windows(\\[A-Za-z0-9 ._()-]+)+$", RegexOptions.CultureInvariant)]

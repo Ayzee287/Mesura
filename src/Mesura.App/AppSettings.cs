@@ -35,6 +35,27 @@ public sealed class AppSettings
     /// <summary>Whether the window asks for administrator rights when it opens (one UAC prompt).</summary>
     public bool ElevateAtStart { get; set; } = true;
 
+    /// <summary>Whether Mesura makes a Windows restore point before it changes settings for the whole PC (when it runs as administrator).</summary>
+    public bool RestorePointBeforeChanges { get; set; } = true;
+
+    /// <summary>Where updates come from: <c>stable</c> (releases) or <c>preview</c> (release candidates, earlier and rougher).</summary>
+    public string UpdateChannel { get; set; } = "stable";
+
+    /// <summary>Whether Mesura asks the update server for news when it starts (never downloads or installs without a click).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>A version the user chose to skip: not offered again; a newer one is.</summary>
+    public string? SkippedUpdate { get; set; }
+
+    /// <summary>"Remind me later": no update is offered before this time (UTC, ISO 8601).</summary>
+    public string? UpdateRemindAfterUtc { get; set; }
+
+    /// <summary>The highest update manifest sequence accepted so far: an older manifest is a replay and is refused.</summary>
+    public long UpdateHighestSequence { get; set; }
+
+    /// <summary>When the update server was last reached (UTC, ISO 8601); shown on Settings.</summary>
+    public string? LastUpdateCheckUtc { get; set; }
+
     /// <summary>The user's saved configuration bundle (a file they chose), restored after installs and on Configurations.</summary>
     public string? SavedConfiguration { get; set; }
 

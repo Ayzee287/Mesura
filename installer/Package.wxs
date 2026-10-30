@@ -1,0 +1,111 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!-- Mesura's installer. By default it installs for the current user, without administrator rights, into
+       %LOCALAPPDATA%\Programs\Mesura (where Mesura's Settings already expects an installed copy); the folder is chosen in the
+       wizard. For every user: msiexec /i Mesura.msi ALLUSERS=1 (administrator rights; Program Files). An update is this same package
+       run again over the installed one (major upgrade), so the Windows Installer's transaction is the rollback. User data
+       (%LOCALAPPDATA%\Mesura: settings, history, profiles, logs) is never part of the package: neither an upgrade nor an uninstall
+       touches it. -->
+  <Package Name="!(loc.ProductName)" Manufacturer="Mesura" Version="$(MsiProductVersion)" UpgradeCode="6C1F6D1E-5B0A-4C54-9E2F-3A7D0B8E41A9"
+           Language="!(loc.LanguageId)" Scope="perUserOrMachine" InstallerVersion="500" Compressed="yes">
+
+    <SummaryInformation Description="!(loc.Description)" Manufacturer="Mesura" />
+    <Icon Id="MesuraIcon" SourceFile="$(IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="MesuraIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Ayzee287/Mesura" />
+    <Property Id="ARPCOMMENTS" Value="$(AppVersion)" />
+
+    <!-- A newer package replaces the installed one in place; the 4th number carries the release candidate, which Windows Installer
+         ignores when comparing, so same-version upgrades are allowed (rc1 to rc2 to the release). An older package is refused. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="!(loc.DowngradeError)" Schedule="afterInstallExecute" IgnoreLanguage="yes" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="medium" />
+
+    <!-- Where it was installed before (an upgrade and a reinstall go to the same folder, not to the default). -->
+    <Property Id="PREVINSTALLDIR">
+      <RegistrySearch Id="PrevDirUser" Root="HKCU" Key="Software\Mesura" Name="InstallDir" Type="directory" Bitness="always64" />
+    </Property>
+    <Property Id="PREVINSTALLDIRMACHINE">
+      <RegistrySearch Id="PrevDirMachine" Root="HKLM" Key="Software\Mesura" Name="InstallDir" Type="directory" Bitness="always64" />
+    </Property>
+    <CustomAction Id="FolderMachineDefault" Property="INSTALLFOLDER" Value="[ProgramFiles64Folder]Mesura" />
+    <CustomAction Id="FolderPrevUser" Property="INSTALLFOLDER" Value="[PREVINSTALLDIR]" />
+    <CustomAction Id="FolderPrevMachine" Property="INSTALLFOLDER" Value="[PREVINSTALLDIRMACHINE]" />
+    <InstallUISequence>
+      <Custom Action="FolderMachineDefault" Before="CostFinalize" Condition="ALLUSERS=1 AND NOT INSTALLFOLDER" />
+      <Custom Action="FolderPrevUser" After="FolderMachineDefault" Condition="PREVINSTALLDIR AND NOT ALLUSERS=1 AND NOT INSTALLFOLDER" />
+      <Custom Action="FolderPrevMachine" After="FolderPrevUser" Condition="PREVINSTALLDIRMACHINE AND ALLUSERS=1 AND NOT INSTALLFOLDER" />
+    </InstallUISequence>
+    <InstallExecuteSequence>
+      <Custom Action="FolderMachineDefault" Before="CostFinalize" Condition="ALLUSERS=1 AND NOT INSTALLFOLDER" />
+      <Custom Action="FolderPrevUser" After="FolderMachineDefault" Condition="PREVINSTALLDIR AND NOT ALLUSERS=1 AND NOT INSTALLFOLDER" />
+      <Custom Action="FolderPrevMachine" After="FolderPrevUser" Condition="PREVINSTALLDIRMACHINE AND ALLUSERS=1 AND NOT INSTALLFOLDER" />
+    </InstallExecuteSequence>
+
+    <Feature Id="MainFeature" Title="!(loc.FeatureMain)" Description="!(loc.FeatureMainDescription)" Level="1" AllowAbsent="no" ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentGroupRef Id="ProgramFiles" />
+      <ComponentRef Id="Registration" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+    <Feature Id="DesktopFeature" Title="!(loc.FeatureDesktop)" Description="!(loc.FeatureDesktopDescription)" Level="2" AllowAbsent="yes">
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <!-- The wizard: welcome, licence, features and folder, ready, progress, finish (with a box to start Mesura). -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchMesura)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <CustomAction Id="LaunchMesura" Directory="INSTALLFOLDER" ExeCommand="&quot;[INSTALLFOLDER]Mesura.exe&quot;" Return="asyncNoWait" Impersonate="yes" />
+    <?if $(FailInstall) = 1 ?>
+    <!-- Test builds only (tools\build-installer.ps1 -FailInstall): the install fails after the old version was removed (the major upgrade
+         removes it first) and before the new files are copied, to prove that the Windows Installer puts the previous version back and
+         that the updater reports it. (A failure placed after the product is registered leaves the failed package registered next to the
+         restored one; that is a Windows Installer property of failing that late, and no step of this installer can fail there.) Never part of a release. -->
+    <CustomAction Id="TestFailInstall" Directory="INSTALLFOLDER" ExeCommand="cmd.exe /c exit 7" Execute="deferred" Impersonate="yes" Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="TestFailInstall" Before="InstallFiles" Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+    <?endif?>
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchMesura" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+  </Package>
+
+  <Fragment>
+    <!-- The default place: the current user's Programs folder. For every user, Program Files. -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="UserProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Mesura" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+  </Fragment>
+
+  <Fragment>
+    <!-- Every file of the build (the app, the command line in cli\, the licence and notices, the diagnostic scripts in tools\). -->
+    <ComponentGroup Id="ProgramFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(PayloadDir)\**" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <!-- What the updater and the app read to know where Mesura is installed, and for whom. -->
+    <Component Id="Registration" Directory="INSTALLFOLDER" Bitness="always64">
+      <RegistryValue Root="HKMU" Key="Software\Mesura" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+      <RegistryValue Root="HKMU" Key="Software\Mesura" Name="Version" Type="string" Value="$(AppVersion)" />
+      <RegistryValue Root="HKMU" Key="Software\Mesura" Name="Language" Type="string" Value="!(loc.LanguageCode)" />
+    </Component>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Bitness="always64">
+      <Shortcut Id="StartMenuMesura" Name="Mesura" Description="!(loc.Description)" Target="[INSTALLFOLDER]Mesura.exe" WorkingDirectory="INSTALLFOLDER" Icon="MesuraIcon" />
+      <RegistryValue Root="HKCU" Key="Software\Mesura\Shortcuts" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Bitness="always64">
+      <Shortcut Id="DesktopMesura" Name="Mesura" Description="!(loc.Description)" Target="[INSTALLFOLDER]Mesura.exe" WorkingDirectory="INSTALLFOLDER" Icon="MesuraIcon" />
+      <RegistryValue Root="HKCU" Key="Software\Mesura\Shortcuts" Name="Desktop" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

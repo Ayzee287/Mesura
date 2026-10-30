@@ -45,6 +45,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        StartupLog.Note("stage: OnStartup");
         DispatcherUnhandledException += OnUnhandledException;
         bool Has(string argument) => e.Args.Any(a => a.Equals(argument, StringComparison.OrdinalIgnoreCase));
         var exitRequested = Has("--exit");
@@ -79,10 +80,17 @@ public partial class App : Application
             return;
         }
 
+        StartupLog.Note("stage: this is the one instance");
         // One administrator prompt when the window opens; the elevated instance takes over and this one leaves.
         var preferences = AppSettings.Load(new Mesura.Setup.Windows.SetupStore());
+        StartupLog.Note("stage: preferences read");
         Loc.Instance.Use(PreviewLanguage() ?? preferences.Language ?? Loc.DefaultLanguage());
-        if (!Has("--tray") && !relaunched && !Has(NoElevateArgument) && preferences.ElevateAtStart && !IsElevated())
+        if (ShellLauncher.ElevationBlockedReason is { } exposed && preferences.ElevateAtStart)
+        {
+            StartupLog.Note($"administrator mode is not offered from this folder: {exposed}");
+        }
+
+        if (!Has("--tray") && !relaunched && !Has(NoElevateArgument) && preferences.ElevateAtStart && !IsElevated() && ShellLauncher.ElevationBlockedReason is null)
         {
             _elevationAsked = true;
             if (ShellLauncher.RelaunchElevated(e.Args) is null)
@@ -108,9 +116,11 @@ public partial class App : Application
         try
         {
             _services = Services.Create();
+            StartupLog.Note("stage: services created");
         }
         catch (Exception ex)
         {
+            StartupLog.Fatal("Services.Create", ex);
             MessageBox.Show(Loc.Format("Common.StartFailed", ex.Message), Branding.Name, MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
             return;
@@ -124,6 +134,7 @@ public partial class App : Application
 
         if (_tray is null || relaunched)
         {
+            StartupLog.Note("stage: opening the window");
             ShowWindow(); // after an elevation restart the user expects the window back, tray or not
         }
     }
@@ -357,7 +368,7 @@ public partial class App : Application
         if (_window is null)
         {
             // The tray instance started at sign-in runs unelevated: its window asks once, like a normal start.
-            if (_tray is not null && !_elevationAsked && !_services.Changing && _services.Settings.ElevateAtStart && !IsElevated())
+            if (_tray is not null && !_elevationAsked && !_services.Changing && _services.Settings.ElevateAtStart && !IsElevated() && ShellLauncher.ElevationBlockedReason is null)
             {
                 _elevationAsked = true;
                 if (ShellLauncher.RelaunchElevated(["--tray"]) is null)
@@ -392,6 +403,7 @@ public partial class App : Application
     {
         e.Handled = true;
         _services?.Log($"Unexpected: {e.Exception}");
+        StartupLog.Fatal("the window (unexpected, the app keeps running)", e.Exception);
         MessageBox.Show(Loc.Format("Common.UnexpectedDialog", $"{e.Exception.GetType().Name}: {e.Exception.Message}"),
             Branding.Name, MessageBoxButton.OK, MessageBoxImage.Warning);
     }

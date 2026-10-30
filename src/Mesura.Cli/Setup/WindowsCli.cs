@@ -19,6 +19,8 @@ internal static class WindowsCli
           mesura windows show --id <operation>
           mesura windows apply (--id <a,b> | --preset <p>)... [--apply]
           mesura windows revert --run <run id> [--apply]
+          mesura windows restore-points
+          mesura windows restore-point [--apply]
         """;
 
     public const string Help = """
@@ -34,6 +36,10 @@ internal static class WindowsCli
                          with every previous value. A failed operation puts back what it changed.
         windows revert   Previews restoring a recorded run's previous values; with --apply restores those
                          still holding what the run wrote (a setting changed since is left alone).
+        windows restore-points  Lists the System Restore points Windows has (needs an elevated terminal). Read-only.
+        windows restore-point   Previews making a System Restore point; with --apply makes one (elevated). 'windows apply
+                         --apply' makes one itself, unless the run changes nothing for the whole PC, before it
+                         starts; --no-restore-point skips that.
         """;
 
     private const int Ok = 0;
@@ -61,7 +67,7 @@ internal static class WindowsCli
             return UsageCode;
         }
 
-        var reader = new SystemStateReader();
+        var reader = new SystemStateReader(new SystemTools());
         return args[0] switch
         {
             "list" => List(catalog, reader, Single(options, "--category")),
@@ -69,14 +75,23 @@ internal static class WindowsCli
             "show" when Single(options, "--id") is { } id => Show(catalog, reader, id),
             "apply" => Apply(catalog, reader, options, apply),
             "revert" when Single(options, "--run") is { } run => Revert(reader, run, apply),
+            "restore-points" => RestorePointList(reader),
+            "restore-point" => RestorePointCreate(reader, apply),
             _ => Bad($"windows: unknown verb or missing argument. {Usage}"),
         };
+    }
+
+    /// <summary>Whether this process runs as administrator (an elevated run never reads an edited catalog: <see cref="CatalogFiles.Windows"/>).</summary>
+    private static bool IsAdministrator()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
     }
 
     /// <summary>Loads the edited catalog if there is one (<see cref="CatalogFiles"/>), else the built-in copy.</summary>
     public static bool TryLoadCatalog(out WindowsCatalog catalog, out string source)
     {
-        var loaded = CatalogFiles.Windows();
+        var loaded = CatalogFiles.Windows(IsAdministrator());
         catalog = loaded.Catalog ?? WindowsCatalog.Default;
         source = loaded.Source;
         if (loaded.Error is not null)
@@ -233,7 +248,7 @@ internal static class WindowsCli
             return Bad("These operations can't run together:" + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", conflicts));
         }
 
-        var configurator = new WindowsConfigurator(reader, new WindowsWriter(reader.User));
+        var configurator = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools));
         var preview = configurator.Preview(operations);
         SetupOutput.WriteScope(reader);
         Console.WriteLine(apply ? "Applying:" : "Preview (nothing changed):");
@@ -244,6 +259,14 @@ internal static class WindowsCli
                 ? "Re-run with --apply to make these changes; each is recorded and can be reverted with 'windows revert'."
                 : "Nothing to change.");
             return Ok;
+        }
+
+        if (!options.ContainsKey("--no-restore-point") && reader.IsElevated && operations.Any(o => o.Applicable && o.MachineWide && o.NeedsElevation)
+            && preview.Any(p => p.State is OperationState.NotApplied or OperationState.Partial))
+        {
+            // A System Restore point beneath Mesura's own undo, as the window makes: before whole-PC changes, never blocking them.
+            var why = new RestorePoints().Create($"Mesura: before {operations.Count} changes");
+            Console.Error.WriteLine(why is null ? "Made a System Restore point first." : $"No restore point was made: {why}");
         }
 
         var started = DateTimeOffset.UtcNow;
@@ -261,6 +284,43 @@ internal static class WindowsCli
         SetupOutput.WriteWindows(outcomes);
         SetupOutput.WriteFollowUps(run);
         return run.Ok ? Ok : Failed;
+    }
+
+    private static int RestorePointList(SystemStateReader reader)
+    {
+        var points = new RestorePoints().List();
+        if (points.Count == 0)
+        {
+            Console.WriteLine(reader.IsElevated
+                ? "No System Restore points (System Protection may be off for this drive)."
+                : "No restore points could be read: listing them needs an elevated terminal.");
+            return reader.IsElevated ? Ok : Failed;
+        }
+
+        foreach (var point in points)
+        {
+            Console.WriteLine($"  {point.Sequence,5}  {point.Created.LocalDateTime:yyyy-MM-dd HH:mm}  {point.Description}");
+        }
+
+        return Ok;
+    }
+
+    private static int RestorePointCreate(SystemStateReader reader, bool apply)
+    {
+        if (!apply)
+        {
+            Console.WriteLine("Preview (nothing changed): would make a System Restore point named 'Mesura: manual'. Re-run with --apply (elevated terminal).");
+            return Ok;
+        }
+
+        if (!reader.IsElevated)
+        {
+            return Bad("windows restore-point --apply needs an elevated terminal (Run as administrator).");
+        }
+
+        var why = new RestorePoints().Create("Mesura: manual");
+        Console.WriteLine(why ?? "Made a System Restore point.");
+        return why is null ? Ok : Failed;
     }
 
     private static int Revert(SystemStateReader reader, string runId, bool apply)
@@ -303,7 +363,8 @@ internal static class WindowsCli
         }
 
         var started = DateTimeOffset.UtcNow;
-        var outcomes = new WindowsConfigurator(reader, new WindowsWriter(reader.User)).Revert(steps);
+        _ = TryLoadCatalog(out var trusted, out _);
+        var outcomes = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools), trusted).Revert(steps);
         if (outcomes.All(o => o.Status == WindowsOpStatus.RevertSkipped))
         {
             // The same rule as the app: nothing was put back, so no empty revert is recorded.
@@ -331,6 +392,10 @@ internal static class WindowsCli
             if (args[i] == "--apply")
             {
                 apply = true;
+            }
+            else if (args[i] == "--no-restore-point")
+            {
+                options["--no-restore-point"] = [];
             }
             else if (args[i] is "--id" or "--preset" or "--category" or "--run" && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
             {

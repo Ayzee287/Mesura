@@ -1,0 +1,12 @@
+<WixLocalization Culture="ru-RU" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="LanguageId" Value="1049" />
+  <String Id="LanguageCode" Value="ru" />
+  <String Id="ProductName" Value="Mesura" />
+  <String Id="Description" Value="Mesura: настройка Windows и восстановление окружения" />
+  <String Id="DowngradeError" Value="Уже установлена более новая версия Mesura. Если нужно вернуться назад, сначала удалите её." />
+  <String Id="FeatureMain" Value="Mesura" />
+  <String Id="FeatureMainDescription" Value="Приложение Mesura, его командная строка и документация. Настройки, история и профили хранятся отдельно от программы и никогда не удаляются." />
+  <String Id="FeatureDesktop" Value="Ярлык на рабочем столе" />
+  <String Id="FeatureDesktopDescription" Value="Добавляет ярлык Mesura на рабочий стол." />
+  <String Id="LaunchMesura" Value="Запустить Mesura" />
+</WixLocalization>

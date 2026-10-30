@@ -73,7 +73,7 @@ public sealed class AcceptanceReviewTests : IDisposable
         Assert.Equal(WindowsCatalog.Default.Operations.Count, loaded.Catalog!.Operations.Count);
 
         // A broken current copy is still an error, never silently replaced by the built-in catalog.
-        Write(WindowsCatalog.FileName, """{"kind":"Mesura.WindowsCatalog","schemaVersion":3,"operations":[{"name":"x"}],"presets":[]}""");
+        Write(WindowsCatalog.FileName, """{"kind":"Mesura.WindowsCatalog","schemaVersion":4,"operations":[{"name":"x"}],"presets":[]}""");
         var broken = LoadWindows();
         Assert.Null(broken.Catalog);
         Assert.NotNull(broken.Error);

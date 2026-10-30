@@ -1,12 +1,14 @@
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Mesura.App;
 
 /// <summary>
 /// Mesura's shortcut in the Start menu (architecture §2.3, §4.11): <c>Mesura.lnk</c> in the user's Start menu Programs
-/// folder, pointing at the running <c>Mesura.exe</c>. Created through Windows' own shortcut object (<c>WScript.Shell</c>)
-/// and removed again, both only when the user ticks or unticks it. It is the app's one file write, so it is its own
-/// owner class.
+/// folder, pointing at the running <c>Mesura.exe</c>. Created through Windows' own shell link object (<c>IShellLinkW</c>, which is
+/// Unicode: a Cyrillic or other non-ANSI folder works on any PC; the scripting object it replaced failed there) and removed again,
+/// both only when the user ticks or unticks it, or when the installed copy points an existing shortcut at itself. It is the app's
+/// one file write, so it is its own owner class.
 /// </summary>
 public static class StartMenuEntry
 {
@@ -38,24 +40,19 @@ public static class StartMenuEntry
                 return null;
             }
 
-            var shell = Shell() ?? throw new InvalidOperationException("Windows' shortcut object isn't available.");
-            dynamic link = shell.CreateShortcut(LinkPath);
-            link.TargetPath = executable;
-            link.WorkingDirectory = Path.GetDirectoryName(executable);
-            link.Description = "Mesura: set up Windows and restore your environment";
-            link.IconLocation = executable + ",0";
-            link.Save();
+            var link = (IShellLinkW)new ShellLink();
+            link.SetPath(executable);
+            link.SetWorkingDirectory(Path.GetDirectoryName(executable) ?? "");
+            link.SetDescription("Mesura: set up Windows and restore your environment");
+            link.SetIconLocation(executable, 0);
+            ((IPersistFile)link).Save(LinkPath, true);
             return IsOn(executable) ? null : "Windows didn't keep the shortcut.";
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException
-            or System.Runtime.InteropServices.COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or COMException or ArgumentException or InvalidCastException)
         {
             return $"The Start menu entry wasn't changed: {e.Message}";
         }
     }
-
-    private static dynamic? Shell() =>
-        Type.GetTypeFromProgID("WScript.Shell") is { } type ? Activator.CreateInstance(type) : null;
 
     /// <summary>What the existing shortcut starts, or <c>null</c> when there is none (or it can't be read).</summary>
     private static string? Target()
@@ -67,13 +64,77 @@ public static class StartMenuEntry
 
         try
         {
-            var shell = Shell();
-            return shell is null ? null : (string)shell.CreateShortcut(LinkPath).TargetPath;
+            var link = (IShellLinkW)new ShellLink();
+            ((IPersistFile)link).Load(LinkPath, 0);
+            var path = new System.Text.StringBuilder(1024);
+            link.GetPath(path, path.Capacity, IntPtr.Zero, 0);
+            return path.Length == 0 ? null : path.ToString();
         }
-        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException
-            or InvalidCastException)
+        catch (Exception e) when (e is COMException or InvalidCastException or ArgumentException or IOException)
         {
             return null;
         }
+    }
+
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    private class ShellLink
+    {
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
+    private interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder file, int maxPath, IntPtr findData, uint flags);
+
+        void GetIDList(out IntPtr pidl);
+
+        void SetIDList(IntPtr pidl);
+
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder name, int maxName);
+
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string name);
+
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder dir, int maxPath);
+
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string dir);
+
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder args, int maxPath);
+
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string args);
+
+        void GetHotkey(out short hotkey);
+
+        void SetHotkey(short hotkey);
+
+        void GetShowCmd(out int showCmd);
+
+        void SetShowCmd(int showCmd);
+
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder iconPath, int iconPathSize, out int iconIndex);
+
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string iconPath, int iconIndex);
+
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string relativePath, uint reserved);
+
+        void Resolve(IntPtr hwnd, uint flags);
+
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string file);
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("0000010b-0000-0000-C000-000000000046")]
+    private interface IPersistFile
+    {
+        void GetClassID(out Guid classId);
+
+        [PreserveSig]
+        int IsDirty();
+
+        void Load([MarshalAs(UnmanagedType.LPWStr)] string fileName, uint mode);
+
+        void Save([MarshalAs(UnmanagedType.LPWStr)] string fileName, [MarshalAs(UnmanagedType.Bool)] bool remember);
+
+        void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string fileName);
+
+        void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string fileName);
     }
 }

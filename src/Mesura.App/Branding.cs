@@ -17,6 +17,11 @@ public static class Branding
 
     private static readonly Uri MarkUri = new("pack://application:,,,/Assets/mesura-mark.png", UriKind.Absolute);
 
+    /// <summary>The version without the commit suffix ("0.2.0"), for the top strip.</summary>
+    public static string ShortVersion { get; } = (System.Reflection.Assembly.GetExecutingAssembly()
+        .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+        .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "0.0.0").Split('+')[0];
+
     /// <summary>The mark shown inside the window (the sidebar, Settings), a 256 px image scaled down with high quality.</summary>
     public static ImageSource Mark { get; } = CreateMark();
 

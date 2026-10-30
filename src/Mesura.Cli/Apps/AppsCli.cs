@@ -62,12 +62,12 @@ internal static class AppsCli
     }
 
     /// <summary>The catalog in use (edited copy or built-in), without printing anything; <c>null</c> if the edited copy is broken.</summary>
-    public static AppCatalog? TryLoadCatalogQuietly() => CatalogFiles.Apps().Catalog;
+    public static AppCatalog? TryLoadCatalogQuietly() => CatalogFiles.Apps(Environment.IsPrivilegedProcess).Catalog;
 
     /// <summary>Loads the edited catalog if there is one (<see cref="CatalogFiles"/>), else the built-in copy.</summary>
     public static bool TryLoadCatalog(out AppCatalog catalog, out string source)
     {
-        var loaded = CatalogFiles.Apps();
+        var loaded = CatalogFiles.Apps(Environment.IsPrivilegedProcess);
         catalog = loaded.Catalog ?? AppCatalog.Default;
         source = loaded.Source;
         if (loaded.Error is not null)

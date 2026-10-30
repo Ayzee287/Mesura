@@ -96,11 +96,11 @@ internal static class ProfileCli
             return Failed;
         }
 
-        var reader = new SystemStateReader();
+        var reader = new SystemStateReader(new SystemTools());
         var installer = AppDetectors.Installer(reader.User, reader.IsElevated);
         var folder = Path.GetDirectoryName(Path.GetFullPath(path))!;
         var plan = ProfileRunner.Plan(profile, folder, catalog, installer, windowsCatalog, new SetupStore());
-        var configurator = new WindowsConfigurator(reader, new WindowsWriter(reader.User));
+        var configurator = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools));
 
         Console.WriteLine($"Profile: {profile.Name}{(profile.Description.Length > 0 ? $" - {profile.Description}" : "")}");
         if (!ProcessUser.Is(reader.User, reader.IsElevated) && (plan.Bundle is not null || plan.BundleError is not null))
@@ -202,7 +202,7 @@ internal static class ProfileCli
         var file = Path.GetFileName(full);
         var stem = file.EndsWith(".profile.json", StringComparison.OrdinalIgnoreCase) ? file[..^".profile.json".Length] : Path.GetFileNameWithoutExtension(file);
         var bundleName = stem + ".settings.json";
-        var reader = new SystemStateReader();
+        var reader = new SystemStateReader(new SystemTools());
         var sameUser = ProcessUser.Is(reader.User, reader.IsElevated);
         if (!sameUser)
         {

@@ -165,7 +165,7 @@ public sealed class ActivationViewModel : Observable, IPageState
     /// <summary>Said once under the title when a card's action needs administrator rights that Mesura doesn't have.</summary>
     public string AdminNote => !_services.Reader.IsElevated && (Windows?.PrimaryIsStrong == true || Office?.PrimaryIsStrong == true
         || Windows?.OffersKey == true || Office?.OffersKey == true || Windows?.License?.State is not (null or LicenseState.Licensed))
-        ? Loc.Get("Activation.AdminHint")
+        ? Loc.Get(Loc.AdminKey("Activation.AdminHint"))
         : "";
 
     public string Status => _status is null ? Loc.Get("Activation.Checking")

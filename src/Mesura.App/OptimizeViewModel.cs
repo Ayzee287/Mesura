@@ -415,7 +415,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
             if (!_services.Reader.IsElevated)
             {
-                facts.Add(SystemFact.With("IconShield", Loc.Get("Optimize.NotElevated"), Tone.Warn));
+                facts.Add(SystemFact.With("IconShield", Loc.Get(Loc.AdminKey("Optimize.NotElevated")), Tone.Warn));
             }
 
             return facts;
@@ -922,7 +922,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
             // NVIDIA Profile Inspector runs only elevated, and the steps are back up, driver, restore or nothing: without
             // administrator rights the card says so instead of offering a plan that would stop at the backup.
             var elevated = _services.Reader.IsElevated || Services.PreviewHardware;
-            Nvidia.Update(elevated ? line : line + " · " + Loc.Get("Setup.NvidiaNeedsAdmin"), "", elevated ? Tone.Neutral : Tone.Warn, elevated);
+            Nvidia.Update(elevated ? line : line + " · " + Loc.Get(Loc.AdminKey("Setup.NvidiaNeedsAdmin")), "", elevated ? Tone.Neutral : Tone.Warn, elevated);
         }
 
         Raise(nameof(NvidiaLatest));
@@ -1095,7 +1095,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
         if (rows.Count(r => r.NeedsAdmin) is var admin and > 0)
         {
-            notes.Add(Loc.Plural("Optimize.ConfirmAdmin", admin));
+            notes.Add(Loc.Plural(Loc.AdminKey("Optimize.ConfirmAdmin"), admin));
         }
 
         if (steps.Any(s => s.Kind == StepKind.NvidiaDriver))

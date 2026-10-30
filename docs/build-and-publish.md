@@ -98,3 +98,16 @@ A release is a build of a clean, committed tree with no label, plus the hashes:
    `Mesura/CHANGELOG.md` and `Mesura/EXE-SHA256.txt`; the executables' version names the commit; the hash recomputed from
    the zip equals the one in `SHA256SUMS.txt`.
 4. The executables are not code-signed. Say so in the release notes (SmartScreen will warn) and give the SHA-256.
+
+## The installer, the update manifest and the checksums (0.3)
+
+After `tools\publish.ps1` (which writes the portable zip), in order:
+
+1. `powershell -File tools\build-installer.ps1` copies the files an install carries into `artifacts\current\installer-payload` and builds `Mesura-<version>-x64.msi` (English wizard) and
+   `Mesura-<version>-x64-ru.msi` with WiX 6 (restored from NuGet; nothing is installed on the PC). The MSI version is `major.minor.patch.rc` (the release candidate number is the 4th field).
+2. `powershell -File tools\make-release.ps1 -Channel preview|stable -Url <https url of the English msi> -NotesEn <file> [-NotesRu <file>]` signs `update-<channel>.json` (see `docs/updates.md`)
+   with the key in `%USERPROFILE%\.mesura-release\` and writes `SHA256SUMS.txt` for the installers, the zip and the manifest. `-Local http://127.0.0.1:8099` writes the manifest for a local
+   test server instead.
+3. Nothing is uploaded by these scripts. Publishing is a GitHub release made by the owner, with those files attached under exactly those names.
+
+End-to-end check of installing and updating without publishing anything: `tools\e2e-update.ps1`; the installer's own lifecycle (install, reinstall, upgrade, uninstall, a failed update) is `tools\e2e-installer.ps1`; what a published release looks like to the app is `tools\verify-published.ps1`.
