@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5CFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient></defs>
-  <rect x="0" y="0" width="256" height="256" rx="56" fill="url(#g)"/>
-  <path d="M 0 56 A 56 56 0 0 1 56 0 L 200 0 A 56 56 0 0 1 256 56 L 256 118 C 176 156 80 156 0 118 Z" fill="#FFFFFF" fill-opacity="0,16"/>
-  <path d="M 58 168 L 58 54 L 90 54 L 128 108 L 166 54 L 198 54 L 198 168 L 166 168 L 166 104 L 134 150 L 122 150 L 90 104 L 90 168 Z" fill="#FFFFFF"/>
-  <rect x="58" y="194" width="140" height="10" rx="0" fill="#FFFFFF" fill-opacity="0,92"/>
-  <rect x="58" y="184" width="10" height="30" rx="0" fill="#FFFFFF" fill-opacity="0,92"/>
-  <rect x="188" y="184" width="10" height="30" rx="0" fill="#FFFFFF" fill-opacity="0,92"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6BFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <path d="M 56 186 L 56 70 L 92 70 L 128 124 L 164 70 L 200 70 L 200 186 L 168 186 L 168 118 L 140 160 L 116 160 L 88 118 L 88 186 Z" fill="url(#g)" stroke="url(#g)" stroke-width="22" stroke-linejoin="round" opacity="0.75" filter="url(#glow)"/>
+  <path d="M 56 186 L 56 70 L 92 70 L 128 124 L 164 70 L 200 70 L 200 186 L 168 186 L 168 118 L 140 160 L 116 160 L 88 118 L 88 186 Z" fill="url(#g)" stroke="url(#g)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M 56 186 L 56 70 L 92 70 L 128 124 L 164 70 L 200 70 L 200 186 L 168 186 L 168 118 L 140 160 L 116 160 L 88 118 L 88 186 Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="1.6" stroke-linejoin="round"/>
 </svg>

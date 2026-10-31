@@ -75,17 +75,26 @@ public static class HighContrastTheme
 
         Set(resources, "NeutralSubtle", window);
         Set(resources, "SidebarSurface", window);
-        foreach (var gradient in new[] { "AccentFill", "AccentFillHover", "AccentFillPressed" })
+        // The glass is flat: the accent fills are the highlight, the panels' sheen and the dock the window colour, the lit rim a full-strength line.
+        SetGradient(resources, highlight, "AccentFill", "AccentFillHover", "AccentFillPressed");
+        SetGradient(resources, window, "GlassSheen", "DockSurface");
+        SetGradient(resources, text, "GlassEdge");
+        SetGradient(resources, Colors.Transparent, "OrbKey", "OrbTrail", "OrbCool", "OrbWarm");
+        LightField.Mode = LightingMode.Off;
+    }
+
+    private static void SetGradient(ResourceDictionary resources, Color color, params string[] keys)
+    {
+        foreach (var key in keys)
         {
-            if (resources[gradient] is LinearGradientBrush { IsFrozen: false } g)
+            if (resources[key] is GradientBrush { IsFrozen: false } g)
             {
-                g.GradientStops.Clear();
-                g.GradientStops.Add(new GradientStop(highlight, 0));
-                g.GradientStops.Add(new GradientStop(highlight, 1));
+                foreach (var stop in g.GradientStops)
+                {
+                    stop.Color = color;
+                }
             }
         }
-
-        LightField.Mode = LightingMode.Off;
     }
 
     private static void Set(ResourceDictionary resources, string key, Color color)

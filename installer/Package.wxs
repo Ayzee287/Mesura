@@ -1,8 +1,8 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
   <!-- Mesura's installer. By default it installs for the current user, without administrator rights, into
-       %LOCALAPPDATA%\Programs\Mesura (where Mesura's Settings already expects an installed copy); the folder is chosen in the
-       wizard. For every user: msiexec /i Mesura.msi ALLUSERS=1 (administrator rights; Program Files). An update is this same package
+       %LOCALAPPDATA%\Programs\Mesura (where Mesura's Settings already expects an installed copy); there is no folder to choose
+       (0.4.2). For every user: msiexec /i Mesura.msi ALLUSERS=1 (administrator rights; Program Files). An update is this same package
        run again over the installed one (major upgrade), so the Windows Installer's transaction is the rollback. User data
        (%LOCALAPPDATA%\Mesura: settings, history, profiles, logs) is never part of the package: neither an upgrade nor an uninstall
        touches it. -->
@@ -41,7 +41,7 @@
       <Custom Action="FolderPrevMachine" After="FolderPrevUser" Condition="PREVINSTALLDIRMACHINE AND ALLUSERS=1 AND NOT INSTALLFOLDER" />
     </InstallExecuteSequence>
 
-    <Feature Id="MainFeature" Title="!(loc.FeatureMain)" Description="!(loc.FeatureMainDescription)" Level="1" AllowAbsent="no" ConfigurableDirectory="INSTALLFOLDER">
+    <Feature Id="MainFeature" Title="!(loc.FeatureMain)" Description="!(loc.FeatureMainDescription)" Level="1" AllowAbsent="no" >
       <ComponentGroupRef Id="ProgramFiles" />
       <ComponentRef Id="Registration" />
       <ComponentRef Id="StartMenuShortcut" />
@@ -50,7 +50,9 @@
       <ComponentRef Id="DesktopShortcut" />
     </Feature>
 
-    <!-- The wizard: welcome, licence, features and folder, ready, progress, finish (with a box to start Mesura). -->
+    <!-- The wizard (0.4.2): a welcome page about Mesura, a page with the Install button, progress, finish (with a box to start Mesura). No licence,
+         features or folder pages: the licence text is in the install folder, the folder is chosen by the installer, the desktop shortcut is
+         there for ADDLOCAL=MainFeature,DesktopFeature on the command line. -->
     <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
     <!-- The wizard's pictures (tools\make-installer-art.ps1): the mark and the logo's light, so the installer looks like the program. -->
     <WixVariable Id="WixUIBannerBmp" Value="$(ArtDir)\banner.bmp" />
@@ -71,10 +73,9 @@
     </InstallExecuteSequence>
     <?endif?>
     <UI>
-      <!-- 0.4.1: the licence page is skipped (the MIT licence is in the install folder and one click away in the notices); the wizard goes from the
-           welcome page straight to the folder and the choices. -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Order="4" Condition="NOT Installed" />
-      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="4" Condition="NOT Installed" />
+      <!-- The welcome page leads straight to the page with the Install button (the licence, the features and the folder pages are never shown). -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="4" Condition="NOT Installed" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="4" Condition="NOT Installed" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchMesura" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
     </UI>
   </Package>

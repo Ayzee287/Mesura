@@ -219,7 +219,7 @@
                             <RadioButton Style="{StaticResource ChoiceCard}" GroupName="Outcome" IsChecked="{Binding IsSelected}" Margin="0,0,12,0"
                                          AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Summary}">
                                 <StackPanel Margin="0,0,30,0">
-                                    <TextBlock Text="{Binding Name}" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Name}" FontFamily="{StaticResource DisplayFont}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding Summary}" Style="{StaticResource Secondary}" Margin="0,6,0,12" MinHeight="38" />
                                     <Border Style="{StaticResource Pill}" Background="{Binding PendingTone, Converter={StaticResource StateBackground}}"
                                             Visibility="{Binding PendingText, Converter={StaticResource Presence}}">

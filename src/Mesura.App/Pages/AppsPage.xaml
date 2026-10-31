@@ -3,6 +3,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="clr-namespace:Mesura.App">
     <UserControl.Resources>
+        <!-- A pill that is a button (the Update action on an app's card): the pill inside is its look; it dims a little under the pointer. -->
+        <Style x:Key="PillAction" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter x:Name="Face" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Face" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- The page's actions, shown in the command dock (MainWindow) while the page is open: the summary, then what can be done. -->
         <DataTemplate x:Key="DockActions">
             <Grid>
@@ -17,6 +37,8 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="{l:T Common.Cancel}" Style="{StaticResource Ghost}" Command="{Binding Cancel}" Margin="0,0,8,0"
                             Visibility="{Binding Installing, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Content="{Binding UpdateAllText}" Command="{Binding UpdateAll}" Margin="0,0,8,0"
+                            Visibility="{Binding HasUpdates, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{l:T AllSettings.Clear}" Style="{StaticResource Ghost}" Command="{Binding ClearSelection}" Margin="0,0,8,0" />
                     <Button Content="{l:T Apps.Install}" Style="{StaticResource Primary}" Command="{Binding Install}" MinWidth="120" />
                 </StackPanel>
@@ -66,14 +88,6 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>
-            <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
-                <TextBlock Text="{l:T Apps.SetUpWith}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,10,6" />
-                <RadioButton Style="{StaticResource Segment}" GroupName="ConfigSource" Content="{l:T Apps.SourceDefaults}" IsChecked="{Binding ConfigureDefaults}"
-                             ToolTip="{l:T Apps.SourceDefaultsHint}" Margin="0,0,4,6" />
-                <RadioButton Style="{StaticResource Segment}" GroupName="ConfigSource" Content="{l:T Apps.SourceSaved}" IsChecked="{Binding ConfigureSaved}"
-                             IsEnabled="{Binding SavedAvailable}" ToolTip="{Binding SavedHint}" Margin="0,0,4,6" />
-                <RadioButton Style="{StaticResource Segment}" GroupName="ConfigSource" Content="{l:T Apps.SourceNone}" IsChecked="{Binding ConfigureNone}" Margin="0,0,4,6" />
-            </WrapPanel>
             <ContentControl Content="{Binding Result}" ContentTemplate="{StaticResource BannerTemplate}" Margin="0,6,0,0" Focusable="False" />
         </StackPanel>
 
@@ -87,9 +101,9 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <!-- One card shape for every app, so a row never stretches one card to the height of its neighbour: icon, name and group, one line of
-                             note, then the state, the link to its settings and any component that belongs to it (Vencord on Discord) on a single line. -->
+                             note, then its state (or the Update action). -->
                         <DataTemplate DataType="{x:Type l:AppItem}">
-                            <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Padding="16,14,14,14" Margin="0,0,12,12" Cursor="Hand" MinHeight="92" VerticalAlignment="Top"
+                            <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Padding="16,14,14,14" Margin="0,0,12,12" Cursor="Hand" Height="84" VerticalAlignment="Top"
                                     MouseLeftButtonUp="OnCardClick" ToolTip="{Binding Note}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -104,25 +118,28 @@
                                             <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
                                             <TextBlock Text="{Binding Category}" Style="{StaticResource Tertiary}" Margin="8,1,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
                                         </StackPanel>
-                                        <WrapPanel Margin="0,8,0,0">
-                                            <Border Style="{StaticResource Pill}" Background="{Binding StateTone, Converter={StaticResource StateBackground}}" VerticalAlignment="Center" Margin="0,0,10,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <!-- The state in one word. With a newer version on offer the word is "Update" and the pill is the button that does it. -->
+                                            <Border Style="{StaticResource Pill}" Background="{Binding StateTone, Converter={StaticResource StateBackground}}" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                    Visibility="{Binding NoUpdate, Converter={StaticResource BoolToVisibility}}">
                                                 <TextBlock Text="{Binding StateText}" Style="{StaticResource PillText}" Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
                                             </Border>
-                                            <!-- Installed and carried by Mesura: its settings are changed on Configurations. -->
-                                            <Button Style="{StaticResource Link}" Margin="0,0,10,0" VerticalAlignment="Center" FontSize="12.5"
-                                                    Command="{Binding DataContext.OpenConfigurations, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    Visibility="{Binding ShowConfigureLink, Converter={StaticResource BoolToVisibility}}"
-                                                    AutomationProperties.Name="{l:T Apps.OpenConfigurations}">
-                                                <TextBlock Text="{l:T Apps.OpenConfigurations}" />
+                                            <Button Style="{StaticResource PillAction}" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.UpdateApp, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                    ToolTip="{Binding UpdateTip}" AutomationProperties.Name="{Binding UpdateAutomationName}"
+                                                    Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVisibility}}">
+                                                <Border Style="{StaticResource Pill}" Background="{Binding StateTone, Converter={StaticResource StateBackground}}">
+                                                    <TextBlock Text="{Binding StateText}" Style="{StaticResource PillText}" Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
+                                                </Border>
                                             </Button>
-                                        </WrapPanel>
+                                        </StackPanel>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
-                                        <!-- Where it installs: a folder where its installer takes one; for the others the button says that it cannot be chosen. -->
-                                        <Button Content="{StaticResource IconFolder}" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="12" Margin="0,-3,6,0"
-                                                Command="{Binding ChooseFolder}" ToolTip="{Binding FolderTip}" ToolTipService.ShowOnDisabled="True"
-                                                Visibility="{Binding SupportsFolder, Converter={StaticResource BoolToVisibility}}"
-                                                AutomationProperties.Name="{Binding FolderTip}" />
+                                        <!-- Only for an installed app whose uninstall Mesura has verified; disabled, with the reason, until Mesura runs as administrator. -->
+                                        <Button Content="{StaticResource IconDebloat}" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="12" Margin="0,-3,6,0"
+                                                Command="{Binding DataContext.UninstallApp, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                ToolTip="{Binding UninstallTip}" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="{Binding UninstallAutomationName}"
+                                                Visibility="{Binding SupportsUninstall, Converter={StaticResource BoolToVisibility}}" />
                                         <CheckBox IsChecked="{Binding Selected}" IsEnabled="{Binding CanSelect}" VerticalAlignment="Top"
                                                   AutomationProperties.Name="{Binding Name}" />
                                     </StackPanel>

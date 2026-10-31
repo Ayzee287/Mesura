@@ -44,7 +44,8 @@
                 <TextBlock Style="{StaticResource Icon}" Text="{Binding Tone, Converter={StaticResource ToneGlyph}}" FontSize="16"
                            Foreground="{Binding Tone, Converter={StaticResource StateBrush}}" VerticalAlignment="Top" Margin="0,2,12,0" />
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" />
+                    <!-- The live region: a new result is announced by a screen reader, with its detail (the name), without the user having to find it. -->
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" AutomationProperties.Name="{Binding Announcement}" l:Announce.Serial="{Binding Serial}" />
                     <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" Margin="0,4,0,0" LineHeight="18"
                                Visibility="{Binding Detail, Converter={StaticResource Presence}}" />
                     <!-- Something around the run that did not work (no restore point): its own line in the warning colour, never part of the result's sentence. -->

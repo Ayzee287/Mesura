@@ -9,4 +9,6 @@
   <String Id="FeatureDesktop" Value="Desktop shortcut" />
   <String Id="FeatureDesktopDescription" Value="Adds a Mesura shortcut to the desktop." />
   <String Id="LaunchMesura" Value="Start Mesura" />
+  <String Id="WelcomeDlgDescription" Value="Mesura sets up Windows and your apps the way you choose, shows every change before it is made and keeps it undoable. It installs for you alone and needs no administrator rights. Click Next to continue." />
+  <String Id="VerifyReadyDlgInstallText" Value="Click Install to put Mesura on this PC. Your settings, history and profiles are kept apart from the program and are never removed." />
 </WixLocalization>

@@ -281,6 +281,21 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
     }
 
     [Fact]
+    public void An_app_the_chosen_configuration_does_not_cover_installs_as_it_is_and_is_not_an_error()
+    {
+        // Mesura's own configuration covers only Brave and Spotify: 7-Zip and Notepad++ have none in it, so they are installed and nothing is set up.
+        var (plain, winget, _, _) = Pc();
+        var context = plain with { ConfigBundle = Mesura.Core.Config.ConfigDefaults.Bundle("2026-10-23T12:00:00Z") };
+        var apps = PendingSetup.Create("20261023T140000Z-apps-install", "2026-10-23T14:00:00Z", null, "defaults", [new SetupStep(StepKind.Apps, ["sevenzip", "notepadpp"])], null);
+        var sitting = SetupWorkflowRunner.Run(apps, context, null, CancellationToken.None, operation: "apps-install", persist: false);
+        Assert.Equal(["7zip.7zip", "Notepad++.Notepad++"], winget.Ran);
+        Assert.Equal(StepState.Done, sitting.Setup.Step(StepKind.Apps)!.State);
+        Assert.Empty(sitting.Run.Config);
+        Assert.Empty(sitting.KeptSettings);
+        Assert.Equal(RunStatus.Succeeded, RunFollowUp.Status(sitting.Run));
+    }
+
+    [Fact]
     public void An_install_from_apps_leaves_an_unfinished_setup_as_it_was()
     {
         var (context, winget, _, store) = Pc();

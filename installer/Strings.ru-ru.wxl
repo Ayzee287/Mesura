@@ -9,4 +9,6 @@
   <String Id="FeatureDesktop" Value="Ярлык на рабочем столе" />
   <String Id="FeatureDesktopDescription" Value="Добавляет ярлык Mesura на рабочий стол." />
   <String Id="LaunchMesura" Value="Запустить Mesura" />
+  <String Id="WelcomeDlgDescription" Value="Mesura настраивает Windows и ваши приложения так, как вы выберете, показывает каждое изменение до его применения и позволяет его отменить. Устанавливается только для вас и не требует прав администратора. Нажмите «Далее», чтобы продолжить." />
+  <String Id="VerifyReadyDlgInstallText" Value="Нажмите «Установить», чтобы поставить Mesura на этот ПК. Ваши настройки, история и профили хранятся отдельно от программы и никогда не удаляются." />
 </WixLocalization>

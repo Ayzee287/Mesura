@@ -70,6 +70,79 @@ public sealed class InstallerLauncher : IInstallerRunner
         return false;
     }
 
+    /// <summary>One updater per user session: a named mutex in the session's namespace (an elevated updater of the same user sees it too).</summary>
+    public IDisposable? AcquireSingleInstance()
+    {
+        var mutex = new Mutex(initiallyOwned: true, @"Local\MesuraUpdateApply", out var created);
+        if (!created)
+        {
+            mutex.Dispose();
+            return null;
+        }
+
+        return new Gate(mutex);
+    }
+
+    private sealed class Gate(Mutex mutex) : IDisposable
+    {
+        public void Dispose()
+        {
+            mutex.ReleaseMutex();
+            mutex.Dispose();
+        }
+    }
+
+    public string? InstalledVersion(ApplyRequest request) => InstallRegistration.Read()?.Version;
+
+    /// <summary>
+    /// Waits until the install a killed or crashed client started has ended, finished or rolled back. The install's own verbose log says so: the service writes
+    /// it to the end and its last line is "MainEngineThread is returning"; a log that has stopped growing for a while (or never appeared) means nothing more is going
+    /// on. (Windows Installer's <c>_MSIExecute</c> mutex is no signal: it belongs to the client and goes with it.)
+    /// </summary>
+    public void WaitUntilInstallerIdle(ApplyRequest request, TimeSpan timeout) => WaitUntilIdle(request.LogPath, timeout, QuietPeriod);
+
+    internal static void WaitUntilIdle(string logPath, TimeSpan timeout, TimeSpan quietPeriod)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        var lastSize = -1L;
+        var lastChange = DateTime.UtcNow;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var log = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (log.Length != lastSize)
+                {
+                    lastSize = log.Length;
+                    lastChange = DateTime.UtcNow;
+                }
+
+                var tail = new byte[(int)Math.Min(log.Length, 8192)];
+                log.Seek(log.Length - tail.Length, SeekOrigin.Begin);
+                log.ReadExactly(tail);
+
+                // The log is ANSI or UTF-16 depending on how msiexec was asked; the sentence is ASCII either way once the zero bytes are dropped.
+                if (System.Text.Encoding.Latin1.GetString(tail).Replace("\0", "", StringComparison.Ordinal).Contains("MainEngineThread is returning", StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // No log yet, or it can't be read right now: the quiet period below decides.
+            }
+
+            if (DateTime.UtcNow - lastChange > quietPeriod)
+            {
+                return;
+            }
+
+            Thread.Sleep(500);
+        }
+    }
+
+    private static readonly TimeSpan QuietPeriod = TimeSpan.FromSeconds(10);
+
     public bool WaitForExit(int processId, TimeSpan timeout)
     {
         try
@@ -90,6 +163,13 @@ public sealed class InstallerLauncher : IInstallerRunner
     public void Restart(string executable, string arguments)
     {
         if (!File.Exists(executable))
+        {
+            return;
+        }
+
+        // After a machine-wide update this process is elevated: Mesura is started as the signed-in user, unelevated, never with the updater's administrator rights
+        // (and never as another account that approved the prompt). Without a desktop shell to take the token from, it starts the ordinary way.
+        if (Environment.IsPrivilegedProcess && ShellProcess.TryStart(executable, arguments, Path.GetDirectoryName(executable)!))
         {
             return;
         }

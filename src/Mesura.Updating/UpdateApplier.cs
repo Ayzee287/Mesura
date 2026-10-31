@@ -45,6 +45,16 @@ public sealed record ApplyRequest(
     bool NoElevate = false,
     string? Language = null);
 
+/// <summary>The gate of a runner that has none (tests).</summary>
+internal sealed class NoGate : IDisposable
+{
+    public static readonly NoGate Instance = new();
+
+    public void Dispose()
+    {
+    }
+}
+
 /// <summary>Runs the Windows Installer (a stand-in in tests).</summary>
 public interface IInstallerRunner
 {
@@ -57,6 +67,23 @@ public interface IInstallerRunner
     /// waits on a box nobody may see. Waiting for the files to be released avoids it; after the timeout the installer runs anyway.
     /// </summary>
     void WaitUntilReplaceable(ApplyRequest request, TimeSpan timeout);
+
+    /// <summary>
+    /// The version the installer's registration names right now, or <c>null</c> when it can't be read. Asked after an installer that ended with an error:
+    /// the exit code is the client's, and a client that was killed or crashed leaves the Windows Installer service to finish the install (or roll it back).
+    /// </summary>
+    string? InstalledVersion(ApplyRequest request) => null;
+
+    /// <summary>
+    /// Takes the right to be the only updater running, or <c>null</c> when another updater already holds it. A second updater (the Install button pressed twice, a task started
+    /// by hand) must do nothing: two would race for the Windows Installer, and the later one would overwrite the first one's result with "installer busy" and start the old version.
+    /// </summary>
+    IDisposable? AcquireSingleInstance() => NoGate.Instance;
+
+    /// <summary>Waits (up to <paramref name="timeout"/>) until the install the client started has ended (the service goes on after its client was killed), so what is installed can be read once it has settled.</summary>
+    void WaitUntilInstallerIdle(ApplyRequest request, TimeSpan timeout)
+    {
+    }
 
     /// <summary>Waits for the app to exit; <c>false</c> when it is still running after <paramref name="timeout"/>.</summary>
     bool WaitForExit(int processId, TimeSpan timeout);
@@ -78,13 +105,33 @@ public sealed class UpdateApplier(UpdateStore store, IInstallerRunner runner)
 {
     public static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(45);
     public static readonly TimeSpan ReplaceableTimeout = TimeSpan.FromSeconds(90);
+    public static readonly TimeSpan InstallerSettleTimeout = TimeSpan.FromMinutes(3);
 
     private static readonly HashSet<int> Success = [0, 1641, 3010];
 
     public UpdateResult Apply(ApplyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var result = Run(request);
+
+        using var gate = runner.AcquireSingleInstance();
+        if (gate is null)
+        {
+            // The other updater records the result and starts Mesura; this one changes nothing and says nothing to the app.
+            return new UpdateResult(UpdateResult.Failed, request.FromVersion, request.ToVersion, "updater-already-running", 0, request.LogPath, DateTimeOffset.Now);
+        }
+
+        UpdateResult result;
+        try
+        {
+            result = Run(request);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Whatever went wrong, the app is told: a result is always recorded and the app is always started again (a silent updater that just stops leaves
+            // the user with no Mesura and no explanation; seen for real in 2026-10 when a mutex abandoned by a killed installer client threw here).
+            result = new UpdateResult(UpdateResult.Failed, request.FromVersion, request.ToVersion, "updater-error", 0, request.LogPath, DateTimeOffset.Now);
+        }
+
         try
         {
             store.WriteText(UpdateStore.ResultFile, JsonSerializer.Serialize(result, UpdateResult.Json));
@@ -108,6 +155,31 @@ public sealed class UpdateApplier(UpdateStore store, IInstallerRunner runner)
 
         return result;
     }
+
+    /// <summary>What the registration names once the installer service has settled; <c>null</c> when that could not be found out (this step never stops the updater).</summary>
+    private string? InstalledAfterSettling(ApplyRequest r)
+    {
+        try
+        {
+            runner.WaitUntilInstallerIdle(r, InstallerSettleTimeout);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Waiting is a courtesy: what is installed can still be read.
+        }
+
+        try
+        {
+            return runner.InstalledVersion(r);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            return null;
+        }
+    }
+
+    private static bool SameVersion(string installed, string target) =>
+        AppVersion.TryParse(installed) is { } a && AppVersion.TryParse(target) is { } b ? !(a > b) && !(b > a) : string.Equals(installed, target, StringComparison.OrdinalIgnoreCase);
 
     private UpdateResult Run(ApplyRequest r)
     {
@@ -188,8 +260,22 @@ public sealed class UpdateApplier(UpdateStore store, IInstallerRunner runner)
             return Fail("installer-not-started");
         }
 
-        return Success.Contains(code)
-            ? new UpdateResult(UpdateResult.Succeeded, r.FromVersion, r.ToVersion, code is 3010 or 1641 ? "restart-needed" : "", code, r.LogPath, DateTimeOffset.Now)
-            : Fail(code switch { 1602 => "cancelled", 1618 => "installer-busy", 1925 => "needs-administrator", 1603 => "installer-failed-rolled-back", _ => "installer-error" }, code);
+        if (Success.Contains(code))
+        {
+            return new UpdateResult(UpdateResult.Succeeded, r.FromVersion, r.ToVersion, code is 3010 or 1641 ? "restart-needed" : "", code, r.LogPath, DateTimeOffset.Now);
+        }
+
+        // The exit code belongs to the installer's client. A client that ended abnormally (killed, crashed) says nothing about the install itself: the service goes on
+        // and finishes it, or rolls it back. Those codes that name a refusal or a finished rollback are taken at their word; for any other, what is installed decides
+        // (after the service has settled), so a finished update is never recorded as a failed one, and a rolled-back one never as a success.
+        if (code is not (1602 or 1618 or 1925 or 1603))
+        {
+            if (InstalledAfterSettling(r) is { } installed && SameVersion(installed, r.ToVersion))
+            {
+                return new UpdateResult(UpdateResult.Succeeded, r.FromVersion, r.ToVersion, "installer-client-ended-early", code, r.LogPath, DateTimeOffset.Now);
+            }
+        }
+
+        return Fail(code switch { 1602 => "cancelled", 1618 => "installer-busy", 1925 => "needs-administrator", 1603 => "installer-failed-rolled-back", _ => "installer-error" }, code);
     }
 }

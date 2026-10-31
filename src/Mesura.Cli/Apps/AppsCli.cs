@@ -19,6 +19,9 @@ internal static class AppsCli
           mesura apps list
           mesura apps bundles
           mesura apps install (--id <app>[,<app>...] | --bundle <bundle>)... [--reinstall] [--apply]
+          mesura apps updates
+          mesura apps upgrade (--id <app>[,<app>...] | --all) [--apply]
+          mesura apps uninstall --id <app>[,<app>...] [--apply]
         """;
 
     public const string Help = """
@@ -29,13 +32,23 @@ internal static class AppsCli
                          skipped as already installed, or left to do by hand. With --apply it installs
                          them with winget one at a time; a failure never stops the rest, and Ctrl+C
                          cancels cleanly. --reinstall also runs apps that are already installed.
+        apps updates     Lists the installed apps Mesura can update and whether winget offers a newer
+                         version of each. Read-only.
+        apps upgrade     Previews updating the chosen apps (or --all with an update available).
+                         With --apply it updates them with winget one at a time, then asks winget
+                         again whether an update is still offered. Only apps Mesura updates are
+                         accepted; Ctrl+C cancels cleanly.
+        apps uninstall   Previews uninstalling the chosen apps. With --apply it uninstalls them with
+                         winget, then asks winget again whether each is really gone. Only the apps
+                         Mesura has verified are accepted, and --apply needs Mesura to run as
+                         administrator (without it nothing is started).
         """;
 
     private const int Ok = 0;
     private const int Failed = 1;
     private const int UsageCode = 2;
 
-    private sealed record Request(string Verb, IReadOnlyList<string> AppIds, IReadOnlyList<string> BundleIds, bool Reinstall, bool Apply);
+    private sealed record Request(string Verb, IReadOnlyList<string> AppIds, IReadOnlyList<string> BundleIds, bool Reinstall, bool Apply, bool All = false);
 
     public static int Run(string[] args)
     {
@@ -57,6 +70,9 @@ internal static class AppsCli
             "list" => List(catalog),
             "bundles" => Bundles(catalog),
             "install" => Install(catalog, request),
+            "updates" => Updates(catalog),
+            "upgrade" => Upgrade(catalog, request),
+            "uninstall" => Uninstall(catalog, request),
             _ => UsageCode,
         };
     }
@@ -100,7 +116,7 @@ internal static class AppsCli
         var verb = args[0];
         var apps = new List<string>();
         var bundles = new List<string>();
-        bool reinstall = false, apply = false;
+        bool reinstall = false, apply = false, all = false;
         for (var i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -109,10 +125,16 @@ internal static class AppsCli
                     var target = args[i] == "--id" ? apps : bundles;
                     target.AddRange(args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     break;
+                case "--id" when verb is "upgrade" or "uninstall" && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal):
+                    apps.AddRange(args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    break;
                 case "--reinstall" when verb == "install":
                     reinstall = true;
                     break;
-                case "--apply" when verb == "install":
+                case "--all" when verb == "upgrade":
+                    all = true;
+                    break;
+                case "--apply" when verb is "install" or "upgrade" or "uninstall":
                     apply = true;
                     break;
                 default:
@@ -123,15 +145,28 @@ internal static class AppsCli
 
         switch (verb)
         {
-            case "list" or "bundles":
+            case "list" or "bundles" or "updates":
                 return new Request(verb, [], [], false, false);
+            case "uninstall" when apps.Count == 0:
+                error = "apps uninstall needs --id <app>.";
+                return null;
+            case "uninstall":
+                return new Request(verb, apps, [], false, apply);
+            case "upgrade" when apps.Count == 0 && !all:
+                error = "apps upgrade needs --id <app> or --all (see 'apps updates').";
+                return null;
+            case "upgrade" when apps.Count > 0 && all:
+                error = "apps upgrade takes --id <app> or --all, not both.";
+                return null;
+            case "upgrade":
+                return new Request(verb, apps, [], false, apply, all);
             case "install" when apps.Count == 0 && bundles.Count == 0:
                 error = "apps install needs --id <app> or --bundle <bundle> (see 'apps list' and 'apps bundles').";
                 return null;
             case "install":
                 return new Request(verb, apps, bundles, reinstall, apply);
             default:
-                error = $"Unknown apps verb '{verb}'. Use list, bundles or install.";
+                error = $"Unknown apps verb '{verb}'. Use list, bundles, install, updates, upgrade or uninstall.";
                 return null;
         }
     }
@@ -225,6 +260,187 @@ internal static class AppsCli
         Console.Error.WriteLine($"Recorded as history run {runId}.");
         return run.Ok ? Ok : Failed;
     }
+
+    private static int Updates(AppCatalog catalog)
+    {
+        var service = Service();
+        var checks = service.FindUpdates(service.BuildPlan(catalog.Packages.Where(p => p.Upgradable)));
+        if (checks.Count == 0)
+        {
+            Console.WriteLine("No installed app that Mesura updates was found.");
+            return Ok;
+        }
+
+        foreach (var check in checks)
+        {
+            Console.WriteLine($"  {UpdateLabel(check),-28} {check.Package.Id,-13} {check.Package.Name}");
+        }
+
+        return Ok;
+    }
+
+    private static string UpdateLabel(UpdateCheck check) => check.State switch
+    {
+        UpdateState.Available when check.InstalledVersion is { } from && check.AvailableVersion is { } to => $"update {from} -> {to}",
+        UpdateState.Available => "update available",
+        UpdateState.UpToDate => "up to date",
+        _ => "unknown (winget didn't answer)",
+    };
+
+    private static AppInstallService Service()
+    {
+        var reader = new SystemStateReader();
+        var winget = new WingetRunner(reader.User, reader.IsElevated);
+        return new AppInstallService(winget, AppDetectors.For(reader.User));
+    }
+
+    private static int Upgrade(AppCatalog catalog, Request request)
+    {
+        var chosen = new List<AppPackage>();
+        foreach (var id in request.AppIds)
+        {
+            if (catalog.ById(id) is not { } package)
+            {
+                Console.Error.WriteLine($"Unknown app '{id}' (see 'apps list').");
+                return UsageCode;
+            }
+
+            if (!package.Upgradable)
+            {
+                Console.Error.WriteLine($"Mesura doesn't update '{id}': it updates itself or must be updated by hand (see 'apps updates' for the apps it does update).");
+                return UsageCode;
+            }
+
+            chosen.Add(package);
+        }
+
+        var service = Service();
+        var plan = service.BuildPlan(request.All ? catalog.Packages.Where(p => p.Upgradable) : chosen);
+        var notInstalled = plan.Where(i => i.State != InstallState.Installed).Select(i => i.Package.Id).ToList();
+        if (notInstalled.Count > 0 && !request.All)
+        {
+            Console.Error.WriteLine($"Not installed (or not detected): {string.Join(", ", notInstalled)}. Nothing to update for them.");
+        }
+
+        var checks = service.FindUpdates(plan);
+        foreach (var check in checks)
+        {
+            Console.WriteLine($"  {UpdateLabel(check),-28} {check.Package.Id,-13} {check.Package.Name}");
+        }
+
+        var due = checks.Where(c => c.State == UpdateState.Available).Select(c => c.Package).ToList();
+        if (due.Count == 0)
+        {
+            var unknown = checks.Any(c => c.State == UpdateState.Unknown);
+            Console.WriteLine(unknown ? "Nothing to update that winget confirmed." : "Nothing to update.");
+            return unknown ? Failed : Ok;
+        }
+
+        if (!request.Apply)
+        {
+            Console.WriteLine($"Preview (nothing updated). Re-run with --apply to update {due.Count} app(s). Installers run silently; some ask for elevation.");
+            return Ok;
+        }
+
+        var started = DateTimeOffset.UtcNow;
+        var outcomes = SetupOutput.WithCancel((progress, token) => service.Upgrade(due, progress, token));
+        var runId = SetupRun.NewId(started, "apps-update");
+        var run = SetupRun.Create(runId, "apps-update", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), outcomes, []);
+        new SetupStore().WriteRunRecord(runId, run.ToJson());
+
+        Console.WriteLine("Result:");
+        foreach (var e in run.Apps)
+        {
+            Console.WriteLine($"  {UpdateWord(e.Status),-17} {e.AppId,-13} {e.Detail}");
+        }
+
+        Console.Error.WriteLine($"Recorded as history run {runId}.");
+        return run.Ok ? Ok : Failed;
+    }
+
+    private static int Uninstall(AppCatalog catalog, Request request)
+    {
+        var chosen = new List<AppPackage>();
+        foreach (var id in request.AppIds)
+        {
+            if (catalog.ById(id) is not { } package)
+            {
+                Console.Error.WriteLine($"Unknown app '{id}' (see 'apps list').");
+                return UsageCode;
+            }
+
+            if (!package.Uninstallable)
+            {
+                Console.Error.WriteLine($"Mesura doesn't uninstall '{id}': it is not one of the apps whose uninstall it has verified. Remove it in Windows' Settings, Installed apps.");
+                return UsageCode;
+            }
+
+            chosen.Add(package);
+        }
+
+        var reader = new SystemStateReader();
+        var service = new AppInstallService(new WingetRunner(reader.User, reader.IsElevated), AppDetectors.For(reader.User));
+        var plan = service.BuildPlan(chosen);
+        foreach (var item in plan)
+        {
+            Console.WriteLine($"  {(item.State switch { InstallState.Installed => "uninstall", InstallState.NotInstalled => "not installed", _ => "state unknown" }),-26} {item.Package.Id,-13} {item.Package.Name}");
+        }
+
+        var due = plan.Where(i => i.State == InstallState.Installed).Select(i => i.Package).ToList();
+        if (due.Count == 0)
+        {
+            var unknown = plan.Any(i => i.State == InstallState.Unknown);
+            Console.WriteLine(unknown ? "Nothing to uninstall that winget confirmed." : "Nothing to uninstall.");
+            return unknown ? Failed : Ok;
+        }
+
+        if (!reader.IsElevated)
+        {
+            Console.Error.WriteLine("Uninstalling needs Mesura to run as administrator (run this from an administrator terminal). " + (request.Apply ? "Nothing was started." : "This is only a preview."));
+            return request.Apply ? Failed : Ok;
+        }
+
+        if (!request.Apply)
+        {
+            Console.WriteLine($"Preview (nothing uninstalled). Re-run with --apply to uninstall {due.Count} app(s). The app's own settings and documents are normally kept.");
+            return Ok;
+        }
+
+        var started = DateTimeOffset.UtcNow;
+        var outcomes = SetupOutput.WithCancel((progress, token) => service.Uninstall(due, progress, token));
+        var runId = SetupRun.NewId(started, "apps-uninstall");
+        var run = SetupRun.Create(runId, "apps-uninstall", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), outcomes, []);
+        new SetupStore().WriteRunRecord(runId, run.ToJson());
+
+        Console.WriteLine("Result:");
+        foreach (var e in run.Apps)
+        {
+            Console.WriteLine($"  {UninstallWord(e.Status),-17} {e.AppId,-13} {e.Detail}");
+        }
+
+        Console.Error.WriteLine($"Recorded as history run {runId}.");
+        return run.Ok ? Ok : Failed;
+    }
+
+    private static string UninstallWord(InstallStatus status) => status switch
+    {
+        InstallStatus.Succeeded => "uninstalled",
+        InstallStatus.SucceededRebootRequired => "restart needed",
+        InstallStatus.AlreadyInstalled => "not installed",
+        InstallStatus.Cancelled => "cancelled",
+        InstallStatus.WingetUnavailable => "no winget",
+        _ => "FAILED",
+    };
+
+    private static string UpdateWord(InstallStatus status) => status switch
+    {
+        InstallStatus.Succeeded => "updated",
+        InstallStatus.SucceededRebootRequired => "restart needed",
+        InstallStatus.AlreadyInstalled => "up to date",
+        InstallStatus.Cancelled => "cancelled",
+        InstallStatus.WingetUnavailable => "no winget",
+        _ => "FAILED",
+    };
 
     private static string Origin(AppPackage p) => SetupOutput.Origin(p);
 

@@ -11,8 +11,8 @@ namespace Mesura.Setup.Windows.Apps;
 
 /// <summary>
 /// The one place that launches winget, and so the one owner of a process launch and kill besides the planned
-/// PresentMon runner (architecture §2.3). It runs only three fixed command shapes — <c>--version</c>, and
-/// <c>list --exact --id</c> and <c>install --exact --id</c> for a catalog package — with arguments passed as a list,
+/// PresentMon runner (architecture §2.3). It runs only six fixed command shapes — <c>--version</c>, and
+/// <c>list --exact --id</c> (also with <c>--upgrade-available</c>), <c>install --exact --id</c>, <c>upgrade --exact --id</c> and <c>uninstall --exact --id</c> for a catalog package — with arguments passed as a list,
 /// never a shell string. Install runs unattended (<c>--silent</c>, agreements accepted) because the user previewed and
 /// confirmed the batch first.
 /// <para>
@@ -102,6 +102,55 @@ public sealed class WingetRunner : IWingetRunner
         }
 
         var run = Run(arguments, package.Context, onOutput, InstallTimeout, cancellationToken);
+        return new WingetRunResult(run.Launched, run.ExitCode, "", run.Refusal);
+    }
+
+    /// <summary>Asks whether winget offers an update: <c>list --exact --id --upgrade-available</c>, in the context the update would run in.</summary>
+    public WingetRunResult ListUpgradeAvailable(AppPackage package)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        var run = Run(
+            ["list", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--upgrade-available", "--accept-source-agreements", "--disable-interactivity"],
+            package.Context, null, ListTimeout, CancellationToken.None);
+        return new WingetRunResult(run.Launched, run.ExitCode, run.Stdout, run.Refusal);
+    }
+
+    public WingetRunResult Upgrade(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        if (package.Source == AppSource.Manual || !package.Upgradable)
+        {
+            return WingetRunResult.NotLaunched;
+        }
+
+        // No --include-unknown (an app whose installed version winget can't read isn't touched) and no --force: winget's own refusals stand.
+        var run = Run(
+            ["upgrade", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--silent",
+             "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"],
+            package.Context, onOutput, InstallTimeout, cancellationToken);
+        return new WingetRunResult(run.Launched, run.ExitCode, "", run.Refusal);
+    }
+
+    public WingetRunResult Uninstall(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        if (package.Source == AppSource.Manual || !package.Uninstallable)
+        {
+            return WingetRunResult.NotLaunched;
+        }
+
+        if (!_elevated)
+        {
+            // An MSI uninstall without administrator rights fails with installer code 1603, and some vendor uninstallers exit 0 having done nothing:
+            // not started rather than started to fail.
+            return WingetRunResult.Refused("Uninstalling an app needs Mesura to run as administrator.");
+        }
+
+        // No --force (winget's own refusals stand) and no --purge/--preserve (those are for portable packages).
+        var run = Run(
+            ["uninstall", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--silent",
+             "--accept-source-agreements", "--disable-interactivity"],
+            package.Context, onOutput, InstallTimeout, cancellationToken);
         return new WingetRunResult(run.Launched, run.ExitCode, "", run.Refusal);
     }
 

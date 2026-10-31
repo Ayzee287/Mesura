@@ -78,50 +78,6 @@ public sealed class AppMod(AppPackage package, AppItem parent, Func<bool> winget
 /// <summary>A package Setup's Apps card shows: an app or a customisation, by its own name and icon (<see cref="AppGlyph"/>).</summary>
 public sealed record PlanAppChip(string Name, string Id);
 
-/// <summary>The folder choice of the Apps page, kept out of the item so the item stays about what it shows.</summary>
-internal static class InstallFolderDialog
-{
-    public static void Choose(Services services, string id, string? current)
-    {
-        var title = Loc.Get("Apps.FolderTitle");
-        if (current is { Length: > 0 })
-        {
-            var pick = ConfirmDialog.Choose(title, Loc.Format("Apps.FolderChosen", current), Loc.Get("Apps.FolderChange"), Loc.Get("Apps.FolderReset"), "", out _);
-            if (pick == false)
-            {
-                services.Settings.InstallFolders?.Remove(id);
-                services.SaveSettings();
-                return;
-            }
-
-            if (pick is null)
-            {
-                return;
-            }
-        }
-
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = title, Multiselect = false };
-        if (current is { Length: > 0 } && Directory.Exists(current))
-        {
-            dialog.InitialDirectory = current;
-        }
-
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-
-        if (Mesura.Setup.Windows.Apps.InstallFolders.Valid(dialog.FolderName) is not { } folder)
-        {
-            ConfirmDialog.Tell(title, Loc.Get("Apps.FolderRefused"));
-            return;
-        }
-
-        (services.Settings.InstallFolders ??= [])[id] = folder;
-        services.SaveSettings();
-    }
-}
-
 /// <summary>One app in the Apps list: its icon, its state here, whether it is ticked, and its customisations.</summary>
 public sealed class AppItem : Observable
 {
@@ -130,42 +86,15 @@ public sealed class AppItem : Observable
     private InstallState _state = InstallState.Unknown;
     private bool _checking = true;
 
-    public AppItem(AppPackage package, Func<bool> wingetMissing, Func<AppPackage, bool> canDetect, Func<string, string?>? folderOf = null, Action<string, string?>? chooseFolder = null)
+    public AppItem(AppPackage package, Func<bool> wingetMissing, Func<AppPackage, bool> canDetect, Func<bool>? elevated = null)
     {
         Package = package;
+        _elevated = elevated ?? (() => false);
         _wingetMissing = wingetMissing;
         Detectable = canDetect(package);
-        _folderOf = folderOf;
-        ChooseFolder = new RelayCommand(() =>
-        {
-            if (chooseFolder is not null)
-            {
-                chooseFolder(package.Id, _folderOf?.Invoke(package.Id));
-                Raise(nameof(InstallFolder));
-                Raise(nameof(FolderTip));
-                Raise(nameof(Note));
-            }
-        }, () => package.InstallLocation && CanSelect);
     }
 
-    private readonly Func<string, string?>? _folderOf;
-
-    /// <summary>Chooses (or, from the dialog's Reset, clears) the folder this app installs to; only where its installer takes one.</summary>
-    public RelayCommand ChooseFolder { get; }
-
-    /// <summary>The folder the user chose for the next install, or empty for the installer's own default.</summary>
-    public string InstallFolder => Package.InstallLocation ? _folderOf?.Invoke(Package.Id) ?? "" : "";
-
-    /// <summary>Whether the card offers a folder at all: only for installers that take one.</summary>
-    /// <summary>Whether this app's installer takes a folder at all; the button is not drawn for the ones that don't (it would only say "not here").</summary>
-    public bool SupportsFolder => Package.InstallLocation;
-
-    public bool CanChooseFolder => Package.InstallLocation && !_checking && _state != InstallState.Installed;
-
-    /// <summary>What the folder button says: the chosen folder, the default, or why there is no choice (the honest limit).</summary>
-    public string FolderTip => !Package.InstallLocation ? Loc.Get("Apps.FolderNone")
-        : InstallFolder.Length > 0 ? Loc.Format("Apps.FolderChosen", InstallFolder)
-        : Loc.Get("Apps.FolderDefault");
+    private readonly Func<bool> _elevated;
 
     public AppPackage Package { get; }
 
@@ -186,13 +115,10 @@ public sealed class AppItem : Observable
     public bool HasMods => Mods.Count > 0;
 
     /// <summary>
-    /// The app's note, which says what an install would do. Once the app is installed and carried by Mesura, the card has
-    /// the Installed pill and the link to Configurations, so a sentence repeating both is dropped.
+    /// The app's note, which says what an install would do (empty once the app is installed and Mesura carries its settings, and for an app without a
+    /// note: the card then has no tooltip).
     /// </summary>
-    public string Note => ShowConfigureLink ? "" : InstallFolder.Length > 0 && !_checking && _state != InstallState.Installed ? Loc.Format("Apps.InstallsTo", InstallFolder) : Loc.AppNote(Package.Id, Package.Note);
-
-    /// <summary>Whether the card offers the way to Configurations: the app is installed and Mesura carries its settings.</summary>
-    public bool ShowConfigureLink => !_checking && _state == InstallState.Installed && Port is not null;
+    public string Note => !_checking && _state == InstallState.Installed && Port is not null ? "" : Loc.AppNote(Package.Id, Package.Note);
 
     /// <summary>The config port that sets this app up after an install, if Mesura has one.</summary>
     public ConfigPortDefinition? Port => ConfigCatalog.ById(Package.Id);
@@ -215,8 +141,10 @@ public sealed class AppItem : Observable
         }
     }
 
+    /// <summary>The state in one word; for an installed app with a newer version it is the action itself: "Update".</summary>
     public string StateText => _checking ? Loc.Get("State.Checking") : _state switch
     {
+        InstallState.Installed when UpdateAvailable => Loc.Get("Apps.Update"),
         InstallState.Installed => Loc.Get("Apps.Installed"),
         InstallState.NotInstalled => Loc.Get("Apps.NotInstalled"),
         _ when _wingetMissing() => Loc.Get("Apps.NoWinget"),
@@ -225,15 +153,57 @@ public sealed class AppItem : Observable
 
     public string StateTone => _checking ? Tone.Muted : _state switch
     {
+        InstallState.Installed when UpdateAvailable => Tone.Accent,
         InstallState.Installed => Tone.Ok,
         InstallState.NotInstalled => Tone.Neutral,
         _ => Tone.Warn,
     };
 
+    /// <summary>Whether the card shows an uninstall button: an installed app whose uninstall Mesura has verified (never the others, so no button that might do nothing).</summary>
+    public bool SupportsUninstall => !_checking && _state == InstallState.Installed && Package.Uninstallable;
+
+    /// <summary>Uninstalling needs administrator rights; without them the button is shown but disabled, and says why.</summary>
+    public bool CanUninstall => SupportsUninstall && _elevated();
+
+    public string UninstallTip => _elevated() ? Loc.Format("Apps.UninstallTip", Name) : Loc.Get(Loc.AdminKey("Apps.UninstallNeedsAdmin"));
+
+    public string UninstallAutomationName => _elevated() ? Loc.Format("Apps.UninstallAutomation", Name) : Loc.Format("Apps.UninstallAutomationNeedsAdmin", Name);
+
+    private UpdateCheck? _update;
+
+    /// <summary>Whether winget offers a newer version of this installed app (only asked for the apps Mesura updates, so the action never shows for the others).</summary>
+    public bool UpdateAvailable => !_checking && _state == InstallState.Installed && _update is { State: UpdateState.Available };
+
+    /// <summary>The state pill is plain text unless it is the Update action (the card draws one or the other).</summary>
+    public bool NoUpdate => !UpdateAvailable;
+
+    /// <summary>What the update would do, for the tooltip.</summary>
+    public string UpdateTip => _update is { InstalledVersion: { } from, AvailableVersion: { } to } ? Loc.Format("Apps.UpdateTip", from, to) : Loc.Get("Apps.UpdateTipPlain");
+
+    /// <summary>The name assistive technology reads for the button, which names its app (a row of identical "Update" buttons says nothing).</summary>
+    public string UpdateAutomationName => _update?.AvailableVersion is { } to ? Loc.Format("Apps.UpdateAutomationTo", Name, to) : Loc.Format("Apps.UpdateAutomation", Name);
+
+    /// <summary>One line of the confirmation: the app and, when known, the versions.</summary>
+    public string UpdateLine => _update is { InstalledVersion: { } from, AvailableVersion: { } to } ? Loc.Format("Apps.UpdateLine", Name, from, to) : Name;
+
+    public void SetUpdate(UpdateCheck? check)
+    {
+        _update = check;
+        Raise(nameof(UpdateAvailable));
+        Raise(nameof(UpdateTip));
+        Raise(nameof(UpdateAutomationName));
+        Raise(nameof(UpdateLine));
+    }
+
     public void Update(InstallState state)
     {
         _state = state;
         _checking = false;
+        if (state != InstallState.Installed)
+        {
+            _update = null; // nothing installed, nothing to update
+        }
+
         if (!CanSelect)
         {
             _selected = false;
@@ -274,18 +244,17 @@ public sealed class AppsViewModel : Observable, IPageState
     private string _progress = "";
     private CancellationTokenSource? _cancel;
 
-    public AppsViewModel(Services services, Action<string?> openActivity, Action openConfigurations)
+    public AppsViewModel(Services services, Action<string?> openActivity)
     {
         _services = services;
         _openActivity = openActivity;
-        OpenConfigurations = new RelayCommand(openConfigurations);
         View = new ListCollectionView(Items) { Filter = Matches };
 
         if (services.Apps.Catalog is { } catalog)
         {
             foreach (var package in catalog.Packages.Where(p => p.Listed && p.Customizes.Length == 0))
             {
-                var item = new AppItem(package, () => _wingetMissing, services.Installer.CanDetect, id => services.Settings.InstallFolders?.GetValueOrDefault(id), (id, current) => InstallFolderDialog.Choose(services, id, current));
+                var item = new AppItem(package, () => _wingetMissing, services.Installer.CanDetect, () => services.Reader.IsElevated);
                 item.PropertyChanged += OnItemChanged;
                 foreach (var mod in catalog.Packages.Where(p => p.Customizes.Equals(package.Id, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -312,6 +281,9 @@ public sealed class AppsViewModel : Observable, IPageState
 
         Refresh = new AsyncCommand(DetectAsync, () => !_busy, Fail);
         Install = new AsyncCommand(InstallAsync, () => !_busy && !_services.Changing && Chosen().Count > 0, Fail);
+        UpdateApp = new AsyncCommand<AppItem>(item => UpdateAsync(item is null ? [] : [item]), item => !_busy && !_services.Changing && item?.UpdateAvailable == true, Fail);
+        UninstallApp = new AsyncCommand<AppItem>(item => UninstallAsync(item), item => !_busy && !_services.Changing && item?.CanUninstall == true, Fail);
+        UpdateAll = new AsyncCommand(() => UpdateAsync([.. Items.Where(i => i.UpdateAvailable)]), () => !_busy && !_services.Changing && UpdatesCount > 0, Fail);
         Cancel = new RelayCommand(() =>
         {
             _cancel?.Cancel();
@@ -370,14 +342,26 @@ public sealed class AppsViewModel : Observable, IPageState
 
     public AsyncCommand Install { get; }
 
+    /// <summary>Updates one app through winget (the button on its card).</summary>
+    public AsyncCommand<AppItem> UpdateApp { get; }
+
+    /// <summary>Uninstalls one app through winget (the button on its card); only for the apps Mesura has verified, and only as administrator.</summary>
+    public AsyncCommand<AppItem> UninstallApp { get; }
+
+    /// <summary>Updates every app that has an update on offer.</summary>
+    public AsyncCommand UpdateAll { get; }
+
+    public int UpdatesCount => Items.Count(i => i.UpdateAvailable);
+
+    public bool HasUpdates => UpdatesCount > 0;
+
+    public string UpdateAllText => Loc.Format("Apps.UpdateAll", UpdatesCount);
+
     public RelayCommand Cancel { get; }
 
     public RelayCommand GetWinget { get; }
 
     public RelayCommand ClearSelection { get; }
-
-    /// <summary>Opens Configurations, where an installed app's settings are changed.</summary>
-    public RelayCommand OpenConfigurations { get; }
 
     /// <summary>Raised when what is ticked changes (Setup shows the same choice on its Apps card).</summary>
     public event Action? SelectionChanged;
@@ -461,7 +445,8 @@ public sealed class AppsViewModel : Observable, IPageState
             }
 
             var installed = Items.Count(i => i.State == InstallState.Installed);
-            return Loc.Format("Apps.Status", installed, Items.Count - installed);
+            var text = Loc.Format("Apps.Status", installed, Items.Count - installed);
+            return UpdatesCount > 0 ? $"{text} · {Loc.Plural("Apps.StatusUpdates", UpdatesCount)}" : text;
         }
     }
 
@@ -488,46 +473,31 @@ public sealed class AppsViewModel : Observable, IPageState
 
     // ---- Set-up source -----------------------------------------------------------------------------------------------
 
-    public bool ConfigureDefaults
-    {
-        get => _services.Settings.ConfigureAfterInstall == "defaults";
-        set => SetSource(value, "defaults");
-    }
-
-    public bool ConfigureSaved
-    {
-        get => _services.Settings.ConfigureAfterInstall == "saved" && SavedAvailable;
-        set => SetSource(value, "saved");
-    }
-
-    public bool ConfigureNone
-    {
-        get => _services.Settings.ConfigureAfterInstall == "none" || (_services.Settings.ConfigureAfterInstall == "saved" && !SavedAvailable);
-        set => SetSource(value, "none");
-    }
-
     public bool SavedAvailable => _services.Settings.SavedConfiguration is { } path && File.Exists(path);
 
     public string SavedHint => SavedAvailable ? Path.GetFileName(_services.Settings.SavedConfiguration!) : Loc.Get("Apps.NoSavedConfiguration");
 
     /// <summary>The chosen set-up source in words, for confirmations and Setup's Apps card.</summary>
-    public string SourceText => ConfigureNone ? Loc.Get("Apps.SourceNoneLine")
-        : ConfigureSaved ? Loc.Get("Apps.SourceSaved") : Loc.Get("Apps.SourceDefaults");
+    public string SourceText => SourceName(_services.Settings.ConfigureAfterInstall == "saved" && !SavedAvailable ? "none" : _services.Settings.ConfigureAfterInstall);
 
-    private void SetSource(bool value, string source)
+    private static string SourceName(string source) => source switch
     {
-        if (!value || _services.Settings.ConfigureAfterInstall == source)
+        "none" => Loc.Get("Apps.SourceNoneLine"),
+        "saved" => Loc.Get("Apps.ChoiceCustom"),
+        _ => Loc.Get("Apps.ChoiceMesura"),
+    };
+
+    /// <summary>Remembers the source chosen for an install: Setup (Optimize) installs apps from the same one afterwards.</summary>
+    private void RememberSource(string source)
+    {
+        if (_services.Settings.ConfigureAfterInstall == source)
         {
             return;
         }
 
         _services.Settings.ConfigureAfterInstall = source;
         _services.SaveSettings();
-        Raise(nameof(ConfigureDefaults));
-        Raise(nameof(ConfigureSaved));
-        Raise(nameof(ConfigureNone));
         Raise(nameof(SourceText));
-        Raise(nameof(SelectionSummary));
         SelectionChanged?.Invoke();
     }
 
@@ -536,8 +506,6 @@ public sealed class AppsViewModel : Observable, IPageState
     {
         Raise(nameof(SavedAvailable));
         Raise(nameof(SavedHint));
-        Raise(nameof(ConfigureSaved));
-        Raise(nameof(ConfigureNone));
         Raise(nameof(SourceText));
         Raise(nameof(SelectionSummary));
         SelectionChanged?.Invoke();
@@ -560,9 +528,7 @@ public sealed class AppsViewModel : Observable, IPageState
                 return _loaded ? Loc.Get("Apps.NothingSelected") : "";
             }
 
-            var configured = WillConfigure(chosen);
-            var text = Loc.Plural("Apps.Selected", chosen.Count);
-            return configured > 0 ? $"{text} · {Loc.Plural("Apps.WillConfigure", configured)}" : text;
+            return Loc.Plural("Apps.Selected", chosen.Count);
         }
     }
 
@@ -605,6 +571,7 @@ public sealed class AppsViewModel : Observable, IPageState
             return;
         }
 
+        IReadOnlyList<AppPlanItem>? updatePlan = null;
         Busy = true;
         try
         {
@@ -629,24 +596,62 @@ public sealed class AppsViewModel : Observable, IPageState
             Raise(nameof(Status));
             Raise(nameof(SelectionSummary));
             SelectionChanged?.Invoke();
+            updatePlan = plan;
         }
         finally
         {
             Busy = false;
         }
+
+        if (updatePlan is not null)
+        {
+            await CheckUpdatesAsync(updatePlan);
+        }
     }
 
-    private async Task InstallAsync()
+    /// <summary>
+    /// Asks winget which installed apps have a newer version, after the states are on screen (it is one more winget call per app Mesura
+    /// updates, so it never delays the list). A failed question leaves the app without an update action, never with a wrong one.
+    /// </summary>
+    private async Task CheckUpdatesAsync(IReadOnlyList<AppPlanItem> plan)
     {
-        var chosen = Chosen();
-        var (bundle, configError) = _services.AfterInstallBundle();
-        var source = _services.Settings.ConfigureAfterInstall == "saved" ? Loc.Get("Apps.SourceSaved") : Loc.Get("Apps.SourceDefaults");
-        var configured = bundle is null ? [] : chosen.Where(p => ConfigCatalog.ById(p.Id) is { } port && bundle.Apps.ContainsKey(port.Id)).Select(p => p.Id).ToHashSet();
-        var lines = chosen.Select(p => configured.Contains(p.Id) ? Loc.Format("Apps.ConfirmLineConfigured", p.Name, source) : p.Name).ToList();
-        var note = Loc.Get("Apps.ConfirmNote") + (configured.Count > 0 ? " " + Loc.Get("Apps.ConfirmKeepsSettings") : "")
-            + (configError is null ? "" : " " + Loc.Get("Apps.SavedUnreadable"))
-            + (!_services.SameUser ? " " + Loc.Get("Apps.ConfigBlocked") : "");
-        if (!ConfirmDialog.Ask(Loc.Plural("Apps.ConfirmTitle", chosen.Count), "", lines, note, Loc.Get("Apps.Install")))
+        IReadOnlyList<UpdateCheck> checks;
+        try
+        {
+            checks = await Task.Run(() => _services.Installer.FindUpdates(plan));
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            _services.Log($"Apps: the update check failed: {e.Message}");
+            checks = [];
+        }
+
+        foreach (var item in Items)
+        {
+            item.SetUpdate(checks.FirstOrDefault(c => c.Package.Id == item.Package.Id));
+        }
+
+        _services.Log($"Apps: {checks.Count(c => c.State == UpdateState.Available)} update(s) available among {checks.Count} checked"
+            + (checks.Any(c => c.State == UpdateState.Unknown) ? $", {checks.Count(c => c.State == UpdateState.Unknown)} could not be checked." : "."));
+        Raise(nameof(UpdatesCount));
+        Raise(nameof(HasUpdates));
+        Raise(nameof(UpdateAllText));
+        Raise(nameof(Status));
+        RaiseCommands();
+    }
+
+    /// <summary>
+    /// Updates the given apps with winget, one at a time, and shows what really happened: the service asks winget again afterwards whether an
+    /// update is still offered, so "updated" is never only an exit code. Recorded in the history as <c>apps-update</c>.
+    /// </summary>
+    private async Task UpdateAsync(IReadOnlyList<AppItem> items)
+    {
+        if (items.Count == 0 || _services.Changing)
+        {
+            return;
+        }
+
+        if (!ConfirmDialog.Ask(Loc.Plural("Apps.UpdateConfirmTitle", items.Count), "", [.. items.Select(i => i.UpdateLine)], Loc.Get("Apps.UpdateConfirmNote"), Loc.Get("Apps.Update")))
         {
             return;
         }
@@ -660,7 +665,207 @@ public sealed class AppsViewModel : Observable, IPageState
         {
             var started = DateTimeOffset.UtcNow;
             var token = _cancel.Token;
-            var setup = PendingSetup.Create(SetupRun.NewId(started, "apps-install"), SetupRun.Stamp(started), null, _services.Settings.ConfigureAfterInstall,
+            var packages = items.Select(i => i.Package).ToList();
+            var outcomes = await Task.Run(() => _services.Installer.Upgrade(packages, (package, line) =>
+            {
+                if (line.Length > 0)
+                {
+                    // winget's own lines (English) go to the session log; the page says which app is being updated.
+                    _services.Log($"  {line}");
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => Progress = Loc.Format("Apps.UpdatingProgress", package.Name));
+                }
+            }, token));
+
+            var runId = SetupRun.NewId(started, "apps-update");
+            var run = SetupRun.Create(runId, "apps-update", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), outcomes, []);
+            string? recordError = null;
+            try
+            {
+                _services.Store.WriteRunRecord(runId, run.ToJson());
+                _services.Recorded(run);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                recordError = e.Message;
+            }
+
+            ShowUpdateResult(run, recordError, token.IsCancellationRequested);
+        }
+        finally
+        {
+            change.Dispose();
+            _cancel.Dispose();
+            _cancel = null;
+            Raise(nameof(Installing));
+            Progress = "";
+            Busy = false;
+        }
+
+        await DetectAsync();
+    }
+
+    /// <summary>
+    /// Uninstalls one app with winget and shows what really happened: the service asks winget again afterwards whether the app is still installed,
+    /// so "uninstalled" is never only an exit code. Recorded in the history as <c>apps-uninstall</c>. Nothing can be undone here: the app is gone
+    /// (its settings and documents in the profile are normally kept), and installing it again is the way back.
+    /// </summary>
+    private async Task UninstallAsync(AppItem? item)
+    {
+        if (item is null || !item.CanUninstall || _services.Changing)
+        {
+            return;
+        }
+
+        if (!ConfirmDialog.Ask(Loc.Format("Apps.UninstallConfirmTitle", item.Name), "", [], Loc.Get("Apps.UninstallConfirmNote"), Loc.Get("Apps.Uninstall")))
+        {
+            return;
+        }
+
+        _cancel = new CancellationTokenSource();
+        Raise(nameof(Installing));
+        Busy = true;
+        Progress = Loc.Get("Apps.Starting");
+        var change = _services.BeginChange();
+        try
+        {
+            var started = DateTimeOffset.UtcNow;
+            var token = _cancel.Token;
+            var outcomes = await Task.Run(() => _services.Installer.Uninstall([item.Package], (package, line) =>
+            {
+                if (line.Length > 0)
+                {
+                    _services.Log($"  {line}");
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => Progress = Loc.Format("Apps.UninstallingProgress", package.Name));
+                }
+            }, token));
+
+            var runId = SetupRun.NewId(started, "apps-uninstall");
+            var run = SetupRun.Create(runId, "apps-uninstall", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), outcomes, []);
+            string? recordError = null;
+            try
+            {
+                _services.Store.WriteRunRecord(runId, run.ToJson());
+                _services.Recorded(run);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                recordError = e.Message;
+            }
+
+            ShowUninstallResult(item.Name, run, recordError, token.IsCancellationRequested);
+        }
+        finally
+        {
+            change.Dispose();
+            _cancel.Dispose();
+            _cancel = null;
+            Raise(nameof(Installing));
+            Progress = "";
+            Busy = false;
+        }
+
+        await DetectAsync();
+    }
+
+    private void ShowUninstallResult(string name, SetupRun run, string? recordError, bool cancelled)
+    {
+        var outcome = run.Apps.Single();
+        var done = outcome.Status is InstallStatus.Succeeded or InstallStatus.SucceededRebootRequired or InstallStatus.AlreadyInstalled;
+        var lines = RunActions.FollowUps(_services, run).Select(f => f.Text).ToList();
+        var technical = RunActions.TechnicalLines(run);
+        if (recordError is not null)
+        {
+            lines.Add(Loc.Get("Common.RecordFailed"));
+            technical = string.Join("\n", new[] { technical, recordError }.Where(t => t.Length > 0));
+        }
+
+        var recorded = recordError is null && _services.Store.ReadRunRecord(run.Id) is not null;
+        Result.Show(done && !cancelled ? Tone.Ok : Tone.Warn,
+            cancelled ? Loc.Format("Apps.UninstallResultCancelled", name)
+            : done ? Loc.Format("Apps.UninstallResultDone", name)
+            : Loc.Format("Apps.UninstallResultFailed", name),
+            string.Join("\n", lines), null, recorded ? () => _openActivity(run.Id) : null, technical);
+    }
+
+    private void ShowUpdateResult(SetupRun run, string? recordError, bool cancelled)
+    {
+        var outcomes = run.Apps;
+        var updated = outcomes.Count(o => o.Status is InstallStatus.Succeeded or InstallStatus.SucceededRebootRequired);
+        var problems = outcomes.Count(o => o.Status is InstallStatus.Failed or InstallStatus.Cancelled or InstallStatus.WingetUnavailable);
+        var lines = RunActions.FollowUps(_services, run).Select(f => f.Text).ToList();
+        var technical = RunActions.TechnicalLines(run);
+        if (recordError is not null)
+        {
+            lines.Add(Loc.Get("Common.RecordFailed"));
+            technical = string.Join("\n", new[] { technical, recordError }.Where(t => t.Length > 0));
+        }
+
+        var recorded = recordError is null && _services.Store.ReadRunRecord(run.Id) is not null;
+        Result.Show(problems > 0 || cancelled ? Tone.Warn : Tone.Ok,
+            cancelled ? Loc.Format("Apps.UpdateResultCancelled", updated, outcomes.Count)
+            : problems > 0 ? Loc.Format("Apps.UpdateResultPartial", updated, problems)
+            : Loc.Plural("Apps.UpdateResultDone", updated),
+            string.Join("\n", lines), null, recorded ? () => _openActivity(run.Id) : null, technical);
+    }
+
+    /// <summary>
+    /// How many of these packages a configuration source would set up: the ones that have a config port in its bundle (the others install as they
+    /// are, which is not an error).
+    /// </summary>
+    private static int CountIn(ConfigBundleFile? bundle, IEnumerable<AppPackage> packages) =>
+        bundle is null ? 0 : packages.Count(p => ConfigCatalog.ById(p.Id) is { } port && bundle.Apps.ContainsKey(port.Id));
+
+    /// <summary>The three ways to set the chosen apps up, one choice for the whole install: Mesura's, the user's own, or none.</summary>
+    private List<DialogChoice> ConfigChoices(IReadOnlyList<AppPackage> chosen, string current)
+    {
+        var total = chosen.Count;
+        var sameUser = _services.SameUser;
+        var (defaults, _) = _services.BundleFor("defaults");
+        var (saved, savedError) = _services.BundleFor("saved");
+        var savedFile = SavedAvailable;
+        var nMesura = CountIn(defaults, chosen);
+        var nCustom = CountIn(saved, chosen);
+        string Hint(int n, string countKey, string none) => !sameUser ? Loc.Get("Apps.ConfigBlockedShort") : n > 0 ? Loc.Format(countKey, n, total) : none;
+        var customHint = !savedFile ? Loc.Get("Apps.NoSavedConfiguration")
+            : savedError is not null ? Loc.Get("Apps.SavedUnreadable")
+            : Hint(nCustom, "Apps.ChoiceCountCustom", Loc.Get("Apps.ChoiceCustomNone"));
+        return
+        [
+            new DialogChoice("defaults", Loc.Get("Apps.ChoiceMesura"), Hint(nMesura, "Apps.ChoiceCountMesura", Loc.Get("Apps.ChoiceMesuraNone")), true, current == "defaults"),
+            new DialogChoice("saved", Loc.Get("Apps.ChoiceCustom"), customHint, savedFile && savedError is null, current == "saved" && savedFile),
+            new DialogChoice("none", Loc.Get("Apps.ChoiceStandard"), Loc.Get("Apps.ChoiceStandardHint"), true, current == "none" || (current == "saved" && !savedFile)),
+        ];
+    }
+
+    private async Task InstallAsync()
+    {
+        var chosen = Chosen();
+        var current = _services.Settings.ConfigureAfterInstall is "saved" or "none" ? _services.Settings.ConfigureAfterInstall : "defaults";
+        var note = Loc.Get("Apps.ConfirmNote") + " " + Loc.Get("Apps.ConfirmKeepsSettings");
+        var choice = ConfirmDialog.AskChoice(Loc.Plural("Apps.ConfirmTitle", chosen.Count), [.. chosen.Select(p => p.Name)], ConfigChoices(chosen, current), note, Loc.Get("Apps.Install"));
+        if (choice is null)
+        {
+            return;
+        }
+
+        RememberSource(choice);
+        var (bundle, configError) = _services.BundleFor(choice);
+        var source = SourceName(choice);
+        if (configError is not null)
+        {
+            _services.Log($"Apps: the saved settings couldn't be read: {configError}");
+        }
+
+        _cancel = new CancellationTokenSource();
+        Raise(nameof(Installing));
+        Busy = true;
+        Progress = Loc.Get("Apps.Starting");
+        var change = _services.BeginChange();
+        try
+        {
+            var started = DateTimeOffset.UtcNow;
+            var token = _cancel.Token;
+            var setup = PendingSetup.Create(SetupRun.NewId(started, "apps-install"), SetupRun.Stamp(started), null, choice,
                 [new SetupStep(StepKind.Apps, [.. chosen.Select(p => p.Id)])], null);
 
             // The same engine as Setup, with only its apps step; an unfinished setup from Setup is left as it is.
@@ -766,6 +971,9 @@ public sealed class AppsViewModel : Observable, IPageState
     {
         Refresh.RaiseCanExecuteChanged();
         Install.RaiseCanExecuteChanged();
+        UpdateApp.RaiseCanExecuteChanged();
+        UninstallApp.RaiseCanExecuteChanged();
+        UpdateAll.RaiseCanExecuteChanged();
         Cancel.RaiseCanExecuteChanged();
         ClearSelection.RaiseCanExecuteChanged();
     }

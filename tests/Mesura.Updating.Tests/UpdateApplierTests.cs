@@ -26,8 +26,47 @@ public sealed class UpdateApplierTests : IDisposable
 
         public void WaitUntilReplaceable(ApplyRequest request, TimeSpan timeout) => Waited++;
 
+        /// <summary>What the installer's registration says after the run (the service may have finished a client that was killed).</summary>
+        public string? Registered { get; set; }
+
+        public int SettledWaits { get; private set; }
+
+        /// <summary>Makes the installer-settling step throw, as a mutex abandoned by a killed client once did.</summary>
+        public bool SettleThrows { get; set; }
+
+        /// <summary>Makes starting the installer throw something nobody planned for.</summary>
+        public bool RunThrows { get; set; }
+
+        /// <summary>Another updater already runs: this one may not.</summary>
+        public bool AnotherUpdaterRuns { get; set; }
+
+        public IDisposable? AcquireSingleInstance() => AnotherUpdaterRuns ? null : new EmptyGate();
+
+        private sealed class EmptyGate : IDisposable
+        {
+            public void Dispose()
+            {
+            }
+        }
+
+        public string? InstalledVersion(ApplyRequest request) => Registered;
+
+        public void WaitUntilInstallerIdle(ApplyRequest request, TimeSpan timeout)
+        {
+            SettledWaits++;
+            if (SettleThrows)
+            {
+                throw new InvalidOperationException("the installer's mutex was abandoned");
+            }
+        }
+
         public int Run(ApplyRequest request, IReadOnlyList<string> arguments)
         {
+            if (RunThrows)
+            {
+                throw new ArgumentException("not planned for");
+            }
+
             Ran = true;
             Arguments.AddRange(arguments);
             return ExitCode;
@@ -163,6 +202,96 @@ public sealed class UpdateApplierTests : IDisposable
 
         Assert.Equal((UpdateResult.Failed, reason, code), (result.Status, result.Reason, result.ExitCode));
         Assert.Equal(["--update-failed"], _runner.Restarted);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)]
+    public void A_client_that_was_killed_after_the_service_finished_the_install_is_a_success_not_a_failure(int code)
+    {
+        // Seen for real (2026-10-31): msiexec's client killed seconds into the install, the service finished it, the exit code said -1.
+        _runner.ExitCode = code;
+        _runner.Registered = "0.3.1";
+
+        var result = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal((UpdateResult.Succeeded, "installer-client-ended-early", code), (result.Status, result.Reason, result.ExitCode));
+        Assert.Equal(1, _runner.SettledWaits); // the service was given time to settle before the registration was read
+        Assert.Equal(["--updated-from 0.3.0"], _runner.Restarted);
+    }
+
+    [Theory]
+    [InlineData("0.3.0")]
+    [InlineData(null)]
+    public void A_client_that_was_killed_before_the_service_changed_anything_is_still_a_failure(string? registered)
+    {
+        _runner.ExitCode = -1;
+        _runner.Registered = registered;
+
+        var result = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal((UpdateResult.Failed, "installer-error"), (result.Status, result.Reason));
+        Assert.Equal(["--update-failed"], _runner.Restarted);
+    }
+
+    [Theory]
+    [InlineData(1603)]
+    [InlineData(1602)]
+    [InlineData(1618)]
+    [InlineData(1925)]
+    public void A_refusal_or_a_finished_rollback_is_taken_at_its_word_even_if_the_registration_names_the_new_version(int code)
+    {
+        _runner.ExitCode = code;
+        _runner.Registered = "0.3.1";
+
+        var result = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal(UpdateResult.Failed, result.Status);
+        Assert.Equal(0, _runner.SettledWaits);
+    }
+
+    [Fact]
+    public void An_installer_that_cannot_be_waited_for_is_still_judged_by_what_is_installed()
+    {
+        // A mutex abandoned by a killed installer client once threw here and stopped the updater without a word.
+        _runner.ExitCode = -1;
+        _runner.SettleThrows = true;
+        _runner.Registered = "0.3.1";
+
+        var result = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal((UpdateResult.Succeeded, "installer-client-ended-early"), (result.Status, result.Reason));
+        Assert.Equal(["--updated-from 0.3.0"], _runner.Restarted);
+    }
+
+    [Fact]
+    public void An_unexpected_error_in_the_updater_is_still_recorded_and_the_app_is_still_started()
+    {
+        _runner.RunThrows = true;
+
+        var result = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal((UpdateResult.Failed, "updater-error"), (result.Status, result.Reason));
+        Assert.Equal(["--update-failed"], _runner.Restarted);
+        Assert.Equal("updater-error", UpdateResult.TryRead(_store.Read(UpdateStore.ResultFile))!.Reason);
+    }
+
+    [Fact]
+    public void A_second_updater_changes_nothing_and_leaves_the_first_ones_result_and_restart_alone()
+    {
+        var first = new UpdateApplier(_store, _runner).Apply(Stage());
+        var recorded = _store.Read(UpdateStore.ResultFile);
+        var restarts = _runner.Restarted.ToList();
+        var installerRuns = _runner.Arguments.Count;
+        _runner.AnotherUpdaterRuns = true;
+
+        var second = new UpdateApplier(_store, _runner).Apply(Stage());
+
+        Assert.Equal(UpdateResult.Succeeded, first.Status);
+        Assert.Equal((UpdateResult.Failed, "updater-already-running"), (second.Status, second.Reason));
+        Assert.Equal(installerRuns, _runner.Arguments.Count); // the installer was not started again
+        Assert.Equal(restarts, _runner.Restarted); // no second restart of the app
+        Assert.Equal(recorded, _store.Read(UpdateStore.ResultFile)); // the first result is not overwritten with "failed"
     }
 
     [Fact]

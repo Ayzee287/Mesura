@@ -38,14 +38,46 @@ public partial class App : Application
     private EventWaitHandle? _openNoPrompt;
     private EventWaitHandle? _exit;
     private TrayIcon? _tray;
+    /// <summary>
+    /// Loads the design tokens, then the theme and the control templates, in that order. A style freezes the brushes it uses the moment it loads, so a
+    /// high-contrast theme (<see cref="HighContrastTheme"/>) has to recolour the tokens before Theme.xaml is read; applied afterwards it changed nothing.
+    /// </summary>
+    public void LoadResources()
+    {
+        var tokens = new ResourceDictionary { Source = new Uri("Tokens.xaml", UriKind.Relative) };
+        HighContrastTheme.ApplyIfOn(tokens);
+        Resources.MergedDictionaries.Add(tokens);
+        Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Theme.xaml", UriKind.Relative) });
+        Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Templates.xaml", UriKind.Relative) });
+    }
+
     private MainWindow? _window;
     private Services? _services;
     private bool _elevationAsked;
+
+    private static void OnToolTipOpening(object sender, System.Windows.Controls.ToolTipEventArgs e)
+    {
+        if (sender is FrameworkElement element && IsEmptyTip(element.ToolTip))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private static bool IsEmptyTip(object? tip) => tip switch
+    {
+        null => true,
+        string text => string.IsNullOrWhiteSpace(text),
+        System.Windows.Controls.ToolTip { Content: null } => true,
+        System.Windows.Controls.ToolTip { Content: string text } => string.IsNullOrWhiteSpace(text),
+        _ => false,
+    };
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         StartupLog.Note("stage: OnStartup");
+        // A tooltip bound to text that is empty (a note an app doesn't have) would open as a blank box: none opens without something to say.
+        EventManager.RegisterClassHandler(typeof(FrameworkElement), System.Windows.Controls.ToolTipService.ToolTipOpeningEvent, new System.Windows.Controls.ToolTipEventHandler(OnToolTipOpening));
         DispatcherUnhandledException += OnUnhandledException;
         bool Has(string argument) => e.Args.Any(a => a.Equals(argument, StringComparison.OrdinalIgnoreCase));
         var exitRequested = Has("--exit");

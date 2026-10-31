@@ -174,7 +174,7 @@ public class GlowBorder : Border
         var lit = LightField.Mode != LightingMode.Off && (_over || _near > 0.004);
         var center = !lit ? new Point(ActualWidth / 2, 0) : _over ? _pointer : _light;
 
-        _wash ??= Ramp(c, 0x46, GlowRadius);
+        _wash ??= Ramp(c, 0x2C, GlowRadius); // the wash sits behind text: at its centre the secondary text stays above 4.5:1 (docs/redesign-0.4.md)
         _edge ??= Ramp(c, 0xD2, GlowRadius * 0.8);
         _wash.Center = _wash.GradientOrigin = center;
         _edge.Center = _edge.GradientOrigin = center;

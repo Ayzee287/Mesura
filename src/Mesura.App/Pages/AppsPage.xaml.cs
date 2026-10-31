@@ -15,7 +15,7 @@ public partial class AppsPage : UserControl, IDockPage
     /// <summary>A click anywhere on an app's card ticks or unticks it (the tick box itself handles its own click).</summary>
     private void OnCardClick(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is DependencyObject source && FindParent<CheckBox>(source) is not null)
+        if (e.OriginalSource is DependencyObject source && (FindParent<CheckBox>(source) is not null || FindParent<Button>(source) is not null))
         {
             return;
         }

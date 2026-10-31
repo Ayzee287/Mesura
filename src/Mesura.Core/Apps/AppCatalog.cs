@@ -118,7 +118,7 @@ public sealed class AppCatalog
 
             packages.Add(new AppPackage(app.Id, app.WingetId ?? "", app.Name, app.Category ?? "Other", source,
                 app.Note ?? "", app.Url ?? "", app.Detectable ?? source != AppSource.Manual, app.Listed ?? true, context,
-                app.Detector ?? "", app.Customizes ?? "", app.InstallLocation ?? false));
+                app.Detector ?? "", app.Customizes ?? "", app.InstallLocation ?? false, Upgradable: app.Upgrade ?? false, Uninstallable: app.Uninstall ?? false));
         }
 
         if (packages.FirstOrDefault(p => p.Customizes.Length > 0 && !ids.Contains(p.Customizes)) is { } orphan)
@@ -168,7 +168,7 @@ public sealed class AppCatalog
 
     internal sealed record AppEntry(
         string? Id, string? WingetId, string? Name, string? Category, string? Source, string? Note, string? Url, bool? Detectable,
-        bool? Listed = null, string? Context = null, string? Detector = null, string? Customizes = null, bool? InstallLocation = null);
+        bool? Listed = null, string? Context = null, string? Detector = null, string? Customizes = null, bool? InstallLocation = null, bool? Upgrade = null, bool? Uninstall = null);
 
     internal sealed record BundleEntry(string? Id, string? Name, string? Description, List<string>? Apps);
 }

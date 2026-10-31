@@ -34,6 +34,57 @@ public static class WingetOutput
         return list.ExitCode == 0 && ContainsIdToken(list.Output, wingetId) ? InstallState.Installed : InstallState.Unknown;
     }
 
+    /// <summary>
+    /// Reads whether an update is offered from <c>winget list --exact --id &lt;wingetId&gt; --upgrade-available</c>. winget exits 0 both when an
+    /// update exists and when none does (and prints "No installed package found" in the second case, in the user's language), so the answer is
+    /// the id appearing as a token of a table line, never the exit code alone or any message. "Not installed" is up to date: nothing to update.
+    /// Anything else (not launched, a source error) is unknown, never "up to date".
+    /// </summary>
+    public static UpdateCheck ParseUpgradeAvailable(AppPackage package, WingetRunResult list)
+    {
+        ArgumentNullException.ThrowIfNull(package);
+        ArgumentNullException.ThrowIfNull(list);
+
+        if (!list.Launched)
+        {
+            return new UpdateCheck(package, UpdateState.Unknown);
+        }
+
+        if (list.ExitCode == NoApplicationsFound)
+        {
+            return new UpdateCheck(package, UpdateState.UpToDate);
+        }
+
+        if (list.ExitCode != 0)
+        {
+            return new UpdateCheck(package, UpdateState.Unknown);
+        }
+
+        foreach (var line in list.Output.Split('\n'))
+        {
+            var tokens = line.Split([' ', '\t', '\r'], StringSplitOptions.RemoveEmptyEntries);
+            var at = Array.FindIndex(tokens, token => token.Equals(package.WingetId, StringComparison.OrdinalIgnoreCase));
+            if (at < 0)
+            {
+                continue;
+            }
+
+            // After the id: the installed version, the available one, and the source when winget has more than one. A version with a
+            // qualifier ("< 1.0") or a name that moved the columns leaves the versions unread, not guessed.
+            var rest = tokens.Skip(at + 1).ToList();
+            if (rest.Count == 3 && rest[2] is "winget" or "msstore")
+            {
+                rest.RemoveAt(2);
+            }
+
+            return rest.Count == 2
+                ? new UpdateCheck(package, UpdateState.Available, rest[0], rest[1])
+                : new UpdateCheck(package, UpdateState.Available);
+        }
+
+        return new UpdateCheck(package, UpdateState.UpToDate);
+    }
+
     private static bool ContainsIdToken(string output, string wingetId) =>
         output.Split(['\n', '\r', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
             .Any(token => token.Equals(wingetId, StringComparison.OrdinalIgnoreCase));
@@ -79,6 +130,34 @@ public static class WingetOutput
         [0x8A150107] = (InstallStatus.Failed, "No network connection."),
         [0x8A15010A] = (InstallStatus.Failed, "Restart Windows, then try again."),
         [0x8A15010F] = (InstallStatus.Failed, "Blocked by policy."),
+    };
+
+    /// <summary>
+    /// Turns a <c>winget upgrade</c> exit code into an outcome status and a human detail. "No newer version" is not a failure, and success
+    /// is only a claim until the caller asks again whether an update is still offered.
+    /// </summary>
+    public static (InstallStatus Status, string Detail) DescribeUpgrade(int exitCode) => (uint)exitCode switch
+    {
+        0 => (InstallStatus.Succeeded, "Updated."),
+        0x8A15002B => (InstallStatus.AlreadyInstalled, $"Already up to date; winget has no newer version. ({FormatExitCode(exitCode)})"),
+        0x8A150014 => (InstallStatus.Failed, $"winget does not see this app as installed. ({FormatExitCode(exitCode)})"),
+        0x8A150109 => (InstallStatus.SucceededRebootRequired, "Updated; restart Windows to finish."),
+        0x8A15010B => (InstallStatus.SucceededRebootRequired, "Updated; the installer is restarting Windows."),
+        _ => DescribeInstall(exitCode),
+    };
+
+    /// <summary>
+    /// Turns a <c>winget uninstall</c> exit code into an outcome status and a human detail. Success is only a claim until the caller asks
+    /// again whether the app is still installed (winget exits 0 for a Firefox uninstall that removed nothing).
+    /// </summary>
+    public static (InstallStatus Status, string Detail) DescribeUninstall(int exitCode) => (uint)exitCode switch
+    {
+        0 => (InstallStatus.Succeeded, "Uninstalled."),
+        0x8A150014 => (InstallStatus.AlreadyInstalled, $"Not installed; nothing to remove. ({FormatExitCode(exitCode)})"),
+        0x8A150109 => (InstallStatus.SucceededRebootRequired, "Uninstalled; restart Windows to finish."),
+        0x8A15010B => (InstallStatus.SucceededRebootRequired, "Uninstalled; the uninstaller is restarting Windows."),
+        0x8A150030 => (InstallStatus.Failed, $"The uninstaller failed. ({FormatExitCode(exitCode)})"),
+        _ => DescribeInstall(exitCode),
     };
 
     /// <summary>Turns a <c>winget install</c> exit code into an outcome status and a human detail.</summary>

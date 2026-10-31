@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:l="clr-namespace:Mesura.App"
         xmlns:p="clr-namespace:Mesura.App.Pages"
-        Title="Mesura" Height="860" Width="1280" MinHeight="660" MinWidth="1020"
+        Title="Mesura" Height="860" Width="1280" MinHeight="420" MinWidth="720"
         WindowStartupLocation="CenterScreen" PreviewKeyDown="OnWindowKeyDown" PreviewMouseDown="OnWindowMouseDown" SizeChanged="OnWindowSizeChanged" Style="{StaticResource AppWindow}">
     <Grid>
         <Grid.RowDefinitions>
@@ -30,7 +30,7 @@
         </Grid>
 
         <!-- Where a page scrolls under the dock it fades into the field instead of being cut. -->
-        <Rectangle VerticalAlignment="Bottom" Height="34" IsHitTestVisible="False">
+        <Rectangle x:Name="DockFade" VerticalAlignment="Bottom" Height="34" IsHitTestVisible="False">
             <Rectangle.Fill>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                     <GradientStop Color="#0008090B" Offset="0" />
@@ -52,12 +52,17 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <!-- One row while the window is wide; below StackBelow (MainWindow.xaml.cs) the pages take the first row and the page's action and the access state the second. -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel x:Name="NavStrip" Orientation="Horizontal">
                         <!-- The mark is the way home: the Optimization page, the same place the first start opens. -->
                         <Button x:Name="HomeButton" Style="{StaticResource LogoButton}" Click="OnHomeClick" Margin="2,0,8,0"
                                 ToolTip="{l:T Nav.Home}" AutomationProperties.Name="{l:T Nav.Home}">
-                            <Image x:Name="Logo" Width="36" Height="36" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Image x:Name="Logo" Width="42" Height="42" RenderOptions.BitmapScalingMode="HighQuality" />
                         </Button>
                         <!-- Back: the page you came from (or closes what is open on this one). Only drawn when there is somewhere to go back to. -->
                         <Button x:Name="BackButton" Style="{StaticResource IconButton}" Content="{StaticResource IconBack}" Width="34" Height="34" Margin="0,0,4,0" Click="OnBackClick"
@@ -103,7 +108,7 @@
                     </StackPanel>
 
                     <!-- What the open page can do: its template (DockActions) over its own view model; empty on pages with nothing to apply. -->
-                    <Grid Grid.Column="1" Margin="10,0,0,0">
+                    <Grid x:Name="ActionHost" Grid.Column="1" Margin="10,0,0,0">
                         <Border x:Name="ActionDivider" Style="{StaticResource DockDivider}" HorizontalAlignment="Left" Visibility="Collapsed" />
                         <ContentControl x:Name="ActionZone" Margin="14,0,4,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Focusable="False" />
                     </Grid>

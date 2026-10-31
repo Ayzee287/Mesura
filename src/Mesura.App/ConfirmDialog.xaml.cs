@@ -43,6 +43,19 @@ public partial class ConfirmDialog : Window
         return result;
     }
 
+    /// <summary>
+    /// Asks to confirm and to choose one of several ways to do it, once for the whole action. Returns the chosen key, or <c>null</c> when the user
+    /// cancelled.
+    /// </summary>
+    public static string? AskChoice(string title, IReadOnlyList<string> items, IReadOnlyList<DialogChoice> choices, string note, string confirm)
+    {
+        var dialog = new ConfirmDialog(title, "", items, note, confirm, null);
+        dialog.ChoiceList.ItemsSource = choices;
+        dialog.ChoiceList.Visibility = Visibility.Visible;
+        dialog.ItemsHost.MaxHeight = 120;
+        return dialog.ShowOver() == true ? choices.FirstOrDefault(c => c.IsSelected && c.Enabled)?.Key : null;
+    }
+
     /// <summary>Asks to confirm; true when the user confirmed.</summary>
     public static bool Ask(string title, string message, IReadOnlyList<string>? items = null, string note = "", string? confirm = null)
     {
@@ -88,5 +101,25 @@ public partial class ConfirmDialog : Window
     {
         base.OnMouseLeftButtonDown(e);
         DragMove();
+    }
+}
+
+/// <summary>One way of doing an action, offered as a card in <see cref="ConfirmDialog.AskChoice"/>; disabled when it can't be used (with the reason as its hint).</summary>
+public sealed class DialogChoice(string key, string title, string hint, bool enabled, bool selected) : Observable
+{
+    private bool _selected = selected;
+
+    public string Key { get; } = key;
+
+    public string Title { get; } = title;
+
+    public string Hint { get; } = hint;
+
+    public bool Enabled { get; } = enabled;
+
+    public bool IsSelected
+    {
+        get => _selected;
+        set => Set(ref _selected, value);
     }
 }

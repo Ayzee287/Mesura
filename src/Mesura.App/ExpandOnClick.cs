@@ -38,6 +38,8 @@ public static class ExpandOnClick
             return;
         }
 
+        NameByCard(toggle, card);
+
         void Handler(object sender, MouseButtonEventArgs args)
         {
             if (args.Handled || !toggle.IsVisible || !toggle.IsEnabled || Interactive(args.OriginalSource as DependencyObject, card))
@@ -59,6 +61,50 @@ public static class ExpandOnClick
 
         card.MouseLeftButtonUp -= Handler;
         card.MouseLeftButtonUp += Handler;
+    }
+
+    /// <summary>
+    /// A row of identical chevrons all named "Details" tells a screen reader nothing: name each one after its card ("Windows settings, Details"), from the first text the card shows.
+    /// Only when the toggle still carries the generic name.
+    /// </summary>
+    private static void NameByCard(ToggleButton toggle, DependencyObject card)
+    {
+        var generic = Loc.Get("Common.Details");
+        if (System.Windows.Automation.AutomationProperties.GetName(toggle) != generic)
+        {
+            return;
+        }
+
+        var title = FirstText(card, toggle);
+        if (title.Length > 0)
+        {
+            System.Windows.Automation.AutomationProperties.SetName(toggle, $"{title}, {generic}");
+        }
+    }
+
+    private static string FirstText(DependencyObject node, DependencyObject skip)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+        {
+            var child = VisualTreeHelper.GetChild(node, i);
+            if (ReferenceEquals(child, skip))
+            {
+                continue;
+            }
+
+            if (child is TextBlock { Text.Length: > 1, IsVisible: true } text && !string.IsNullOrWhiteSpace(text.Text)) // one character is an icon glyph
+            {
+                return text.Text.Trim();
+            }
+
+            var inner = FirstText(child, skip);
+            if (inner.Length > 0)
+            {
+                return inner;
+            }
+        }
+
+        return "";
     }
 
     /// <summary>The card: the highest ancestor whose data context is the toggle's own (so a template's root, or the surface that carries the item).</summary>

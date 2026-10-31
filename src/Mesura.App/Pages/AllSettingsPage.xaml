@@ -30,7 +30,7 @@
         <!-- Header: the title with quick select and search, then the recommendation level -->
         <StackPanel>
             <Grid>
-                <l:PageHero Title="{l:T AllSettings.Title}" Subtitle="{Binding CountText}" HeroMargin="36,28,36,12" />
+                <l:PageHero Title="{l:T AllSettings.Title}" Subtitle="{Binding CountText}" HeroMargin="36,28,440,12" />
                 <!-- The actions sit over the hero's right edge (they are named, which a hero's own content can't be). -->
                 <Grid Margin="0,0,36,12" HorizontalAlignment="Right" VerticalAlignment="Bottom">
                 <StackPanel Orientation="Horizontal">

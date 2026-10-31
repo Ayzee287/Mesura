@@ -16,6 +16,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <TextBlock x:Name="TitleText" Style="{StaticResource SectionTitle}" FontSize="18" TextWrapping="Wrap" />
             <TextBlock x:Name="MessageText" Grid.Row="1" Style="{StaticResource Secondary}" Margin="0,8,0,0" />
@@ -35,7 +36,21 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-            <Border x:Name="NoteBox" Grid.Row="3" Style="{StaticResource Inset}" Margin="0,14,0,0" Visibility="Collapsed">
+            <!-- Optional: one choice for the whole action (the install's set-up source), as large selectable cards. -->
+            <ItemsControl x:Name="ChoiceList" Grid.Row="3" Margin="0,14,0,0" Visibility="Collapsed" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <RadioButton Style="{StaticResource ChoiceCard}" GroupName="DialogChoice" IsChecked="{Binding IsSelected}" IsEnabled="{Binding Enabled}" Margin="0,0,0,8"
+                                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Hint}">
+                            <StackPanel Margin="0,0,34,0">
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" />
+                                <TextBlock Text="{Binding Hint}" Style="{StaticResource Caption}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </RadioButton>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border x:Name="NoteBox" Grid.Row="4" Style="{StaticResource Inset}" Margin="0,6,0,0" Visibility="Collapsed">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -46,8 +61,8 @@
                     <TextBlock x:Name="NoteText" Grid.Column="1" Style="{StaticResource Caption}" />
                 </Grid>
             </Border>
-            <CheckBox x:Name="RememberBox" Grid.Row="4" Margin="0,16,0,0" Visibility="Collapsed" />
-            <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <CheckBox x:Name="RememberBox" Grid.Row="5" Margin="0,16,0,0" Visibility="Collapsed" />
+            <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button x:Name="CancelButton" IsCancel="True" MinWidth="96" Click="OnCancel" />
                 <Button x:Name="OkButton" Style="{StaticResource Primary}" IsDefault="True" MinWidth="110" Margin="8,0,0,0" Click="OnOk" />
             </StackPanel>

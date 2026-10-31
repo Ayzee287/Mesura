@@ -25,7 +25,7 @@ it installs, and makes no promise that your games run faster: see [What it does 
   registers an app again where Windows still has its copy.
 - **BIOS & Firmware** reads the board, BIOS, boot mode, Secure Boot, TPM, virtualization, memory profile and channels, Resizable BAR and the Intel microcode, and says which few firmware
   settings are worth a look on this PC, with the menu steps for its maker. It changes nothing in the firmware; its one action is Windows' own *restart to firmware*.
-- **Apps** installs apps through winget (browsers, Steam, Discord with Vencord, Telegram, AyuGram, Git, runtimes and the like), detecting what is there, with an install folder where the installer allows one.
+- **Apps** installs apps through winget (browsers, Steam, Discord with Vencord, Telegram, AyuGram, Git, runtimes and the like), detecting what is there. One choice for the whole install: Mesura's prepared settings, your own saved ones, or none.
 - **Configurations** exports and restores a short allowlist of app settings (Steam, Brave, Discord, Vencord, Spotify).
 - **Profiles** saves a PC's setup and runs it again on a new one.
 - **NVIDIA** (when the PC has a GeForce card): looks up the current WHQL driver, installs it trimmed with NVCleanstall
@@ -41,7 +41,7 @@ it installs, and makes no promise that your games run faster: see [What it does 
 ## Install
 
 **With the installer (recommended).** Download `Mesura-<version>-x64.msi` (English wizard) or `Mesura-<version>-x64-ru.msi` from the release, check its SHA-256 against `SHA256SUMS.txt`
-(`Get-FileHash .\Mesura-<version>-x64.msi`), and run it. Choose the folder, and whether to add a desktop shortcut; by default it installs for you alone, without administrator rights.
+(`Get-FileHash .\Mesura-<version>-x64.msi`), and run it. The wizard has two pages (welcome, Install); by default it installs for you alone, without administrator rights.
 Windows SmartScreen may warn, because the installer is not code-signed: *More info*, then *Run anyway*, once you have checked the hash. Mesura then updates itself (see below).
 Details, silent install and all-users install: `docs/installing.md`.
 

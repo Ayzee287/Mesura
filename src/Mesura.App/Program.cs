@@ -31,6 +31,7 @@ public static class Program
             StartupLog.Note("stage: creating the application");
             var app = new App();
             app.InitializeComponent();
+            app.LoadResources();
             StartupLog.Note("stage: resources loaded, running");
             var code = app.Run();
             StartupLog.Note($"exit code {code}");

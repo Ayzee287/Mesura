@@ -4,7 +4,7 @@
 
 | | Installer (`Mesura-<version>-x64.msi`) | Portable (`Mesura-<version>-win-x64.zip`) |
 |---|---|---|
-| Install | wizard: welcome, licence, folder and shortcuts, install | unzip the **whole** folder anywhere and run `Mesura.exe` |
+| Install | wizard: a welcome page, then Install (no licence, folder or feature pages) | unzip the **whole** folder anywhere and run `Mesura.exe` |
 | Registered with Windows | Apps > Installed apps; Start menu entry; optional desktop shortcut | nothing |
 | Updates | in the app (Settings > Updates), or by running a newer installer | the app downloads the verified installer and opens it |
 | Needs administrator rights | no (default: current user) | no |
@@ -16,13 +16,13 @@ Both are self-contained: no .NET or other runtime is needed on the PC. Windows 1
 Download `Mesura-<version>-x64.msi` (English wizard) or `Mesura-<version>-x64-ru.msi` (Russian wizard) and compare its SHA-256 with `SHA256SUMS.txt` of the same release. The installers are
 not Authenticode-signed (no certificate yet), so Windows may show a SmartScreen warning: *More info > Run anyway*.
 
-- **Where it installs.** Default: for the current user in `%LOCALAPPDATA%\Programs\Mesura`, no administrator rights, no UAC prompt. The wizard lets you choose the folder
-  (spaces and Cyrillic are fine). For every user in `Program Files\Mesura`: run `msiexec /i Mesura-<version>-x64.msi ALLUSERS=1` from an administrator prompt.
+- **Where it installs.** Default: for the current user in `%LOCALAPPDATA%\Programs\Mesura`, no administrator rights, no UAC prompt. There is no folder to choose in the wizard (0.4.2);
+  a silent install can still name one (below; spaces and Cyrillic are fine). For every user in `Program Files\Mesura`: run `msiexec /i Mesura-<version>-x64.msi ALLUSERS=1` from an administrator prompt.
   Mesura asks for administrator rights each time it starts (it changes Windows settings), so an all-users install is the hardened choice: a program in
   `Program Files` cannot be replaced by a process that is not elevated. **A per-user install does not ask for administrator rights at start**, because any program you run could replace
   `Mesura.exe` in your profile and be elevated in its place (`docs/security.md`); there is no setting to override this, and the window says so and how to get full access (install for all users). The per-user default matches where Mesura's Settings already expected an installed copy.
 - **What it installs.** `Mesura.exe` and its five native libraries, `cli\mesura.exe` (the command line, also the updater), the licence, third-party notices, README and changelog. A Start menu shortcut,
-  and a desktop shortcut if ticked. Registration in `HKCU\Software\Mesura` (or `HKLM` for all users): the install folder and version, which the app and the updater read.
+  and, on request (`ADDLOCAL=MainFeature,DesktopFeature`), a desktop shortcut. Registration in `HKCU\Software\Mesura` (or `HKLM` for all users): the install folder and version, which the app and the updater read.
 - **What it does not touch.** `%LOCALAPPDATA%\Mesura` (settings, history and backups, profiles, edited catalogs, logs, staged updates) is not part of the package: install, upgrade and
   uninstall leave it as it is. Uninstalling removes the program, the shortcuts and the registration only.
 - **Silent install:** `msiexec /i Mesura-<version>-x64.msi /qn INSTALLFOLDER="D:\Apps\Mesura" [ALLUSERS=1]`. Add `/l*v install.log` for a log.

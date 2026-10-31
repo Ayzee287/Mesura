@@ -72,6 +72,19 @@ public enum InstallState
 /// (Squirrel, most vendor exes, Chrome's MSI): choosing a folder for those would be ignored, so it is not offered.
 /// </param>
 /// <param name="InstallFolder">The folder the user chose for this install (set for one run, never in the catalog); <c>null</c> means the installer's own default.</param>
+/// <param name="Upgradable">
+/// Whether Mesura offers to update this app through winget. True only for an app whose winget manifest updates it in place
+/// reliably and which has no updater of its own to fight with; false for apps that update themselves (browsers, chat clients,
+/// game stores), install per user through a stub, or ship as a portable file. Updating is never offered for those: a button that
+/// might do nothing, or run a second updater next to the app's own, is worse than none.
+/// </param>
+/// <param name="Uninstallable">
+/// Whether Mesura offers to uninstall this app through winget. True only for an app whose uninstall was run for real, elevated, and
+/// checked afterwards (an MSI package, or a vendor installer whose uninstaller winget drives correctly); false for everything else, including
+/// apps winget reports as uninstalled while they remain (Firefox, seen 2026-10-30), apps with their own uninstaller flow (Steam, Discord) and
+/// anything whose uninstall would touch more than the app (Vencord patches Discord). Uninstalling needs Mesura to run as administrator: an MSI
+/// uninstall run without it fails (winget exit 0x8A150030, installer code 1603), so it is never offered without.
+/// </param>
 public sealed record AppPackage(
     string Id,
     string WingetId,
@@ -86,7 +99,9 @@ public sealed record AppPackage(
     string Detector = "",
     string Customizes = "",
     bool InstallLocation = false,
-    string? InstallFolder = null)
+    string? InstallFolder = null,
+    bool Upgradable = false,
+    bool Uninstallable = false)
 {
     /// <summary>The <c>--source</c> argument for this package.</summary>
     public string SourceArgument => Source == AppSource.MsStore ? "msstore" : "winget";
@@ -97,6 +112,22 @@ public sealed record AppBundle(string Id, string Name, string Description, IRead
 
 /// <summary>One line of an install plan: a package and whether it is already present.</summary>
 public sealed record AppPlanItem(AppPackage Package, InstallState State);
+
+/// <summary>Whether winget offers a newer version of an installed application.</summary>
+public enum UpdateState
+{
+    /// <summary>winget has a newer version (the versions are in <see cref="UpdateCheck"/> when they could be read).</summary>
+    Available,
+
+    /// <summary>winget was asked and offers nothing newer (or doesn't know the app).</summary>
+    UpToDate,
+
+    /// <summary>The question couldn't be answered (winget missing, refused, a source error); never read as up to date.</summary>
+    Unknown,
+}
+
+/// <summary>The answer to "is there an update for this app": the state and, when winget printed them, the installed and available versions.</summary>
+public sealed record UpdateCheck(AppPackage Package, UpdateState State, string? InstalledVersion = null, string? AvailableVersion = null);
 
 /// <summary>What happened to one application during a batch install.</summary>
 public enum InstallStatus

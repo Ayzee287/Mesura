@@ -2,79 +2,56 @@
 #
 #   powershell -ExecutionPolicy Bypass -File tools\make-branding.ps1 [-Preview <png>]
 #
-# The mark (0.4.1) is an M measured with a dimension line: the M is the product, the line under it with its two end caps is
-# the measurement. The tile is a vivid violet-azure-mint gradient with a soft top light so the mark stands out on the dark window
-# and on a light surface alike; the M and the line are white. Sizes up to 32 px use an
-# optically heavier variant (thicker strokes, no end caps) because the master's fine parts would blur; everything is drawn
-# from the numbers here, nothing is traced or taken from another source. Output (committed): assets\branding\*.svg and
-# *.png, src\Mesura.App\Assets\mesura.ico and mesura-mark.png, docs\images\mesura-logo.{svg,png}.
+# The mark (0.4.1) is one letter M with nothing behind it: a violet-azure-mint gradient letter with a soft glow of the same colours following its
+# outline, and a thin bright edge so it stays a letter at small sizes. There is no tile, plate or frame, so on the window's dark glass it reads as
+# light, and on a light surface the gradient letter is still the darkest thing on it. Sizes up to 32 px use a heavier M with a tighter glow (the
+# master's soft halo would blur into the letter). Everything is drawn from the numbers here; nothing is traced or taken from another source.
+# Output (committed): assets\branding\*.svg and *.png, src\Mesura.App\Assets\mesura.ico and mesura-mark.png, docs\images\mesura-logo.{svg,png}.
 param([string]$Preview = '')
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-$Tile = 'grad:#7A5CFF,#2AB6FF,#34F0B0'; $Ink = '#FFFFFF'; $Accent = '#FFFFFF'; $Edge = '#FFFFFF'
-# A shape is: @(kind, data, fill, opacity). kind 'path' or 'rect' (x y w h rx).
-$Light = 'M 0 56 A 56 56 0 0 1 56 0 L 200 0 A 56 56 0 0 1 256 56 L 256 118 C 176 156 80 156 0 118 Z'
-$master = @(
-  @('rect', '0 0 256 256 56', $Tile, 1),
-  @('path', $Light, '#FFFFFF', 0.16),
-  @('path', 'M 58 168 L 58 54 L 90 54 L 128 108 L 166 54 L 198 54 L 198 168 L 166 168 L 166 104 L 134 150 L 122 150 L 90 104 L 90 168 Z', $Ink, 1),
-  @('rect', '58 194 140 10 0', $Accent, 0.92),
-  @('rect', '58 184 10 30 0', $Accent, 0.92),
-  @('rect', '188 184 10 30 0', $Accent, 0.92)
-)
-$small = @(
-  @('rect', '0 0 256 256 56', $Tile, 1),
-  @('path', 'M 48 166 L 48 48 L 92 48 L 128 100 L 164 48 L 208 48 L 208 166 L 168 166 L 168 108 L 140 150 L 116 150 L 88 108 L 88 166 Z', $Ink, 1),
-  @('rect', '48 186 160 24 0', $Accent, 0.95)
-)
+$Violet = '#8A6BFF'; $Azure = '#2AB6FF'; $Mint = '#34F0B0'
+# The letter, in a 256 x 256 box. The master leaves room around it for the glow; the small one fills the box.
+$masterPath = 'M 56 186 L 56 70 L 92 70 L 128 124 L 164 70 L 200 70 L 200 186 L 168 186 L 168 118 L 140 160 L 116 160 L 88 118 L 88 186 Z'
+$smallPath = 'M 34 206 L 34 52 L 88 52 L 128 120 L 168 52 L 222 52 L 222 206 L 178 206 L 178 124 L 146 176 L 110 176 L 78 124 L 78 206 Z'
 
-function ToSvg($shapes, [bool]$edge) {
-  $out = New-Object System.Text.StringBuilder
-  [void]$out.AppendLine('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">')
-  [void]$out.AppendLine('  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5CFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient></defs>')
-  foreach ($s in $shapes) {
-    $fill = if ($s[2] -like 'grad:*') { 'url(#g)' } else { $s[2] }
-    $op = if ($s[3] -lt 1) { (' fill-opacity="{0}"' -f $s[3]) } else { '' }
-    if ($s[0] -eq 'rect') { $v = $s[1] -split ' '; [void]$out.AppendLine(('  <rect x="{0}" y="{1}" width="{2}" height="{3}" rx="{4}" fill="{5}"{6}/>' -f $v[0], $v[1], $v[2], $v[3], $v[4], $fill, $op)) }
-    else { [void]$out.AppendLine(('  <path d="{0}" fill="{1}"{2}/>' -f $s[1], $fill, $op)) }
-    if ($edge -and $s -eq $shapes[0]) { [void]$out.AppendLine(('  <rect x="1" y="1" width="254" height="254" rx="55" fill="none" stroke="{0}" stroke-opacity="0.14" stroke-width="2"/>' -f $Edge)) }
-  }
-  [void]$out.AppendLine('</svg>')
-  $out.ToString()
+function Grad([double]$opacity) {
+  $g = New-Object System.Windows.Media.LinearGradientBrush
+  $g.StartPoint = New-Object System.Windows.Point(0, 0); $g.EndPoint = New-Object System.Windows.Point(1, 1)
+  [void]$g.GradientStops.Add((New-Object System.Windows.Media.GradientStop(([System.Windows.Media.ColorConverter]::ConvertFromString($Violet)), 0)))
+  [void]$g.GradientStops.Add((New-Object System.Windows.Media.GradientStop(([System.Windows.Media.ColorConverter]::ConvertFromString($Azure)), 0.55)))
+  [void]$g.GradientStops.Add((New-Object System.Windows.Media.GradientStop(([System.Windows.Media.ColorConverter]::ConvertFromString($Mint)), 1)))
+  $g.Opacity = $opacity; $g.Freeze(); $g
 }
 
-function Brush([string]$hex, [double]$opacity) {
-  if ($hex -like 'grad:*') {
-    $stops = ($hex.Substring(5)) -split ','
-    $g = New-Object System.Windows.Media.LinearGradientBrush
-    $g.StartPoint = New-Object System.Windows.Point(0, 0); $g.EndPoint = New-Object System.Windows.Point(1, 1)
-    $offsets = 0.0, 0.55, 1.0
-    for ($i = 0; $i -lt $stops.Count; $i++) { [void]$g.GradientStops.Add((New-Object System.Windows.Media.GradientStop(([System.Windows.Media.ColorConverter]::ConvertFromString($stops[$i])), $offsets[$i]))) }
-    $g.Opacity = $opacity; $g.Freeze(); return $g
-  }
-  $c = [System.Windows.Media.ColorConverter]::ConvertFromString($hex)
-  $b = New-Object System.Windows.Media.SolidColorBrush($c); $b.Opacity = $opacity; $b.Freeze(); $b
+function SolidBrush([string]$hex, [double]$opacity) {
+  $b = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.ColorConverter]::ConvertFromString($hex)); $b.Opacity = $opacity; $b.Freeze(); $b
 }
 
-# Draws shapes into a bitmap of $px x $px; $bg is an optional backdrop colour (preview sheets only).
-function Draw($shapes, [int]$px, [bool]$edge) {
+# Draws the mark into a $px x $px bitmap with a transparent background.
+function Draw([int]$px, [bool]$small) {
+  $geo = [System.Windows.Media.Geometry]::Parse($(if ($small) { $smallPath } else { $masterPath }))
   $dv = New-Object System.Windows.Media.DrawingVisual
   $dc = $dv.RenderOpen()
   $k = $px / 256.0
   $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform($k, $k)))
-  foreach ($s in $shapes) {
-    $brush = Brush $s[2] $s[3]
-    if ($s[0] -eq 'rect') { $v = $s[1] -split ' '; $r = [double]$v[4]
-      $dc.DrawRoundedRectangle($brush, $null, (New-Object System.Windows.Rect([double]$v[0], [double]$v[1], [double]$v[2], [double]$v[3])), $r, $r) }
-    else { $dc.DrawGeometry($brush, $null, [System.Windows.Media.Geometry]::Parse($s[1])) }
-    if ($edge -and $s -eq $shapes[0]) {
-      $pen = New-Object System.Windows.Media.Pen((Brush $Edge 0.14), 2)
-      $dc.DrawRoundedRectangle($null, $pen, (New-Object System.Windows.Rect(1, 1, 254, 254)), 55, 55)
-    }
+  # The glow: the outline stroked many times, wide to narrow, each layer faint, so the light is brightest at the letter and fades outwards.
+  $layers = if ($small) { if ($px -le 32) { 4 } else { 8 } } else { 14 }
+  $step = if ($small) { 3.0 } else { 3.4 }
+  $strength = if ($small) { 0.080 } else { 0.034 }
+  for ($i = $layers; $i -ge 1; $i--) {
+    $pen = New-Object System.Windows.Media.Pen((Grad ($strength * (1.0 + (($layers - $i) / $layers) * 1.6))), (6 + $i * $step))
+    $pen.LineJoin = 'Round'; $pen.StartLineCap = 'Round'; $pen.EndLineCap = 'Round'
+    $dc.DrawGeometry($null, $pen, $geo)
   }
+  # The letter: the gradient, a soft rounded edge, then a thin bright inner edge.
+  $edge = New-Object System.Windows.Media.Pen((Grad 1.0), 5); $edge.LineJoin = 'Round'
+  $dc.DrawGeometry((Grad 1.0), $edge, $geo)
+  $hi = New-Object System.Windows.Media.Pen((SolidBrush '#FFFFFF' 0.55), $(if ($small) { 2.5 } else { 1.6 })); $hi.LineJoin = 'Round'
+  $dc.DrawGeometry($null, $hi, $geo)
   $dc.Pop(); $dc.Close()
   $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap($px, $px, 96, 96, [System.Windows.Media.PixelFormats]::Pbgra32)
   $rtb.Render($dv); $rtb.Freeze(); $rtb
@@ -86,7 +63,23 @@ function PngBytes($bitmap) {
   $ms = New-Object System.IO.MemoryStream; $enc.Save($ms); $ms.ToArray()
 }
 
-function ShapesFor([int]$px) { if ($px -le 32) { $small } else { $master } }
+function ToSvg([bool]$small) {
+  $d = if ($small) { $smallPath } else { $masterPath }
+  $blur = if ($small) { 5 } else { 12 }
+  @"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="$Violet"/><stop offset="0.55" stop-color="$Azure"/><stop offset="1" stop-color="$Mint"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="$blur"/></filter>
+  </defs>
+  <path d="$d" fill="url(#g)" stroke="url(#g)" stroke-width="22" stroke-linejoin="round" opacity="0.75" filter="url(#glow)"/>
+  <path d="$d" fill="url(#g)" stroke="url(#g)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="$d" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>
+"@
+}
+
+function ShapesFor([int]$px) { $px -le 64 }
 
 $brand = Join-Path $repo 'assets\branding'
 $docsImages = Join-Path $repo 'docs\images'
@@ -94,19 +87,20 @@ $assets = Join-Path $repo 'src\Mesura.App\Assets'
 foreach ($d in $brand, $docsImages) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
-[System.IO.File]::WriteAllText((Join-Path $brand 'mesura-logo.svg'), (ToSvg $master $true), $utf8)
-[System.IO.File]::WriteAllText((Join-Path $brand 'mesura-logo-small.svg'), (ToSvg $small $true), $utf8)
+[System.IO.File]::WriteAllText((Join-Path $brand 'mesura-logo.svg'), (ToSvg $false), $utf8)
+[System.IO.File]::WriteAllText((Join-Path $brand 'mesura-logo-small.svg'), (ToSvg $true), $utf8)
 Copy-Item (Join-Path $brand 'mesura-logo.svg') (Join-Path $docsImages 'mesura-logo.svg') -Force
 
 $sizes = 16, 20, 24, 32, 40, 48, 64, 128, 256, 512
 $pngs = @{}
 foreach ($px in $sizes) {
-  $bytes = PngBytes (Draw (ShapesFor $px) $px $true)
+  $bytes = PngBytes (Draw $px (ShapesFor $px))
   $pngs[$px] = $bytes
   [System.IO.File]::WriteAllBytes((Join-Path $brand ("mesura-{0}.png" -f $px)), $bytes)
 }
 Copy-Item (Join-Path $brand 'mesura-512.png') (Join-Path $docsImages 'mesura-logo.png') -Force
-[System.IO.File]::WriteAllBytes((Join-Path $assets 'mesura-mark.png'), $pngs[256])
+# The window's own mark is shown at about 40 px: the heavier letter with a softer glow stays crisp there.
+[System.IO.File]::WriteAllBytes((Join-Path $assets 'mesura-mark.png'), $pngs[128])
 
 # The Windows icon: PNG-compressed frames, 16 to 256.
 $icoSizes = 16, 20, 24, 32, 40, 48, 64, 128, 256
@@ -123,23 +117,20 @@ $w.Flush()
 [System.IO.File]::WriteAllBytes((Join-Path $assets 'mesura.ico'), $ms.ToArray())
 
 if ($Preview) {
-  # Contact sheet: the icon at its real sizes on a dark and on a light surface, and at 4x for the large ones.
-  $SheetW = 760; $SheetH = 330
+  # Contact sheet: the mark at its real sizes on the window's dark glass, on a mid grey and on a light surface, and large.
+  $SheetW = 900; $SheetH = 330
   $dv = New-Object System.Windows.Media.DrawingVisual; $dc = $dv.RenderOpen()
-  $dc.DrawRectangle((Brush '#1B1D22' 1), $null, (New-Object System.Windows.Rect(0, 0, ($SheetW / 2), $SheetH)))
-  $dc.DrawRectangle((Brush '#F3F4F7' 1), $null, (New-Object System.Windows.Rect(($SheetW / 2), 0, ($SheetW / 2), $SheetH)))
-  foreach ($half in 0, 1) {
-    $x = 20 + $half * ($SheetW / 2)
+  $dc.DrawRectangle((SolidBrush '#0B0C0F' 1), $null, (New-Object System.Windows.Rect(0, 0, 300, $SheetH)))
+  $dc.DrawRectangle((SolidBrush '#3A3D44' 1), $null, (New-Object System.Windows.Rect(300, 0, 300, $SheetH)))
+  $dc.DrawRectangle((SolidBrush '#F3F4F7' 1), $null, (New-Object System.Windows.Rect(600, 0, 300, $SheetH)))
+  foreach ($half in 0, 1, 2) {
+    $x = 14 + $half * 300
     foreach ($px in 16, 20, 24, 32, 48, 64) {
-      $bmp = Draw (ShapesFor $px) $px $true
-      $dc.DrawImage($bmp, (New-Object System.Windows.Rect($x, 20, $px, $px))); $x += $px + 14
+      $bmp = Draw $px (ShapesFor $px)
+      $dc.DrawImage($bmp, (New-Object System.Windows.Rect($x, 14, $px, $px))); $x += $px + 10
     }
-    $big = Draw $master 256 $true
-    $dc.DrawImage($big, (New-Object System.Windows.Rect((20 + $half * ($SheetW / 2)), 80, 230, 230)))
-    $mid = Draw $master 96 $true
-    $dc.DrawImage($mid, (New-Object System.Windows.Rect((270 + $half * ($SheetW / 2)), 80, 96, 96)))
-    $tiny = Draw $small 40 $true
-    $dc.DrawImage($tiny, (New-Object System.Windows.Rect((270 + $half * ($SheetW / 2)), 190, 40, 40)))
+    $big = Draw 256 $false
+    $dc.DrawImage($big, (New-Object System.Windows.Rect((14 + $half * 300), 90, 230, 230)))
   }
   $dc.Close()
   $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap($SheetW, $SheetH, 96, 96, [System.Windows.Media.PixelFormats]::Pbgra32)

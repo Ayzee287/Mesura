@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.4.2 (local build, not published)
+
+Version numbers have no suffix from here on (0.4.2, 0.4.3, ...).
+
+- **Apps: one choice for the whole install.** Install opens one dialog with three cards: **Mesura** (its prepared settings; today Brave and Spotify have them), **Custom** (your saved configuration; off, with the reason, while you have
+  none) and **Standard** (install only). Each card says how many of the chosen apps it covers; an app it does not cover is installed as it is, which is not an error. The row "After install, set up with" on the page is gone.
+- **Apps: the state is the action.** An installed app with a newer version shows **Update** in its state pill and the pill is the button (the separate Update button is gone); Update all stays in the dock.
+- **Apps: less on a card.** No install-folder button (an app installs where its installer or winget decides; folders chosen before are ignored and stay in the settings file) and no Configurations link (Configurations is in the More menu).
+- **No blank tooltips.** A tooltip with no text (an app card without a note) used to open as an empty square; none opens now, anywhere in the app.
+- **Icons** for Medal (its brand mark on the dark disc of its favicon: the installer link in winget is dead, so its own icon could not be taken from the executable) and Reg Organizer (its executable's own icon, replacing the company mark).
+- **Installer.** A welcome page that says what Mesura is, then a page with Install; no licence, feature or folder pages. The install model is unchanged (per user without UAC, or all users through the standard UAC prompt).
+- **High contrast** now works: Windows' high-contrast themes recolour Mesura (before, nothing changed; the design tokens are loaded first, `Tokens.xaml`). Verified on the four real themes.
+- **Window.** Opens inside the work area; the smallest size is 720 x 420; below 940 DIP the dock takes two rows so the page's action stays visible. Checked at a real 200 % Windows scale.
+- **Texts.** The catalog's detail texts no longer carry audit notes (PC-000, "I found"); the twelve longest were shortened.
+- **Tools.** `tools\shoot-scaled.ps1` (real display scale), `tools\shoot-contrast.ps1` (real high-contrast colours), `tools\e2e-installer-wizard.ps1` (the wizard, driven for real as a throwaway user), `tools\e2e-user-ops.ps1` (per-user operations, no
+  administrator rights), `tools\e2e-apps-install-choice.ps1` (the install dialog, one real install); `tools\e2e-admin-ops.ps1` gained six machine-wide mechanisms.
+
+## Earlier work now part of 0.4.2 (written while it was "Unreleased")
+
+- **Logo:** one letter M with a violet-azure-mint glow along its outline and nothing behind it (no tile), crisp at 16 to 64 px; still the button that goes home.
+- **Contrast under the pointer glow** is back above 4.5 : 1 for body and secondary text and for danger colours, and 4.2 : 1 for captions (captions and danger were lifted a little).
+- **Apps:** one tile height for every app (a long Russian link no longer makes a card taller), no description text on the tile (it is the tooltip), Vencord named plainly in Configurations.
+- **Light behind cards:** the glass of a card now carries a dark scrim, so the pointer light can be as bright as before without lowering the contrast of captions (4.6 : 1 or more in every lighting mode, measured).
+- **Texts:** shorter administrator-rights messages, key hint, profile note and dock hints.
+- **Apps: update.** An installed app that Mesura updates (7-Zip, Notepad++, OBS Studio, Visual Studio Code, and Git, VLC, Firefox for the command line) shows an **Update** button when winget has a newer version,
+  and the dock has **Update all (n)**. The confirmation lists each app with both versions; the result says what really happened, because Mesura asks winget again afterwards whether an update is still offered
+  (an installer that exits cleanly and leaves the old version is reported as not updated). `mesura apps updates` and `mesura apps upgrade (--id | --all) [--apply]` do the same from the terminal. The run is in Activity.
+  Apps that update themselves (browsers, chat clients, game stores) or install through a stub get no update button on purpose.
+- **Apps: uninstall.** Only for the three apps whose uninstall was run for real and checked (Notepad++, VLC, OBS Studio), and only as administrator: an MSI uninstall without it fails (installer code 1603), so
+  without administrator rights the button is disabled and says why. After winget reports success Mesura asks whether the app is really gone. Firefox is not offered: winget says "successfully uninstalled" and the
+  app stays. `mesura apps uninstall --id <app> [--apply]` does the same (`--apply` refuses to start without administrator rights).
+- **Updates that go wrong halfway.** If the installer's client is killed or crashes while Windows Installer goes on with the install (seen for real), the updater no longer records a finished update as failed: it waits for the installer's
+  own log to end, reads what is installed and records that (the app said "the update didn't finish" while the new version was installed). The updater itself no longer stops silently on an unexpected error (a result is always recorded and
+  Mesura is always started again), a second updater (Install pressed twice) does nothing instead of overwriting the first one's result, and after a **machine-wide update Mesura starts again as the signed-in user, unelevated**: it used to inherit the
+  updater's administrator rights (and, when another account's password approved the prompt, that account).
+- **Window size.** The smallest window is 900 x 500 (was 1020 x 660), so it fits a 1080p screen at 200 % scale; checked down to 800 x 500, below which the dock's main button starts to be cut off.
+- **Screen readers.** A new result line (update, install, apply, failure) is a live region: the window raises a UI Automation LiveRegionChanged event with the result as its name, so Narrator announces it without being asked.
+- **Tools.** `tools\e2e-update.ps1` also runs machine-wide updates (`-AllUsers`), a download cut once by the server (`resume`) and an installer killed midway (`killed`); `tools\e2e-apps-update.ps1`, `tools\e2e-apps-uninstall.ps1`, `tools\e2e-announce.ps1`, `tools\e2e-admin-ops.ps1`
+  (services, hibernation, per-interface NetBIOS, a DISM feature) are real checks that read the result back independently. `tools\publish.ps1` never gives a build the file version of the one it replaces (equal file versions made an upgrade keep the old files).
+
 ## 0.4.1-rc1 (release candidate, not published)
 
 Fixes from the first real use of 0.4.0-rc1, and the next round of the redesign.

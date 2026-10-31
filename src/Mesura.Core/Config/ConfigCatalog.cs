@@ -122,7 +122,7 @@ public static class ConfigCatalog
     // sync section is excluded so the destination doesn't inherit an "authenticated" flag. quickCss.css and theme
     // files are copied as whole files by the Platform port (noted below), not via this JSON allowlist.
     private static ConfigPortDefinition Vencord() => new(
-        "vencord", "Vencord (Discord mod)",
+        "vencord", "Vencord",
         [ new("main", Format.Json, "settings/settings.json.") ],
         [
             App("vencord.plugins", "Plugins and their settings", "/plugins", TransferConfidence.Reliable,

@@ -29,7 +29,7 @@
 
         <StackPanel>
             <Grid>
-                <l:PageHero Title="{l:T Debloat.Title}" Subtitle="{Binding Status}" />
+                <l:PageHero Title="{l:T Debloat.Title}" Subtitle="{Binding Status}" HeroMargin="36,28,330,12" />
                 <StackPanel Orientation="Horizontal" Margin="0,0,36,12" HorizontalAlignment="Right" VerticalAlignment="Bottom">
                     <Button Style="{StaticResource Ghost}" Command="{Binding OpenTaskManager}" Margin="0,0,8,0" AutomationProperties.Name="{l:T Debloat.OpenStartupSettings}"
                             Visibility="{Binding InStartup, Converter={StaticResource BoolToVisibility}}">

@@ -35,10 +35,14 @@ public partial class MainWindow : Window
     public MainWindow(Services services, bool hostedInTray = false)
     {
         InitializeComponent();
+        // A small or heavily scaled screen (1600x900 at 200% is 800x450 DIP) is smaller than the designed 1280x860: open inside the work area.
+        Width = Math.Min(Width, SystemParameters.WorkArea.Width);
+        Height = Math.Min(Height, SystemParameters.WorkArea.Height);
         _hostedInTray = hostedInTray;
         _services = services;
         Icon = Branding.WindowIcon;
         Logo.Source = Branding.Mark;
+        DockFade.Visibility = HighContrastTheme.IsOn ? Visibility.Collapsed : Visibility.Visible; // a fixed dark fade would smear a light high-contrast theme
         LightField.Mode = LightField.Resolve(services.Settings.Lighting);
         LightField.Attach(this);
         ApplyAccessState();
@@ -59,7 +63,7 @@ public partial class MainWindow : Window
 
         _windows = new WindowsStateModel(services);
         _activity = new ActivityViewModel(services);
-        AppsPage.DataContext = _apps = new AppsViewModel(services, OpenActivity, () => ShowPage(ConfigurationsPage));
+        AppsPage.DataContext = _apps = new AppsViewModel(services, OpenActivity);
         OptimizePage.DataContext = new OptimizeViewModel(services, _windows, _apps, () => ShowPage(AllSettingsPage), OpenActivity, () => ShowPage(AppsPage));
         AllSettingsPage.DataContext = new AllSettingsViewModel(services, _windows, () => ShowPage(OptimizePage), OpenActivity);
         DebloatPage.DataContext = new DebloatViewModel(services, _windows, OpenActivity);
@@ -181,6 +185,7 @@ public partial class MainWindow : Window
         ActionZone.ContentTemplate = template;
         ActionZone.Content = template is null ? null : page.DataContext;
         ActionDivider.Visibility = template is null ? Visibility.Collapsed : Visibility.Visible;
+        ArrangeDock();
 
         if (changed)
         {
@@ -214,16 +219,55 @@ public partial class MainWindow : Window
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
         var compact = ActualWidth < CompactBelow;
-        if (Chrome.GetCompact(Dock) == compact)
+        if (Chrome.GetCompact(Dock) != compact)
+        {
+            Chrome.SetCompact(Dock, compact);
+            AccessText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        StackDock(ActualWidth < StackBelow);
+    }
+
+    /// <summary>
+    /// Below <see cref="StackBelow"/> the page icons no longer share a row with the page's action, so the dock takes two: the pages on top,
+    /// the action (its summary and the primary button) and the access state under them. Nothing is hidden or moved behind a scroll bar.
+    /// </summary>
+    private void StackDock(bool stacked)
+    {
+        if (_dockStacked == stacked)
         {
             return;
         }
 
-        Chrome.SetCompact(Dock, compact);
-        AccessText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        _dockStacked = stacked;
+        ArrangeDock();
     }
 
+    /// <summary>
+    /// Stacked, a page with an action keeps it on the second row with the access state; a page with none puts the access state
+    /// beside the page icons instead of leaving an empty row.
+    /// </summary>
+    private void ArrangeDock()
+    {
+        var stacked = _dockStacked;
+        var actionRow = stacked && ActionZone.Content is not null;
+        Grid.SetRow(ActionHost, actionRow ? 1 : 0);
+        Grid.SetColumn(ActionHost, actionRow ? 0 : 1);
+        Grid.SetColumnSpan(ActionHost, actionRow ? 2 : 1);
+        ActionHost.Margin = actionRow ? new Thickness(6, 8, 0, 2) : new Thickness(10, 0, 0, 0);
+        ActionDivider.Opacity = stacked ? 0 : 1;
+        ActionZone.Margin = stacked ? new Thickness(4, 0, 4, 0) : new Thickness(14, 0, 4, 0);
+        Grid.SetRow(AccessButton, actionRow ? 1 : 0);
+        AccessButton.Margin = actionRow ? new Thickness(2, 8, 0, 2) : new Thickness(2, 0, 0, 0);
+        Grid.SetColumnSpan(NavStrip, stacked ? (actionRow ? 3 : 2) : 1);
+        NavStrip.HorizontalAlignment = stacked ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+    }
+    private bool _dockStacked;
+
     private const double CompactBelow = 1180;
+
+    // The one-row dock needs about 900 DIP at compact size (page icons, the action's summary and button, the access glyph).
+    private const double StackBelow = 940;
 
     private void OpenActivity(string? runId)
     {

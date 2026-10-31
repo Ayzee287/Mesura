@@ -64,6 +64,12 @@ public sealed class Banner : Observable
 
     public bool Visible => _title.Length > 0;
 
+    /// <summary>The result as one sentence for assistive technology (the accessible name of the live region).</summary>
+    public string Announcement => _detail.Length > 0 ? $"{_title}. {_detail}" : _title;
+
+    /// <summary>Changes with every result shown, even one with the same words, so the live region announces it again.</summary>
+    public int Serial { get; private set; }
+
     public bool CanUndo => _undo is not null;
 
     public bool HasDetails => _details is not null;
@@ -83,6 +89,9 @@ public sealed class Banner : Observable
         _undo = undo;
         _details = details;
         Title = title;
+        Serial++;
+        Raise(nameof(Announcement));
+        Raise(nameof(Serial));
         Raise(nameof(Visible));
         Raise(nameof(CanUndo));
         Raise(nameof(HasDetails));
@@ -341,11 +350,24 @@ public static class RunActions
     public static IReadOnlyList<(string Tone, string Text)> FollowUps(Services services, SetupRun run)
     {
         var items = new List<(string, string)>();
+        var updating = run.Operation == "apps-update";
+        var removing = run.Operation == "apps-uninstall";
         foreach (var app in run.Apps)
         {
             var name = AppName(services, app.AppId);
             switch (app.Status)
             {
+                case InstallStatus.Failed when updating:
+                    // The service's own sentence (English, ours) marks an installer that exited cleanly and left the old version behind.
+                    items.Add((Tone.Danger, app.Detail.StartsWith("winget finished without an error", StringComparison.Ordinal)
+                        ? Loc.Format("FollowUp.UpdateNotTaken", name)
+                        : Loc.Format("FollowUp.UpdateFailed", name, WingetReason(app.Detail))));
+                    break;
+                case InstallStatus.Failed when removing:
+                    items.Add((Tone.Danger, app.Detail.StartsWith("winget finished without an error", StringComparison.Ordinal) ? Loc.Format("FollowUp.UninstallNotTaken", name)
+                        : app.Detail.Contains("administrator", StringComparison.Ordinal) ? Loc.Format(Loc.AdminKey("FollowUp.UninstallNeedsAdmin"), name)
+                        : Loc.Format("FollowUp.UninstallFailed", name, WingetReason(app.Detail))));
+                    break;
                 case InstallStatus.Failed:
                     items.Add((Tone.Danger, Loc.Format("FollowUp.InstallFailed", name, WingetReason(app.Detail))));
                     break;
@@ -353,10 +375,10 @@ public static class RunActions
                     items.Add((Tone.Warn, Loc.Format("FollowUp.NoWinget", name)));
                     break;
                 case InstallStatus.Cancelled:
-                    items.Add((Tone.Warn, Loc.Format("FollowUp.Cancelled", name)));
+                    items.Add((Tone.Warn, Loc.Format(updating ? "FollowUp.UpdateCancelled" : removing ? "FollowUp.UninstallCancelled" : "FollowUp.Cancelled", name)));
                     break;
                 case InstallStatus.SucceededRebootRequired:
-                    items.Add((Tone.Info, Loc.Format("FollowUp.RestartToFinish", name)));
+                    items.Add((Tone.Info, Loc.Format(updating ? "FollowUp.RestartToFinishUpdate" : removing ? "FollowUp.RestartToFinishUninstall" : "FollowUp.RestartToFinish", name)));
                     break;
             }
         }

@@ -17,6 +17,7 @@
 param(
   [string]$Label = 'review',
   [string]$Out = '',
+  [int]$BuildNumber = 0,     # the file version's last number (default: hours since 2026-10-01); a test that needs an OLDER and a NEWER build within one hour sets it
   [switch]$Sign,            # Authenticode-sign Mesura.exe and cli\mesura.exe (tools\sign-release.ps1) before they are zipped
   [string]$Thumbprint = '', # the certificate in the Windows store, or
   [string]$PfxPath = ''     # a PFX file (its password in MESURA_SIGN_PFX_PASSWORD)
@@ -49,10 +50,12 @@ function Move-ToPrevious([string]$folder, [string]$name) {
   Write-Output "Kept the earlier build in $target"
 }
 
+$previousFileVersion = $null
 if (Test-Path $current) {
   $info = Join-Path $current 'build.json'
   $name = if (Test-Path $info) {
     $b = Get-Content -Raw $info | ConvertFrom-Json
+    $previousFileVersion = $b.fileVersion
     "{0}-{1}-{2}{3}" -f $b.builtLocal.Substring(0, 10), $b.version, $b.commit, $(if ($b.uncommitted) { '-dirty' } else { '' })
   } else { (Get-Item $current).LastWriteTime.ToString('yyyy-MM-dd') + '-unknown' }
   Move-ToPrevious $current $name
@@ -88,6 +91,9 @@ New-Item -ItemType Directory -Force -Path $current | Out-Null
 # number is not part of it ("0.3.0-rc2" is file version 0.3.0.0 otherwise), and an upgrade that installs the new files before it removes the old product
 # (installer\Package.wxs, docs/installing.md) leaves a same-versioned file in place. Hours since 2026-10-01 (UTC) are monotonic whichever repository or machine builds (a commit count is not: the public repository has a different history), and fit in 16 bits for years.
 $buildHours = [int](([datetime]::UtcNow - [datetime]'2026-10-01').TotalHours)
+# Two builds in the same hour would share a file version, and an upgrade between them would keep the old files while registering the new product (seen
+# 2026-10-31 with two test builds an hour apart at most): a build is never given the file version of the one it replaces.
+if ($BuildNumber -gt 0) { $buildHours = $BuildNumber } elseif ($previousFileVersion -and "$previousFileVersion" -match '^(.+)\.(\d+)$' -and $Matches[1] -eq "$version" -and [int]$Matches[2] -ge $buildHours) { $buildHours = [int]$Matches[2] + 1 }
 $fileVersion = "$version.$buildHours"
 $versionArgs = @("-p:FileVersion=$fileVersion"; if ($Label) { "-p:Version=$stamp" })
 # Every publish starts from a clean Release build: an incremental WPF build once left out the compiled pages after only
@@ -162,6 +168,7 @@ $build = [ordered]@{
   commit      = $commit
   uncommitted = $dirty
   productVersion = $productVersion
+  fileVersion = $fileVersion
   builtLocal  = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
   app         = 'Mesura\Mesura.exe'
   cli         = 'Mesura\cli\mesura.exe'

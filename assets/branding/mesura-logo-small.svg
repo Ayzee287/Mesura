@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Mesura">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5CFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient></defs>
-  <rect x="0" y="0" width="256" height="256" rx="56" fill="url(#g)"/>
-  <path d="M 48 166 L 48 48 L 92 48 L 128 100 L 164 48 L 208 48 L 208 166 L 168 166 L 168 108 L 140 150 L 116 150 L 88 108 L 88 166 Z" fill="#FFFFFF"/>
-  <rect x="48" y="186" width="160" height="24" rx="0" fill="#FFFFFF" fill-opacity="0,95"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6BFF"/><stop offset="0.55" stop-color="#2AB6FF"/><stop offset="1" stop-color="#34F0B0"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <path d="M 34 206 L 34 52 L 88 52 L 128 120 L 168 52 L 222 52 L 222 206 L 178 206 L 178 124 L 146 176 L 110 176 L 78 124 L 78 206 Z" fill="url(#g)" stroke="url(#g)" stroke-width="22" stroke-linejoin="round" opacity="0.75" filter="url(#glow)"/>
+  <path d="M 34 206 L 34 52 L 88 52 L 128 120 L 168 52 L 222 52 L 222 206 L 178 206 L 178 124 L 146 176 L 110 176 L 78 124 L 78 206 Z" fill="url(#g)" stroke="url(#g)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M 34 206 L 34 52 L 88 52 L 128 120 L 168 52 L 222 52 L 222 206 L 178 206 L 178 124 L 146 176 L 110 176 L 78 124 L 78 206 Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="1.6" stroke-linejoin="round"/>
 </svg>

@@ -40,7 +40,7 @@ public sealed class ActivityItem : Observable
     /// </summary>
     public string? AppId =>
         Run.Operation is "config-import" or "config-restore" && Run.Config.Select(c => c.PortId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1 ? Run.Config[0].PortId
-        : Run.Operation == "apps-install" && Run.Apps.Count == 1 ? Run.Apps[0].AppId
+        : Run.Operation is "apps-install" or "apps-update" or "apps-uninstall" && Run.Apps.Count == 1 ? Run.Apps[0].AppId
         : null;
 
     public string AppLabel => AppId is { } id ? RunActions.AppName(_services, id) : "";
@@ -50,6 +50,8 @@ public sealed class ActivityItem : Observable
     public string Glyph => Application.Current?.TryFindResource(Run.Operation switch
     {
         "apps-install" => "IconDownload",
+        "apps-update" => "IconUpdate",
+        "apps-uninstall" => "IconDebloat",
         "config-import" or "config-restore" => "IconConfigurations",
         "windows-revert" or "undo" => "IconUndo",
         "profile" => "IconProfiles",
@@ -73,6 +75,8 @@ public sealed class ActivityItem : Observable
                 "windows-apply" => WithSubject(Loc.Plural("Activity.WindowsApplied", applied)),
                 "windows-revert" => WithSubject(Loc.Plural("Activity.WindowsReverted", Run.WindowsSteps.Count(s => s.Status == WindowsOpStatus.Reverted))),
                 "apps-install" => Loc.Plural("Activity.AppsInstalled", apps) + (Run.Config.Count > 0 ? " · " + Loc.Get("Activity.AndSetUp") : ""),
+                "apps-update" => Loc.Plural("Activity.AppsUpdated", apps),
+                "apps-uninstall" => Loc.Plural("Activity.AppsUninstalled", Run.Apps.Count(a => a.Status is InstallStatus.Succeeded or InstallStatus.SucceededRebootRequired)),
                 "config-import" => Loc.Format("Activity.ConfigImported", configured),
                 "config-restore" => Loc.Format("Activity.ConfigRestored", configured),
                 "undo" => Loc.Get("Activity.Undo"),
@@ -147,7 +151,7 @@ public sealed class ActivityItem : Observable
         {
             var lines = new List<StepLine>();
             lines.AddRange(Run.Apps.Select(a => new StepLine(Tone.Of(StepWords.Install(a.Status)),
-                $"{RunActions.AppName(_services, a.AppId)} · {Loc.Get($"Install.{a.Status}")}",
+                $"{RunActions.AppName(_services, a.AppId)} · {Loc.Get($"{Run.Operation switch { "apps-update" => "Update", "apps-uninstall" => "Uninstall", _ => "Install" }}.{a.Status}")}",
                 a.Status is InstallStatus.Failed or InstallStatus.WingetUnavailable ? a.Detail : null, a.AppId, RunActions.AppName(_services, a.AppId))));
             lines.AddRange(Run.Config.Select(c => new StepLine(Tone.Of(StepWords.Config(c)), RunActions.ConfigLine(c),
                 c.Status is ConfigImportStatus.Failed or ConfigImportStatus.ChangedSince ? c.Detail : null, c.PortId, c.AppName)));
