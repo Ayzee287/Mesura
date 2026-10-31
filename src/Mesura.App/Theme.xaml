@@ -840,7 +840,10 @@
     </Style>
 
     <!-- A search box: a magnifier, and the placeholder (Tag) while it is empty. -->
+    <!-- The search box. Its text, its caret and its hint start at one x (the icon's width): the base style's 10 px padding used to push the typed text and the
+         caret past the hint, so the empty focused box showed the caret inside the hint's first letter and a typed letter sat to the right of where the hint began. -->
     <Style x:Key="Search" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -850,7 +853,7 @@
                             <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconSearch}" FontSize="13"
                                        Foreground="{StaticResource TextTertiary}" Margin="12,0,0,0" HorizontalAlignment="Left" />
                             <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Foreground="{StaticResource TextTertiary}"
-                                       Margin="36,0,10,0" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
+                                       Margin="36,0,10,0" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" TextTrimming="CharacterEllipsis" />
                             <ScrollViewer x:Name="PART_ContentHost" Margin="34,0,10,0" VerticalAlignment="Center" />
                         </Grid>
                     </Border>

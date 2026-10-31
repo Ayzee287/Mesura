@@ -16,7 +16,8 @@
 
         <!-- Pages: each keeps its state while another is shown, all in one column so they line up. -->
         <Grid x:Name="PageHost" MaxWidth="1320" HorizontalAlignment="Stretch">
-            <p:OptimizePage x:Name="OptimizePage" />
+            <p:WelcomePage x:Name="WelcomePage" />
+            <p:OptimizePage x:Name="OptimizePage" Visibility="Collapsed" />
             <p:AllSettingsPage x:Name="AllSettingsPage" Visibility="Collapsed" />
             <p:DebloatPage x:Name="DebloatPage" Visibility="Collapsed" />
             <p:FirmwarePage x:Name="FirmwarePage" Visibility="Collapsed" />

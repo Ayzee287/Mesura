@@ -26,9 +26,6 @@ public enum Recommendation
     /// <summary>Documented and reversible, but a matter of preference or of a specific need.</summary>
     Optional,
 
-    /// <summary>Undocumented by Microsoft: chosen one at a time, never in a preset.</summary>
-    Advanced,
-
     /// <summary>A procedure carried out by hand, or a security setting changed in Windows itself.</summary>
     Guide,
 }
@@ -86,7 +83,7 @@ public sealed class SettingRow : Observable
     /// Where it sorts inside its group: what can act here first, advanced (undocumented) entries after, entries that don't
     /// apply to this PC last, so the default view leads with what is useful.
     /// </summary>
-    public int SortRank => !_checking && _eval.State == OperationState.Inapplicable ? 2 : Recommendation == Recommendation.Advanced ? 1 : 0;
+    public int SortRank => !_checking && _eval.State == OperationState.Inapplicable ? 1 : 0;
 
     public string RecommendationText => Loc.Get($"Recommendation.{Recommendation}");
 
@@ -333,7 +330,6 @@ public sealed class WindowsStateModel : Observable
             {
                 var op = catalog.Operations[i];
                 var recommendation = !op.Applicable ? Recommendation.Guide
-                    : op.Risk == RiskClass.Undocumented ? Recommendation.Advanced
                     : recommended.Contains(op.Id) ? Recommendation.Recommended
                     : Recommendation.Optional;
                 categoryIndex.TryAdd(op.Category, i);

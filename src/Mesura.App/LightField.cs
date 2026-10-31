@@ -7,13 +7,13 @@ namespace Mesura.App;
 /// <summary>How much of the interactive light Mesura draws (Settings > Lighting).</summary>
 public enum LightingMode
 {
-    /// <summary>The pointer lights every glass surface near it, and the ambient light behind them follows it with inertia.</summary>
+    /// <summary>The pointer lights every glass surface near it, and the shapes of the background move aside for it.</summary>
     Full,
 
-    /// <summary>Only the surface under the pointer lights up; the ambient light stays where it is.</summary>
+    /// <summary>Only the surface under the pointer lights up (half as much); the background drifts slowly and faintly and ignores the pointer.</summary>
     Reduced,
 
-    /// <summary>No pointer light at all. A selected surface keeps its static wash.</summary>
+    /// <summary>No background and no pointer light at all. A selected surface keeps its static wash.</summary>
     Off,
 }
 
@@ -60,6 +60,9 @@ public static class LightField
 
     /// <summary>The pointer's position in window coordinates, once it has entered the window.</summary>
     public static bool HasPointer => _has;
+
+    /// <summary>The last position of the pointer in window coordinates (the raw one, not the eased one).</summary>
+    public static Point Pointer => _pointer;
 
     /// <summary>
     /// What "Automatic" means on this PC: off when Windows' animation effects are off, reduced in a remote session or when the

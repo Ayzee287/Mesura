@@ -155,10 +155,6 @@ public sealed class Loc : INotifyPropertyChanged
     public static string Category(string category) =>
         Instance._catalog.Categories?.TryGetValue(category, out var text) == true ? text : category;
 
-    /// <summary>An app's note, translated when the table has it.</summary>
-    public static string AppNote(string appId, string note) =>
-        Instance._catalog.AppNotes?.TryGetValue(appId, out var text) == true ? text : note;
-
     public static string Impact(OperationImpact impact) => Get($"Impact.{impact}");
 
     /// <summary>An app setting Mesura carries (Configurations), translated when the table has it.</summary>
@@ -213,7 +209,6 @@ public sealed class Loc : INotifyPropertyChanged
 
         public Dictionary<string, string>? Categories { get; set; }
 
-        public Dictionary<string, string>? AppNotes { get; set; }
 
         public Dictionary<string, string>? ConfigSettings { get; set; }
 

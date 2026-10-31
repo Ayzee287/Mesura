@@ -147,7 +147,7 @@
       "impact": "convenience", "summary": "Brings back the full Windows 10 right-click menu.",
       "description": "Restores the full Windows 10 right-click menu in File Explorer and on the desktop, without the 'Show more options' step.",
       "risk": "undocumented", "activation": "explorerRestart", "minBuild": 22000,
-      "limitations": "Advanced: a community workaround Microsoft doesn't document (it blocks the Windows 11 menu's registration for this user), so an update may stop honouring it. Kept out of presets; tick it yourself if you want it. Revert removes it.",
+      "limitations": "A community workaround Microsoft doesn't document (it blocks the Windows 11 menu's registration for this user), so an update may stop honouring it. Not part of any preset; tick it yourself if you want it. Revert removes it.",
       "source": "Community workaround: an empty default value under CLSID {86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32 (per-user). Classed undocumented and kept out of presets by the owner's decision (vault D027).",
       "registry": [ { "hive": "HKCU", "path": "Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32", "name": "", "type": "string", "value": "" } ]
     },

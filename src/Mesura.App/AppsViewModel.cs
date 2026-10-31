@@ -31,8 +31,6 @@ public sealed class AppMod(AppPackage package, AppItem parent, Func<bool> winget
     /// <summary>What assistive technology reads for this item: its display name, never the type name.</summary>
     public override string ToString() => Name;
 
-    public string Note => Loc.AppNote(Package.Id, Package.Note);
-
     public bool CanSelect => !_checking && !wingetMissing() && _state != InstallState.Installed
         && (parent.State == InstallState.Installed || parent.Selected);
 
@@ -113,12 +111,6 @@ public sealed class AppItem : Observable
     public ObservableCollection<AppMod> Mods { get; } = [];
 
     public bool HasMods => Mods.Count > 0;
-
-    /// <summary>
-    /// The app's note, which says what an install would do (empty once the app is installed and Mesura carries its settings, and for an app without a
-    /// note: the card then has no tooltip).
-    /// </summary>
-    public string Note => !_checking && _state == InstallState.Installed && Port is not null ? "" : Loc.AppNote(Package.Id, Package.Note);
 
     /// <summary>The config port that sets this app up after an install, if Mesura has one.</summary>
     public ConfigPortDefinition? Port => ConfigCatalog.ById(Package.Id);

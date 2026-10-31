@@ -104,7 +104,7 @@
                              note, then its state (or the Update action). -->
                         <DataTemplate DataType="{x:Type l:AppItem}">
                             <l:GlowBorder x:Name="Card" Style="{StaticResource GlowCard}" Padding="16,14,14,14" Margin="0,0,12,12" Cursor="Hand" Height="84" VerticalAlignment="Top"
-                                    MouseLeftButtonUp="OnCardClick" ToolTip="{Binding Note}">
+                                    MouseLeftButtonUp="OnCardClick">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />

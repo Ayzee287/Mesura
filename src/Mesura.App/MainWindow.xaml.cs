@@ -78,7 +78,10 @@ public partial class MainWindow : Window
         _update = new UpdateViewModel(services);
         UpdateNotice.DataContext = _update;
         SettingsPage.DataContext = new SettingsViewModel(services, _update);
-        NavOptimize.IsChecked = true;
+        WelcomePage.DataContext = new WelcomeViewModel(
+            () => ShowPage(OptimizePage), () => ShowPage(AppsPage), () => ShowPage(AllSettingsPage), () => ShowPage(DebloatPage), () => ShowPage(FirmwarePage),
+            () => ShowPage(SystemInfoPage), () => ShowPage(ActivityPage));
+        ShowPage(WelcomePage, record: false);
         Language = System.Windows.Markup.XmlLanguage.GetLanguage(Loc.Instance.Culture.IetfLanguageTag);
         Loc.Instance.LanguageChanged += () => Language = System.Windows.Markup.XmlLanguage.GetLanguage(Loc.Instance.Culture.IetfLanguageTag);
         _ = _windows.RefreshAsync();
@@ -140,7 +143,7 @@ public partial class MainWindow : Window
         _current = page;
         BackButton.Visibility = _history.Count > 0 || page.DataContext is IPageBack ? Visibility.Visible : Visibility.Collapsed;
         var changed = page.Visibility != Visibility.Visible;
-        foreach (var child in new UserControl[] { OptimizePage, AllSettingsPage, DebloatPage, FirmwarePage, AppsPage, ConfigurationsPage, ProfilesPage, ActivationPage, SystemInfoPage, ActivityPage, SettingsPage })
+        foreach (var child in new UserControl[] { WelcomePage, OptimizePage, AllSettingsPage, DebloatPage, FirmwarePage, AppsPage, ConfigurationsPage, ProfilesPage, ActivationPage, SystemInfoPage, ActivityPage, SettingsPage })
         {
             if (child != page && child.Visibility == Visibility.Visible)
             {
@@ -154,7 +157,10 @@ public partial class MainWindow : Window
             child.Visibility = child == page ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        var nav = page == AllSettingsPage ? NavTweaks
+        // The Welcome page is no entry of the dock: with it open none is checked.
+        RadioButton? nav = page == WelcomePage ? null
+            : page == OptimizePage ? NavOptimize
+            : page == AllSettingsPage ? NavTweaks
             : page == DebloatPage ? NavDebloat
             : page == FirmwarePage ? NavFirmware
             : page == AppsPage ? NavApps
@@ -164,7 +170,7 @@ public partial class MainWindow : Window
             : page == SystemInfoPage ? NavSystem
             : page == ActivityPage ? NavActivity
             : page == SettingsPage ? NavSettings
-            : NavOptimize;
+            : null;
         // The dock's entries are kept in step by hand: the ones in the "more" menu are not in the visual tree until it opens, so the
         // group's own mutual exclusion cannot reach them.
         foreach (var item in new[] { NavOptimize, NavTweaks, NavDebloat, NavFirmware, NavApps, NavActivation, NavSystem, NavActivity, NavConfigurations, NavProfiles, NavSettings })
@@ -392,8 +398,8 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>The logo: back to the Optimization page from anywhere.</summary>
-    private void OnHomeClick(object sender, RoutedEventArgs e) => NavOptimize.IsChecked = true;
+    /// <summary>The logo: back to the Welcome page from anywhere.</summary>
+    private void OnHomeClick(object sender, RoutedEventArgs e) => ShowPage(WelcomePage);
 
     /// <summary>Ctrl+F opens All settings with its search box focused.</summary>
     private void OnWindowKeyDown(object sender, KeyEventArgs e)

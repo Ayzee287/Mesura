@@ -238,7 +238,9 @@
 
     <!-- A setting as a card (Tweaks and Debloat): risk label, name, summary, status and the staged switch. -->
     <DataTemplate x:Key="TweakCard" DataType="{x:Type l:SettingRow}">
-            <Grid Margin="18,15,18,14">
+            <!-- Rows of cards are as tall as their tallest card (EqualRowsPanel); MinHeight is one name line and two lines of description, so most rows are alike
+                 and a longer text only makes its own row taller. The description is never cut. -->
+            <Grid Margin="18,15,18,14" MinHeight="134">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -267,8 +269,8 @@
                                Visibility="{Binding ShowCategoryLabel, Converter={StaticResource BoolToVisibility}}" />
                 </DockPanel>
                 <TextBlock Grid.Row="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource Text}" TextWrapping="Wrap" Margin="0,9,0,0" />
-                <TextBlock Grid.Row="2" Text="{Binding Summary}" Style="{StaticResource Caption}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" MaxHeight="54"
-                           TextTrimming="CharacterEllipsis" Margin="0,6,0,12" VerticalAlignment="Top" />
+                <TextBlock Grid.Row="2" Text="{Binding Summary}" Style="{StaticResource Caption}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap"
+                           Margin="0,6,0,12" VerticalAlignment="Top" />
                 <Border Grid.Row="3" BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0" Padding="0,11,0,0">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">

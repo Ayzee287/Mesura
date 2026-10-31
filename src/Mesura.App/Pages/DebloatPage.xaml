@@ -71,7 +71,7 @@
                      ItemsSource="{Binding View}" KeyDown="OnListKeyDown">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="2" />
+                        <l:EqualRowsPanel MinColumnWidth="330" MaxColumns="3" />
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
                 <ListBox.GroupStyle>

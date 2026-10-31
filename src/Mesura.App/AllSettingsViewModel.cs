@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -112,7 +112,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
         View.Filter = Matches;
         Regroup();
 
-        foreach (var value in new[] { "all", "Recommended", "Optional", "Advanced" })
+        foreach (var value in new[] { "all", "Recommended", "Optional" })
         {
             RecommendationFilters.Add(new FilterChoice(value, () => value == "all" ? Loc.Get("Filter.AllLevels") : Loc.Get($"Recommendation.{value}"), v =>
             {
@@ -206,7 +206,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
     public ObservableCollection<RailChoice> Rail { get; } = [];
 
     /// <summary>The chosen category's name and what in it can be applied here, for the list's header.</summary>
-    public string RailTitle => Rail.FirstOrDefault(r => r.Value == _rail)?.Label ?? "";
+    public string RailTitle => Searching ? Loc.Get("AllSettings.SearchResults") : Rail.FirstOrDefault(r => r.Value == _rail)?.Label ?? "";
 
     public string RailSummary
     {
@@ -217,6 +217,11 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
                 return Loc.Get("State.Checking");
             }
 
+            if (Searching)
+            {
+                return Loc.Format("AllSettings.SearchSummary", View.Cast<object>().Count());
+            }
+
             var rows = _state.Rows.Where(InRail).ToList();
             return _rail == Guides
                 ? Loc.Get("AllSettings.GuidesSummary")
@@ -225,7 +230,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
     }
 
     /// <summary>Whether the rail's category is the guides (no ticks there: each opens its steps or the Windows page).</summary>
-    public bool InGuides => _rail == Guides;
+    public bool InGuides => _rail == Guides && !Searching;
 
     public ObservableCollection<CollectionChoice> Collections { get; } = [];
 
@@ -244,10 +249,19 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
         get => _search;
         set
         {
+            var was = Searching;
             Set(ref _search, value ?? "");
+            if (Searching != was)
+            {
+                Regroup(); // results from every category are grouped by category; a category on its own is flat
+            }
+
             Refilter();
         }
     }
+
+    /// <summary>Whether a search is running: then it covers every category and level, not only the ones chosen on the left and above.</summary>
+    public bool Searching => _search.Trim().Length > 0;
 
     public bool OnlyChangeable
     {
@@ -324,12 +338,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
 
     private bool Matches(object item)
     {
-        if (item is not SettingRow row || !InRail(row))
-        {
-            return false;
-        }
-
-        if (_rail != Guides && _recommendation != "all" && row.Recommendation.ToString() != _recommendation)
+        if (item is not SettingRow row || row.InDebloat)
         {
             return false;
         }
@@ -340,11 +349,38 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
         }
 
         var words = _search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return words.All(w => row.Name.Contains(w, StringComparison.CurrentCultureIgnoreCase)
-            || row.Summary.Contains(w, StringComparison.CurrentCultureIgnoreCase)
-            || row.Category.Contains(w, StringComparison.CurrentCultureIgnoreCase)
-            || row.Operation.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
-            || row.Id.Contains(w, StringComparison.OrdinalIgnoreCase));
+        if (words.Length == 0)
+        {
+            if (!InRail(row))
+            {
+                return false;
+            }
+
+            return _rail == Guides || _recommendation == "all" || row.Recommendation.ToString() == _recommendation;
+        }
+
+        // A search looks everywhere (the guides included) and in what the card shows: its name, description and category, and the English name for
+        // those who search in English on a Russian screen. Never the internal id: it is not on the card, and a short query such as "p" matched almost everything
+        // through it. A one- or two-letter word must start a word, and a single letter is looked for in the name only (in the description and category it would match nearly everything); longer ones may be inside a word.
+        return words.All(w => Hit(row.Name, w) || (w.Length >= 2 && (Hit(row.Summary, w) || Hit(row.Category, w) || Hit(row.Operation.Name, w))));
+    }
+
+    private static bool Hit(string text, string word)
+    {
+        if (word.Length >= 3)
+        {
+            return text.Contains(word, StringComparison.CurrentCultureIgnoreCase);
+        }
+
+        for (var at = text.IndexOf(word, StringComparison.CurrentCultureIgnoreCase); at >= 0; at = text.IndexOf(word, at + 1, StringComparison.CurrentCultureIgnoreCase))
+        {
+            if (at == 0 || !char.IsLetterOrDigit(text[at - 1]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void Refilter()
@@ -355,6 +391,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
         Raise(nameof(SelectionSummary));
         Raise(nameof(RailTitle));
         Raise(nameof(RailSummary));
+        Raise(nameof(Searching));
         Raise(nameof(InGuides));
     }
 
@@ -367,7 +404,7 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
         {
             View.GroupDescriptions.Clear();
             View.SortDescriptions.Clear();
-            if (_rail == "all")
+            if (_rail == "all" || Searching)
             {
                 View.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SettingRow.ImpactText)));
                 View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.ImpactOrder), ListSortDirection.Ascending));

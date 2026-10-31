@@ -1,8 +1,26 @@
 # Changelog
 
-## 0.4.2 (local build, not published)
+## 0.4.3
 
-Version numbers have no suffix from here on (0.4.2, 0.4.3, ...).
+Version numbers have no suffix from here on (0.4.3, 0.4.4, ...).
+
+- **Welcome page.** Mesura now opens on a quiet page of its own: a mark, one line about what it is, three promises (every change is shown first, what Mesura changes is recorded so Activity can undo it, no account and no
+  telemetry), three doors (Optimization, Apps, All settings) and one line of the rest (Debloat, Firmware, System, Activity). It shows no state of the PC and nothing that changes. The logo goes back to it from anywhere; no dock item
+  is selected while it is open. Optimization is still its own page.
+- **Living background.** The light that followed the pointer is replaced by five soft shapes that drift on paths and at speeds of their own, push each other apart and flatten where they meet, and give way to the pointer (it
+  pushes and deforms them, it does not drag them along). Off draws nothing; Reduced is fainter, slower and drawn six times a second; Full is drawn twelve times a second at rest and at the display rate while the pointer is
+  moving them. The shapes follow a resized window. Settings > Background says so.
+- **Search.** It looks everywhere (every category and level, the guides too) and shows "Search results". It matches what is on the card: name, description, category and the English name; no longer the internal id, which made a
+  letter such as "p" match almost everything. One letter is looked for at the start of a word in the name only; two letters at the start of a word; three or more anywhere. The hint, the caret and the typed text now start at the same
+  point (the box showed the hint a few pixels to the right of the caret).
+- **Cards.** All settings and Debloat cards in a row are as tall as the tallest of that row, the status, switch and divider sit in the same place, no text is cut, and the number of columns follows the width (one to three).
+  The category rail is wider so a long Russian category name no longer breaks inside a word.
+- **App cards.** No hover description any more (it was the card's tooltip); the mechanism behind it is removed. Confirmations and dialogs are unchanged.
+- **Levels.** The level "Advanced" is gone: its one entry, "Classic right-click menu (Windows 11)", is Optional, with the same risk and the same note ("a community workaround Microsoft doesn't document"), and it is still in no
+  preset. The filter is All levels, Recommended, Optional.
+- **Tools.** `tools\shoot-scaled.ps1` can also capture the Welcome page.
+
+## 0.4.2
 
 - **Apps: one choice for the whole install.** Install opens one dialog with three cards: **Mesura** (its prepared settings; today Brave and Spotify have them), **Custom** (your saved configuration; off, with the reason, while you have
   none) and **Standard** (install only). Each card says how many of the chosen apps it covers; an app it does not cover is installed as it is, which is not an error. The row "After install, set up with" on the page is gone.

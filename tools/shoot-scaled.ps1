@@ -14,7 +14,7 @@ param(
   [ValidateSet('en', 'ru')][string]$Lang = 'en',
   [int]$Width = 0,
   [int]$Height = 0,
-  [string[]]$Pages = @('Setup', 'Tweaks', 'Debloat', 'Firmware', 'Apps', 'Profiles', 'SystemInfo', 'Activity', 'Settings', 'Configurations', 'Activation'),
+  [string[]]$Pages = @('Welcome', 'Setup', 'Tweaks', 'Debloat', 'Firmware', 'Apps', 'Profiles', 'SystemInfo', 'Activity', 'Settings', 'Configurations', 'Activation'),
   [int]$Settle = 6,
   [int]$Wait = 1800
 )
@@ -107,7 +107,7 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc(); [Dpi]::PrintWindow($h, $hdc, 2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose()
     $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
   }
-  $map = @{ Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Profiles = 'Nav.Profiles'; SystemInfo = 'Nav.SystemInfo'
+  $map = @{ Welcome = 'Nav.Home'; Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Profiles = 'Nav.Profiles'; SystemInfo = 'Nav.SystemInfo'
             Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Configurations'; Activation = 'Nav.Activation' }
   $i = 0
   foreach ($page in ($Pages -join ',').Split(',')) {
@@ -116,14 +116,16 @@ try {
     if (-not $label) { Write-Host "skip $page"; continue }
     if ($page -in 'Configurations', 'Profiles', 'Settings') { $mb = Find-Named $strings.'Nav.More'; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
     $item = $null; $deadline = (Get-Date).AddSeconds(5)
+    $kind = if ($page -eq 'Welcome') { $CT::Button } else { $CT::RadioButton }   # the logo (home) is a button, the dock's pages are radio buttons
     while (-not $item -and (Get-Date) -lt $deadline) {
       $c = New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $label)
-      $item = @($root.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $CT::RadioButton } | Select-Object -First 1
-      if (-not $item) { $item = @($A::RootElement.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $CT::RadioButton } | Select-Object -First 1 }
+      $item = @($root.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $kind } | Select-Object -First 1
+      if (-not $item) { $item = @($A::RootElement.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $kind } | Select-Object -First 1 }
       if (-not $item) { Start-Sleep -Milliseconds 300 }
     }
     if (-not $item) { Write-Host "skip $page (no nav item '$label')"; continue }
-    $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    if ($page -eq 'Welcome') { $item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    else { $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select() }
     Start-Sleep -Milliseconds $Wait
     $file = Join-Path $Out ("{0:00}-{1}-{2}-{3}pct.png" -f $i, $page.ToLower(), $Lang, $Scale)
     Shot $file
