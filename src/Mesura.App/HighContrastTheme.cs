@@ -79,7 +79,7 @@ public static class HighContrastTheme
         SetGradient(resources, highlight, "AccentFill", "AccentFillHover", "AccentFillPressed");
         SetGradient(resources, window, "GlassSheen", "DockSurface");
         SetGradient(resources, text, "GlassEdge");
-        SetGradient(resources, Colors.Transparent, "OrbKey", "OrbTrail", "OrbCool", "OrbWarm");
+        SetGradient(resources, Colors.Transparent, "AmbientKey", "AmbientSafelight", "AmbientHaze", "AmbientBeam", "AmbientMote", "AmbientVignette");
         LightField.Mode = LightingMode.Off;
     }
 

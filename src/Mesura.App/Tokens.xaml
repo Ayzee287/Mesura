@@ -90,27 +90,49 @@
         <GradientStop Color="#F0202328" Offset="0" />
         <GradientStop Color="#F0151719" Offset="1" />
     </LinearGradientBrush>
-    <!-- Ambient light behind everything (AmbientField): a cool key light that follows the pointer with inertia, a broad cool light
-         and a warm counter-light; all neutral, all low. -->
-    <RadialGradientBrush x:Key="OrbKey" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#58708CFF" Offset="0" />
-        <GradientStop Color="#22708CFF" Offset="0.5" />
-        <GradientStop Color="#00708CFF" Offset="1" />
+    <!-- The atmosphere behind everything (AmbientField, 0.4.4): every layer a soft gradient with no edge, a few percent over the ground at its brightest. A key
+         light (silver-blue), a safelight (the violet of the logo), a haze (its mint), a pale diagonal beam, the dust motes and a vignette. Stops are spread
+         like a gaussian, so there is no visible rim and little banding on a dark ground. -->
+    <RadialGradientBrush x:Key="AmbientKey" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#2E86A2F4" Offset="0" />
+        <GradientStop Color="#2486A2F4" Offset="0.18" />
+        <GradientStop Color="#1686A2F4" Offset="0.38" />
+        <GradientStop Color="#0A86A2F4" Offset="0.6" />
+        <GradientStop Color="#0386A2F4" Offset="0.8" />
+        <GradientStop Color="#0086A2F4" Offset="1" />
     </RadialGradientBrush>
-    <!-- The second, slower light that trails the pointer (Full mode only): the violet end of the logo's gradient. -->
-    <RadialGradientBrush x:Key="OrbTrail" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#44A070FF" Offset="0" />
-        <GradientStop Color="#18A070FF" Offset="0.5" />
+    <RadialGradientBrush x:Key="AmbientSafelight" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#4CA070FF" Offset="0" />
+        <GradientStop Color="#2EA070FF" Offset="0.2" />
+        <GradientStop Color="#16A070FF" Offset="0.45" />
+        <GradientStop Color="#06A070FF" Offset="0.7" />
         <GradientStop Color="#00A070FF" Offset="1" />
     </RadialGradientBrush>
-    <RadialGradientBrush x:Key="OrbCool" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#3C2AB6FF" Offset="0" />
-        <GradientStop Color="#142AB6FF" Offset="0.5" />
-        <GradientStop Color="#002AB6FF" Offset="1" />
-    </RadialGradientBrush>
-    <RadialGradientBrush x:Key="OrbWarm" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#2E34F0B0" Offset="0" />
-        <GradientStop Color="#0E34F0B0" Offset="0.5" />
+    <RadialGradientBrush x:Key="AmbientHaze" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#2C34F0B0" Offset="0" />
+        <GradientStop Color="#1634F0B0" Offset="0.25" />
+        <GradientStop Color="#0A34F0B0" Offset="0.5" />
+        <GradientStop Color="#0334F0B0" Offset="0.75" />
         <GradientStop Color="#0034F0B0" Offset="1" />
     </RadialGradientBrush>
-</ResourceDictionary>
+    <LinearGradientBrush x:Key="AmbientBeam" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#00C8D8FF" Offset="0.30" />
+        <GradientStop Color="#06C8D8FF" Offset="0.40" />
+        <GradientStop Color="#0EC8D8FF" Offset="0.47" />
+        <GradientStop Color="#1AC8D8FF" Offset="0.50" />
+        <GradientStop Color="#0EC8D8FF" Offset="0.53" />
+        <GradientStop Color="#06C8D8FF" Offset="0.60" />
+        <GradientStop Color="#00C8D8FF" Offset="0.70" />
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="AmbientMote" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#D8DCE6FF" Offset="0" />
+        <GradientStop Color="#70DCE6FF" Offset="0.4" />
+        <GradientStop Color="#00DCE6FF" Offset="1" />
+    </RadialGradientBrush>
+    <!-- The room's edges fall into the dark: clear in the middle, a little over a third black in the corners. -->
+    <RadialGradientBrush x:Key="AmbientVignette" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.78" RadiusY="0.78">
+        <GradientStop Color="#00000000" Offset="0.45" />
+        <GradientStop Color="#18000000" Offset="0.7" />
+        <GradientStop Color="#40000000" Offset="0.9" />
+        <GradientStop Color="#60000000" Offset="1" />
+    </RadialGradientBrush></ResourceDictionary>

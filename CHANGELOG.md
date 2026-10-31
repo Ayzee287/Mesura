@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.4
+
+- **The background is rethought.** The five moving shapes of 0.4.3 are gone. The picture is now a dark room with a soft light in it, after the calm of the photographer's site that was the reference: a very large, very faint key light that wanders over about forty seconds, a violet
+  light in the upper corner that breathes, a faint mint haze low in the other corner, a pale diagonal beam that crosses the window in about a minute, twenty-six motes of dust at three depths that rise slowly and fade in and out, a vignette and a very fine fixed grain
+  that hides the steps of a dark gradient. Nothing has an edge and nothing is more than a few percent over the ground.
+- **The pointer is nearly out of it.** It shifts the lights by at most about three percent of the window with an inertia of over a second, lifts a light by a few percent when near it, and nudges the nearest motes a few pixels. Nothing follows it and nothing bends; with the pointer still the picture moves
+  by itself as much as with it. (Measured between frames: the sweep of the pointer changes the picture about as much as four seconds of the picture's own movement.)
+- **Modes.** Full: all of the above (26 motes), 15 frames a second at rest, 24 while the lights settle after the pointer. Reduced is a smaller picture, not a slowed one: the three lights moving a little and breathing slowly, no beam, no dust, no reaction to the pointer, 5 frames a second. Off is the same
+  lights standing still (it was an empty window), no loop at all. A window that is not the active one is drawn twice a second. Windows' high-contrast themes still get a plain field.
+- Measured on the one laptop (1920 x 1290 window, idle): Off 0 %, Reduced about 0.8 %, Full about 1.6 % of the CPU.
+
 ## 0.4.3
 
 Version numbers have no suffix from here on (0.4.3, 0.4.4, ...).

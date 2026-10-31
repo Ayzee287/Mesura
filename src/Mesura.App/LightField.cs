@@ -7,20 +7,20 @@ namespace Mesura.App;
 /// <summary>How much of the interactive light Mesura draws (Settings > Lighting).</summary>
 public enum LightingMode
 {
-    /// <summary>The pointer lights every glass surface near it, and the shapes of the background move aside for it.</summary>
+    /// <summary>The pointer lights every glass surface near it; the background is the full atmosphere (lights, beam, dust) and answers the pointer a little.</summary>
     Full,
 
-    /// <summary>Only the surface under the pointer lights up (half as much); the background drifts slowly and faintly and ignores the pointer.</summary>
+    /// <summary>Only the surface under the pointer lights up (half as much); the background is the three lights, moving a little, with no dust, no beam and no reaction to the pointer.</summary>
     Reduced,
 
-    /// <summary>No background and no pointer light at all. A selected surface keeps its static wash.</summary>
+    /// <summary>The same background standing still (one frame, no loop) and no pointer light. A selected surface keeps its static wash.</summary>
     Off,
 }
 
 /// <summary>
 /// One shared light for the whole window (0.4 "Graphite", docs/redesign-2026-11.md §4). The pointer is the light source: every
 /// <see cref="GlowBorder"/> near it answers by its distance, so neighbouring surfaces brighten together instead of one card lighting
-/// up alone, and the ambient field behind the glass (<see cref="AmbientField"/>) leans toward it with a little inertia.
+/// up alone, and the ambient field behind the glass (<see cref="AmbientField"/>) shifts a few percent with it, with a long inertia.
 /// Cost control: the pointer is read once per rendered frame, only while it moves or the eased position is still settling; the
 /// frame loop is not subscribed otherwise, so an idle window draws nothing. Windows' own animation setting, a remote session
 /// and a weak render tier all reduce or switch the effect off (see <see cref="Resolve"/>), and the user can choose too.

@@ -6,59 +6,129 @@ using System.Windows.Shapes;
 namespace Mesura.App;
 
 /// <summary>
-/// The living background behind the glass (0.4.3, docs/redesign-0.4.md): a few soft shapes that move on their own, each on its own slow path and at its
-/// own speed, the way bubbles drift in a lava lamp (the idea, not the look). They have mass, they keep their momentum, and when two of them meet they push
-/// each other away and squash against the contact, so the field is one body of moving light and not four lamps. The pointer does not steer anything: it is
-/// an obstacle. A shape near it is pushed away, flattened against the push, and swept a little along the pointer's own movement; when the pointer
-/// leaves, the shape eases back into its own drift. With the pointer still, nothing stops.
+/// The atmosphere behind the glass (0.4.4, docs/redesign-0.4.md): a dark room with a soft light in it, not an animation. After the look of a darkroom
+/// seen from a distance: a very large, very faint key light that wanders across the window over about forty seconds, a violet "safelight" in the upper
+/// corner that breathes, a faint mint haze low in the opposite corner, a pale diagonal beam that crosses the window in about a minute, and a few motes
+/// of dust that rise through the dark, each at its own depth, speed and pace. The edges fall off into a vignette. Nothing in it has a hard edge and
+/// nothing is brighter than a few percent over the ground, so text keeps its contrast (measured, docs/redesign-0.4.md).
 ///
-/// Everything is a gradient on an ellipse that is moved by composition transforms (scale, rotation, translation), so a frame costs a handful of
-/// property writes and no layout or repaint of the page. The loop runs only while a mode other than Off is on, the window is visible and not minimised,
-/// at the display's rate in Full, at half of it in Reduced, and slowed right down while the window is not the active one.
-/// Full: five shapes, the pointer pushes them. Reduced: the same field drifting more slowly and fainter, no reaction to the pointer. Off: not drawn.
+/// The pointer is not a player here. It shifts the lights a few percent of the window with a long inertia (parallax: the room seems to have depth), lifts
+/// a light by a few percent when it is near it, and nudges the motes a few pixels away. It never drags, bends or follows anything, and with the pointer
+/// still the picture keeps living by itself.
+///
+/// Modes. Full: all of the above, drawn 12 times a second at rest (the movement is a few pixels a second) and 24 while the lights settle after the
+/// pointer. Reduced is a different, smaller picture and not a slowed Full: the key light, the safelight and the haze, moving a little and breathing slowly,
+/// no beam, no motes, no reaction to the pointer, 5 frames a second. Off: the same lights standing still, one frame, no loop.
+/// A window that is not the active one is drawn twice a second. Every layer is a gradient on a shape moved by composition transforms, so a frame is a
+/// handful of property writes, not a layout.
 /// </summary>
 public sealed class AmbientField : Canvas
 {
-    private const double BaseSize = 800; // the ellipse's own size; a shape is this scaled to its radius
+    private const double Tau = Math.PI * 2;
 
-    private sealed class Blob
+    private sealed class Light
     {
-        public required Ellipse Shape { get; init; }
-
-        public required ScaleTransform Scale { get; init; }
-
-        public required RotateTransform Rotate { get; init; }
+        public required Shape Shape { get; init; }
 
         public required TranslateTransform Move { get; init; }
 
-        // Where it lives (fractions of the window), how far its own path wanders, how fast, and its size as a fraction of the window's larger side.
-        public double AnchorX, AnchorY, WanderX, WanderY, FreqX, FreqY, PhaseX, PhaseY, Size, Weight, Strength, Breath, BreathPhase;
+        public RotateTransform? Tilt { get; init; }
 
-        // State: position and velocity in pixels, and the elastic deformation (a push squashes it along the push's direction).
-        public double X, Y, VX, VY, Squash, SquashAngle, Angle;
+        // Where it sits (fractions of the window), how far its own path wanders (fractions), the path's period in seconds and phase, and its size.
+        public double AnchorX, AnchorY, WanderX, WanderY, Period, Phase, Width, Height;
+
+        // Its strength, how deep and how slowly it breathes, how far the pointer shifts it (fraction of the window) and how much a near pointer lifts it.
+        public double Strength, BreathDepth, BreathPeriod, Parallax, Lift;
+
+        // Only drawn in Full (the beam), or moving at all in Reduced.
+        public bool FullOnly;
     }
 
-    private readonly List<Blob> _blobs = [];
-    private readonly Random _random = new(7);
+    private sealed class Mote
+    {
+        public required Ellipse Shape { get; init; }
+
+        public required TranslateTransform Move { get; init; }
+
+        public double Depth, Size, Alpha, Duration, Offset, Rise, Sway, SwayPhase;
+
+        // The life it is in now and where that life starts (fractions of the window); the pointer's small push on it, in pixels.
+        public int Cycle = -1;
+        public double StartX, StartY, PushX, PushY;
+    }
+
+    private static readonly Brush Grain = MakeGrain();
+
+    private static Brush MakeGrain()
+    {
+        const int size = 128;
+        var pixels = new byte[size * size * 4];
+        var random = new Random(3);
+        for (var i = 0; i < size * size; i++)
+        {
+            // White at 1 to 3 parts in 255 over the ground (premultiplied): it lifts a pixel by up to about two levels, one in three pixels stays clear.
+            var a = (byte)random.Next(0, 4);
+            pixels[i * 4] = a;
+            pixels[i * 4 + 1] = a;
+            pixels[i * 4 + 2] = a;
+            pixels[i * 4 + 3] = a;
+        }
+
+        var tile = System.Windows.Media.Imaging.BitmapSource.Create(size, size, 96, 96, PixelFormats.Pbgra32, null, pixels, size * 4);
+        tile.Freeze();
+        var brush = new ImageBrush(tile)
+        {
+            TileMode = TileMode.Tile,
+            ViewportUnits = BrushMappingMode.Absolute,
+            Viewport = new Rect(0, 0, size, size),
+            Stretch = Stretch.None,
+        };
+        brush.Freeze();
+        return brush;
+    }
+
+    private readonly List<Light> _lights = [];
+    private readonly List<Mote> _motes = [];
+    private readonly Random _random = new(11);
+    private Rectangle? _vignette;
+    private Rectangle? _grain;
+    private Light? _beam;
     private bool _running;
     private TimeSpan _last = TimeSpan.MinValue;
-    private double _time;
+    private double _time = 9;
+    private double _sinceDraw;
     private double _width, _height;
-    private Point _pointerBefore;
-    private bool _hadPointer;
+    private double _pointerX = 0.5, _pointerY = 0.5; // eased, as fractions of the window
+    private bool _settling;
     private Window? _window;
 
     public AmbientField()
     {
         IsHitTestVisible = false;
         ClipToBounds = true;
-        // Colour, anchor (fraction of the window), wander, speed (radians per second), size, weight and strength; the numbers are taste, tuned by eye:
-        // the large cool light is the slowest and heaviest, the small violet and blue ones are quick and light, so the field has a pace and not a rhythm.
-        Add("OrbCool", 0.18, 0.12, 0.16, 0.10, 0.052, 0.041, 0.52, 3.2, 0.95);
-        Add("OrbWarm", 0.84, 0.88, 0.14, 0.12, 0.046, 0.058, 0.44, 2.6, 0.85);
-        Add("OrbKey", 0.62, 0.30, 0.20, 0.16, 0.083, 0.067, 0.34, 1.6, 0.90);
-        Add("OrbTrail", 0.30, 0.72, 0.18, 0.14, 0.071, 0.093, 0.30, 1.2, 0.80);
-        Add("OrbKey", 0.90, 0.20, 0.10, 0.18, 0.099, 0.077, 0.22, 0.8, 0.70);
+
+        // Taste, tuned by eye against the reference's calm: slow, large, faint. (anchor, wander, period, size, strength, breath, parallax, lift)
+        AddLight("AmbientKey", 0.5, 0.42, 0.10, 0.08, 34, 1.16, 1.16, 1.00, 0.16, 14, 0.030, 0.12, fullOnly: false);
+        AddLight("AmbientSafelight", 0.88, 0.02, 0.04, 0.045, 29, 0.92, 0.84, 1.0, 0.5, 17, 0.012, 0.14, fullOnly: false);
+        AddLight("AmbientHaze", 0.08, 0.98, 0.06, 0.045, 41, 0.78, 0.66, 1.0, 0.4, 21, 0.018, 0.10, fullOnly: false);
+        _beam = AddLight("AmbientBeam", 0.5, 0.5, 0.10, 0.0, 50, 1.2, 1.6, 1.15, 0.0, 1, 0.010, 0.0, fullOnly: true, tilt: -16);
+
+        // Three depths: near motes are larger, brighter, quicker and react most to the pointer; far ones are specks that hardly move.
+        for (var i = 0; i < 26; i++)
+        {
+            AddMote(i % 3 == 0 ? 1.0 : i % 3 == 1 ? 0.62 : 0.34);
+        }
+
+        _vignette = new Rectangle { Fill = (Brush)Application.Current.Resources["AmbientVignette"], IsHitTestVisible = false };
+        Children.Add(_vignette);
+
+        // A very fine, fixed grain over the lights: a dark gradient in 8 bits shows steps, and two levels of noise hide them (and give the dark its film-like tooth).
+        if (!HighContrastTheme.IsOn)
+        {
+            _grain = new Rectangle { Fill = Grain, IsHitTestVisible = false };
+            Children.Add(_grain);
+        }
+
         SizeChanged += (_, _) => Resized();
         Loaded += (_, _) =>
         {
@@ -68,10 +138,12 @@ public sealed class AmbientField : Canvas
             {
                 _window.StateChanged += (_, _) => Pump();
                 _window.IsVisibleChanged += (_, _) => Pump();
+                _window.Activated += (_, _) => Pump();
             }
 
             Resized();
             ApplyMode();
+            Pump();
         };
         Unloaded += (_, _) =>
         {
@@ -80,40 +152,70 @@ public sealed class AmbientField : Canvas
         };
     }
 
-    private void Add(string brushKey, double ax, double ay, double wx, double wy, double fx, double fy, double size, double weight, double strength)
+    private Light AddLight(string brushKey, double ax, double ay, double wx, double wy, double period, double width, double height, double strength, double breathDepth,
+        double breathPeriod, double parallax, double lift, bool fullOnly, double tilt = 0)
     {
-        var scale = new ScaleTransform(1, 1, BaseSize / 2, BaseSize / 2);
-        var rotate = new RotateTransform(0, BaseSize / 2, BaseSize / 2);
         var move = new TranslateTransform();
-        var shape = new Ellipse
+        var rotate = tilt == 0 ? null : new RotateTransform(tilt);
+        var shape = new Rectangle
         {
-            Width = BaseSize,
-            Height = BaseSize,
             Fill = (Brush)Application.Current.Resources[brushKey],
             IsHitTestVisible = false,
-            RenderTransform = new TransformGroup { Children = [scale, rotate, move] },
+            RenderTransform = rotate is null ? move : new TransformGroup { Children = [rotate, move] },
+            RenderTransformOrigin = new Point(0.5, 0.5),
             Opacity = strength,
         };
         Children.Add(shape);
-        _blobs.Add(new Blob
+        var light = new Light
         {
             Shape = shape,
-            Scale = scale,
-            Rotate = rotate,
             Move = move,
+            Tilt = rotate,
             AnchorX = ax,
             AnchorY = ay,
             WanderX = wx,
             WanderY = wy,
-            FreqX = fx,
-            FreqY = fy,
-            PhaseX = _random.NextDouble() * Math.Tau,
-            PhaseY = _random.NextDouble() * Math.Tau,
-            Size = size,
-            Weight = weight,
+            Period = period,
+            Phase = _random.NextDouble() * Tau,
+            Width = width,
+            Height = height,
             Strength = strength,
-            Breath = 0.05 + _random.NextDouble() * 0.04,
-            BreathPhase = _random.NextDouble() * Math.Tau,
+            BreathDepth = breathDepth,
+            BreathPeriod = breathPeriod,
+            Parallax = parallax,
+            Lift = lift,
+            FullOnly = fullOnly,
+        };
+        _lights.Add(light);
+        return light;
+    }
+
+    private void AddMote(double depth)
+    {
+        var size = 2.0 + 3.6 * depth;
+        var shape = new Ellipse
+        {
+            Width = size,
+            Height = size,
+            Fill = (Brush)Application.Current.Resources["AmbientMote"],
+            IsHitTestVisible = false,
+            Opacity = 0,
+        };
+        var move = new TranslateTransform();
+        shape.RenderTransform = move;
+        Children.Add(shape);
+        _motes.Add(new Mote
+        {
+            Shape = shape,
+            Move = move,
+            Depth = depth,
+            Size = size,
+            Alpha = 0.22 + 0.36 * depth,
+            Duration = 24 + _random.NextDouble() * 18,
+            Offset = _random.NextDouble() * 60,
+            Rise = (46 + _random.NextDouble() * 70) * depth,
+            Sway = (6 + _random.NextDouble() * 12) * depth,
+            SwayPhase = _random.NextDouble() * Tau,
         });
     }
 
@@ -125,11 +227,22 @@ public sealed class AmbientField : Canvas
         Pump();
     }
 
-    /// <summary>Off draws nothing at all (a plain dark window); Reduced draws the field fainter; Full at its own strength.</summary>
+    /// <summary>Full: everything. Reduced: the three lights, moving a little. Off: the three lights standing still.</summary>
     private void ApplyMode()
     {
-        Visibility = LightField.Mode == LightingMode.Off ? Visibility.Collapsed : Visibility.Visible;
-        Opacity = LightField.Mode == LightingMode.Reduced ? 0.55 : 1.0;
+        var full = LightField.Mode == LightingMode.Full;
+        foreach (var light in _lights.Where(l => l.FullOnly))
+        {
+            light.Shape.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        foreach (var mote in _motes)
+        {
+            mote.Shape.Visibility = full ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        Opacity = full ? 1.0 : 0.8;
+        Render(0);
     }
 
     private void Resized()
@@ -141,28 +254,33 @@ public sealed class AmbientField : Canvas
             return;
         }
 
-        if (_width < 8)
+        _width = w;
+        _height = h;
+        foreach (var light in _lights)
         {
-            // First size: every shape starts on its own path at time zero.
-            foreach (var b in _blobs)
-            {
-                var (tx, ty) = Target(b, 0, w, h);
-                b.X = tx;
-                b.Y = ty;
-            }
+            var lw = light.Width * w;
+            var lh = light.Height * h;
+            light.Shape.Width = lw;
+            light.Shape.Height = lh;
+            SetLeft(light.Shape, light.AnchorX * w - lw / 2);
+            SetTop(light.Shape, light.AnchorY * h - lh / 2);
         }
-        else
+
+        foreach (var cover in new[] { _vignette, _grain })
         {
-            foreach (var b in _blobs)
+            if (cover is not null)
             {
-                b.X *= w / _width;
-                b.Y *= h / _height;
+                cover.Width = w;
+                cover.Height = h;
             }
         }
 
-        _width = w;
-        _height = h;
-        Draw();
+        foreach (var mote in _motes)
+        {
+            mote.Cycle = -1; // a new life lays itself out for the new size
+        }
+
+        Render(0);
         Pump();
     }
 
@@ -201,10 +319,6 @@ public sealed class AmbientField : Canvas
         CompositionTarget.Rendering -= OnRendering;
     }
 
-    private double _sinceDraw;
-    private double _sinceTouch = 10;
-    private bool _busy; // something is being pushed or is still moving fast: draw at the display's rate
-
     private void OnRendering(object? sender, EventArgs e)
     {
         if (!Alive)
@@ -220,14 +334,14 @@ public sealed class AmbientField : Canvas
             return;
         }
 
-        var dt = Math.Min((now - _last).TotalSeconds, 0.05);
+        var dt = Math.Min((now - _last).TotalSeconds, 0.25);
         _last = now;
         _sinceDraw += dt;
 
-        // The cost of a frame is the page under it being composed again, so frames are spent where the eye can use them: the drift is slow (a few pixels a
-        // second) and reads the same at 12 frames a second (6 in Reduced); the display's rate is for the moments the pointer is moving things. While another window is the
-        // active one the field only keeps company, at 3.
-        var interval = !_window!.IsActive ? 1.0 / 3 : LightField.Mode == LightingMode.Reduced ? 1.0 / 6 : _busy ? 1.0 / 62 : 1.0 / 12;
+        // The cost of a frame is the page under the light being composed again, so frames are spent where the eye can use them: the movement is a few pixels
+        // a second and reads the same at 15 frames; the lights settling after the pointer get 24; Reduced is 5; a window that is not the active one, 2.
+        var full = LightField.Mode == LightingMode.Full;
+        var interval = !_window!.IsActive ? 1.0 / 2 : !full ? 1.0 / 5 : _settling ? 1.0 / 24 : 1.0 / 15;
         if (_sinceDraw < interval)
         {
             return;
@@ -235,177 +349,125 @@ public sealed class AmbientField : Canvas
 
         var step = _sinceDraw;
         _sinceDraw = 0;
-        Step(Math.Min(step, 0.066));
-        Draw();
+        _time += step;
+        Render(step);
     }
 
-    private (double X, double Y) Target(Blob b, double t, double w, double h) =>
-        ((b.AnchorX + b.WanderX * Math.Sin(b.FreqX * t + b.PhaseX) + 0.35 * b.WanderX * Math.Sin(b.FreqY * 2.3 * t + b.PhaseY)) * w,
-         (b.AnchorY + b.WanderY * Math.Sin(b.FreqY * t + b.PhaseY) + 0.35 * b.WanderY * Math.Sin(b.FreqX * 1.9 * t + b.PhaseX)) * h);
+    private double Smooth(double x) => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 
-    private void Step(double dt)
+    /// <summary>One picture at the current time; <paramref name="dt"/> is the time since the last one (0: just lay it out again).</summary>
+    private void Render(double dt)
     {
-        var full = LightField.Mode == LightingMode.Full;
-        var pace = LightField.Mode == LightingMode.Reduced ? 0.55 : 1.0;
-        _time += dt * pace;
         var w = _width;
         var h = _height;
-        var reference = Math.Max(w, h);
-
-        var pointer = LightField.Pointer;
-        var hasPointer = full && LightField.HasPointer && _window!.IsActive;
-        var pointerVx = 0.0;
-        var pointerVy = 0.0;
-        if (hasPointer && _hadPointer)
+        if (w < 8 || h < 8)
         {
-            pointerVx = (pointer.X - _pointerBefore.X) / Math.Max(dt, 1e-3);
-            pointerVy = (pointer.Y - _pointerBefore.Y) / Math.Max(dt, 1e-3);
-            var speed = Math.Sqrt(pointerVx * pointerVx + pointerVy * pointerVy);
-            if (speed > 2400)
-            {
-                pointerVx *= 2400 / speed;
-                pointerVy *= 2400 / speed;
-            }
+            return;
         }
 
-        _pointerBefore = pointer;
-        _hadPointer = hasPointer;
+        var mode = LightField.Mode;
+        var full = mode == LightingMode.Full;
+        var moving = mode != LightingMode.Off;
+        var reach = Math.Max(w, h);
 
-        // Forces first (every shape sees the others as they were), then the integration.
-        var ax = new double[_blobs.Count];
-        var ay = new double[_blobs.Count];
-        var squashPush = new double[_blobs.Count];
-        var touched = false;
-        var squashAngle = new double[_blobs.Count];
-        for (var i = 0; i < _blobs.Count; i++)
+        // The pointer, as a fraction of the window, eased with a long inertia (about 1.4 s); out of the window it eases back to the middle, slower.
+        var target = new Point(0.5, 0.5);
+        var have = full && LightField.HasPointer && _window is { IsActive: true } && ActualWidth > 8;
+        if (have)
         {
-            var b = _blobs[i];
-            var ri = b.Size * reference / 2;
+            var p = _window!.TranslatePoint(LightField.Pointer, this);
+            target = new Point(Math.Clamp(p.X / w, 0, 1), Math.Clamp(p.Y / h, 0, 1));
+        }
 
-            // Its own path pulls it softly: the shape follows the path, it is not nailed to it.
-            var (tx, ty) = Target(b, _time, w, h);
-            ax[i] += (tx - b.X) * 0.55 * pace;
-            ay[i] += (ty - b.Y) * 0.55 * pace;
+        if (dt > 0)
+        {
+            var k = 1 - Math.Exp(-dt / (have ? 1.4 : 2.6));
+            _pointerX += (target.X - _pointerX) * k;
+            _pointerY += (target.Y - _pointerY) * k;
+        }
 
-            // Two shapes meeting push each other apart, the lighter one more, and both flatten against the contact.
-            for (var j = 0; j < _blobs.Count; j++)
+        _settling = full && (Math.Abs(target.X - _pointerX) > 0.004 || Math.Abs(target.Y - _pointerY) > 0.004);
+        var shiftX = full ? _pointerX - 0.5 : 0;
+        var shiftY = full ? _pointerY - 0.5 : 0;
+        var amplitude = full ? 1.0 : mode == LightingMode.Reduced ? 0.45 : 0.0;
+        var t = moving ? _time : 9;
+
+        foreach (var light in _lights)
+        {
+            if (light.FullOnly && !full)
             {
-                if (j == i)
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                var o = _blobs[j];
-                var dx = b.X - o.X;
-                var dy = b.Y - o.Y;
+            var wx = Math.Sin(Tau * t / light.Period + light.Phase);
+            var wy = Math.Sin(Tau * t / (light.Period * 1.37) + light.Phase * 1.7);
+            var x = (light.WanderX * wx * amplitude + shiftX * light.Parallax * 2) * w;
+            var y = (light.WanderY * wy * amplitude + shiftY * light.Parallax * 2) * h;
+            light.Move.X = x;
+            light.Move.Y = y;
+            if (light.Tilt is not null)
+            {
+                light.Tilt.Angle = -16 + 0.8 * Math.Sin(Tau * t / light.Period + light.Phase);
+            }
+
+            // It breathes (the safelight most) and a near pointer lifts it a little.
+            var breath = moving && light.BreathDepth > 0 ? 0.5 + 0.5 * Math.Sin(Tau * t / light.BreathPeriod + light.Phase * 0.6) : 0.7;
+            var strength = light.Strength * (1 - light.BreathDepth + light.BreathDepth * breath);
+            if (have && light.Lift > 0)
+            {
+                var cx = light.AnchorX * w + x;
+                var cy = light.AnchorY * h + y;
+                var d = Math.Sqrt(Math.Pow(_pointerX * w - cx, 2) + Math.Pow(_pointerY * h - cy, 2)) / (0.6 * reach);
+                strength *= 1 + light.Lift * Smooth(1 - d);
+            }
+
+            light.Shape.Opacity = strength;
+        }
+
+        if (!full)
+        {
+            return;
+        }
+
+        var pointer = have ? new Point(_pointerX * w, _pointerY * h) : (Point?)null;
+        foreach (var mote in _motes)
+        {
+            var u = (t + mote.Offset) / mote.Duration;
+            var cycle = (int)Math.Floor(u);
+            var phase = u - cycle;
+            if (cycle != mote.Cycle)
+            {
+                mote.Cycle = cycle;
+                mote.StartX = 0.02 + _random.NextDouble() * 0.96;
+                mote.StartY = 0.18 + _random.NextDouble() * 0.9;
+            }
+
+            var px = mote.StartX * w + mote.Sway * Math.Sin(Tau * phase * 1.3 + mote.SwayPhase) + shiftX * 26 * mote.Depth;
+            var py = mote.StartY * h - mote.Rise * phase * (mote.Duration / 30) + shiftY * 26 * mote.Depth;
+
+            // The pointer nudges a near mote a few pixels away; the mote settles back when it leaves.
+            var pushX = 0.0;
+            var pushY = 0.0;
+            if (pointer is { } at)
+            {
+                var dx = px - at.X;
+                var dy = py - at.Y;
                 var dist = Math.Sqrt(dx * dx + dy * dy) + 1e-6;
-                var reach = (ri + o.Size * reference / 2) * 0.60;
-                if (dist >= reach)
+                const double radius = 150;
+                if (dist < radius)
                 {
-                    continue;
-                }
-
-                var overlap = 1 - dist / reach;
-                var push = overlap * overlap * 2600 * (o.Weight / (b.Weight + o.Weight)) * 2 / Math.Max(b.Weight, 0.5);
-                ax[i] += dx / dist * push;
-                ay[i] += dy / dist * push;
-                if (overlap > squashPush[i])
-                {
-                    squashPush[i] = overlap * 0.55;
-                    squashAngle[i] = Math.Atan2(dy, dx);
+                    var f = Smooth(1 - dist / radius) * 9 * mote.Depth;
+                    pushX = dx / dist * f;
+                    pushY = dy / dist * f;
                 }
             }
 
-            // The window's edge is soft: a shape that wanders past it is eased back.
-            ax[i] += Edge(b.X, -0.12 * w, 1.12 * w) * 3.5;
-            ay[i] += Edge(b.Y, -0.12 * h, 1.12 * h) * 3.5;
-
-            if (hasPointer)
-            {
-                var dx = b.X - pointer.X;
-                var dy = b.Y - pointer.Y;
-                var dist = Math.Sqrt(dx * dx + dy * dy) + 1e-6;
-                var influence = ri * 0.8 + 150;
-                if (dist < influence)
-                {
-                    touched = true;
-                    var t = 1 - dist / influence;
-                    var push = t * t * 5200 / Math.Max(b.Weight, 0.6);
-                    ax[i] += dx / dist * push + pointerVx * t * 0.9;
-                    ay[i] += dy / dist * push + pointerVy * t * 0.9;
-                    if (t * 0.62 > squashPush[i])
-                    {
-                        squashPush[i] = t * 0.62;
-                        squashAngle[i] = Math.Atan2(dy, dx);
-                    }
-                }
-            }
-        }
-
-        // Shapes resting against each other flatten a little all the time and drift slowly; that is not a reason to draw at the display's rate. The pointer is,
-        // and so is the half second after it lets go, while the shapes spring back.
-        _sinceTouch = touched ? 0 : _sinceTouch + dt;
-        var busy = _sinceTouch < 0.6;
-        for (var i = 0; i < _blobs.Count; i++)
-        {
-            var b = _blobs[i];
-            busy |= b.VX * b.VX + b.VY * b.VY > 90 * 90;
-
-            // Velocity with drag proportional to size (a big, heavy shape keeps its momentum longer), then position.
-            var drag = 1.1 + 0.9 / Math.Max(b.Weight, 0.5);
-            b.VX += ax[i] * dt;
-            b.VY += ay[i] * dt;
-            var damp = Math.Exp(-drag * dt);
-            b.VX *= damp;
-            b.VY *= damp;
-            b.X += b.VX * dt;
-            b.Y += b.VY * dt;
-
-            // The elastic deformation: a spring that is pushed toward the contact's squash and lets go slowly (about a third of a second).
-            var target = squashPush[i];
-            if (target > 0.01)
-            {
-                b.SquashAngle = BlendAngle(b.SquashAngle, squashAngle[i], Math.Min(1, dt * 14));
-            }
-
-            b.Squash += (target - b.Squash) * Math.Min(1, dt * (target > b.Squash ? 16 : 3.2));
-        }
-
-        _busy = busy;
-    }
-
-    /// <summary>How far outside [low, high] a coordinate is, with the sign that points back in.</summary>
-    private static double Edge(double v, double low, double high) => v < low ? low - v : v > high ? high - v : 0;
-
-    private static double BlendAngle(double from, double to, double amount)
-    {
-        var d = Math.IEEERemainder(to - from, Math.Tau);
-        return from + d * amount;
-    }
-
-    private void Draw()
-    {
-        var reference = Math.Max(_width, _height);
-        foreach (var b in _blobs)
-        {
-            var speed = Math.Sqrt(b.VX * b.VX + b.VY * b.VY);
-            var stretch = Math.Min(speed / 900, 0.16);
-            var velocityAngle = Math.Atan2(b.VY, b.VX);
-
-            // One axis for the whole shape: the push's direction while it is squashed, the direction of travel otherwise.
-            var weightOfPush = b.Squash / (b.Squash + stretch + 0.02);
-            b.Angle = BlendAngle(velocityAngle, b.SquashAngle, weightOfPush);
-            var along = 1 + stretch - b.Squash;
-            var across = 1 - 0.45 * stretch + 0.55 * b.Squash;
-
-            var radius = b.Size * reference / 2;
-            var s = 2 * radius / BaseSize;
-            b.Scale.ScaleX = s * along;
-            b.Scale.ScaleY = s * across;
-            b.Rotate.Angle = b.Angle * 180 / Math.PI;
-            b.Move.X = b.X - BaseSize / 2;
-            b.Move.Y = b.Y - BaseSize / 2;
-            b.Shape.Opacity = b.Strength * (1 - b.Breath + b.Breath * Math.Sin(_time * 0.21 + b.BreathPhase));
+            var ease = dt > 0 ? 1 - Math.Exp(-dt / 0.6) : 1;
+            mote.PushX += (pushX - mote.PushX) * ease;
+            mote.PushY += (pushY - mote.PushY) * ease;
+            mote.Move.X = px + mote.PushX - mote.Size / 2;
+            mote.Move.Y = py + mote.PushY - mote.Size / 2;
+            mote.Shape.Opacity = mote.Alpha * Smooth(phase / 0.14) * Smooth((1 - phase) / 0.14);
         }
     }
 }
