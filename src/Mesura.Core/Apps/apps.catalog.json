@@ -41,7 +41,7 @@
     { "id": "epic", "wingetId": "EpicGames.EpicGamesLauncher", "name": "Epic Games Launcher", "category": "Gaming", "listed": false },
     { "id": "nvcleanstall", "wingetId": "TechPowerUp.NVCleanstall", "name": "NVCleanstall", "category": "Drivers", "listed": false,
       "note": "Builds a trimmed NVIDIA driver package; the driver install itself is an interactive step in NVCleanstall." },
-    { "id": "nvpi", "wingetId": "Orbmu2k.nvidiaProfileInspector", "name": "NVIDIA Profile Inspector", "category": "Drivers", "listed": false,
+    { "id": "nvpi", "wingetId": "Orbmu2k.nvidiaProfileInspector", "name": "NVIDIA Profile Inspector", "category": "Drivers", "listed": false, "upgrade": true,
       "note": "Portable; winget adds it to the command path as 'nvpi'." },
     { "id": "sevenzip", "wingetId": "7zip.7zip", "name": "7-Zip", "category": "Utility", "installLocation": true, "upgrade": true },
     { "id": "notepadpp", "wingetId": "Notepad++.Notepad++", "name": "Notepad++", "category": "Utility", "installLocation": true, "upgrade": true, "uninstall": true },

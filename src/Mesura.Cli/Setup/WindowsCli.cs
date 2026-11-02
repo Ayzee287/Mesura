@@ -153,7 +153,7 @@ internal static class WindowsCli
             Console.WriteLine(group.Key);
             foreach (var e in group)
             {
-                Console.WriteLine($"  [{StateLabel(e.State),-11}] {e.Operation.Id,-38} {e.Operation.Name} [{SetupOutput.Scope(e.Operation)}]{Flags(e.Operation)}");
+                Console.WriteLine($"  [{StateLabel(e),-11}] {e.Operation.Id,-38} {e.Operation.Name} [{SetupOutput.Scope(e.Operation)}]{Flags(e.Operation)}");
             }
         }
 
@@ -182,6 +182,11 @@ internal static class WindowsCli
         Console.WriteLine($"{op.Name} ({op.Id}); {op.Category}");
         Console.WriteLine($"  {op.Description}");
         Console.WriteLine($"  Risk: {RiskLabel(op.Risk)}; takes effect: {ActivationLabel(op.Activation)}{(op.NeedsElevation ? "; needs an elevated terminal" : "")}");
+        if (op.Applicable)
+        {
+            Console.WriteLine($"  Confirmed by: {op.Confirmation switch { Confirmation.InEffect => "an independent effect check on top of the stored value", Confirmation.SystemReported => "the part of Windows that owns it (read back after the change)", _ => "the stored registry value read back (Windows can't be asked whether it honours it)" }}");
+        }
+
         if (op.MinBuild is not null || op.MaxBuild is not null)
         {
             Console.WriteLine($"  Windows builds: {op.MinBuild?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "any"} to {op.MaxBuild?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "current"}");
@@ -193,7 +198,7 @@ internal static class WindowsCli
         }
 
         Console.WriteLine($"  Source: {op.Source}");
-        Console.WriteLine($"  State here: {StateLabel(e.State)}. {e.Reason}");
+        Console.WriteLine($"  State here: {StateLabel(e)}. {e.Reason}");
         static string Shown(string value) => value.Length == 0 ? "(empty)" : value;
         foreach (var item in e.Items)
         {
@@ -429,11 +434,16 @@ internal static class WindowsCli
     private static string Flags(WindowsOperation op) =>
         (op.NeedsElevation ? "  [admin]" : "") + (op.Risk == RiskClass.Undocumented ? "  [undocumented]" : "") + (op.Activation == Activation.Reboot ? "  [restart]" : "");
 
+    /// <summary>The word of the cards: "applied" only where Windows (or an independent check) confirms it, "set" where only the stored value was read back.</summary>
+    public static string StateLabel(OperationEvaluation evaluation) =>
+        evaluation.State == OperationState.Applied && evaluation.Operation.Applicable && evaluation.Operation.Confirmation == Confirmation.Stored ? "set" : StateLabel(evaluation.State);
+
     public static string StateLabel(OperationState state) => state switch
     {
         OperationState.Applied => "applied",
         OperationState.NotApplied => "-",
         OperationState.Partial => "partial",
+        OperationState.PendingRestart => "restart",
         OperationState.Inapplicable => "n/a",
         OperationState.Unknown => "unknown",
         OperationState.Manual => "manual",

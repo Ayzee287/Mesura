@@ -2,6 +2,9 @@ using Mesura.Core.Nvidia;
 
 namespace Mesura.Core.Windows;
 
+/// <summary>A hardware graphics adapter as Windows reports it: name, PCI vendor and device id, the driver version Windows shows, and whether it is the processor's own graphics.</summary>
+public sealed record GpuAdapter(string Name, int VendorId, int DeviceId, string DriverVersion, bool? Integrated);
+
 /// <summary>
 /// What Optimize shows about this PC and decides its sections from (redesign 2026-10 §3): the Windows edition and
 /// build, whether it is a laptop (a system battery that isn't a UPS) or a Modern Standby PC, its NVIDIA GPUs, and
@@ -24,10 +27,20 @@ public sealed record SystemSummary(
     IReadOnlyList<string> Gpus,
     IReadOnlyList<string> NvidiaGpus,
     bool GpusRead,
-    IReadOnlyList<NvidiaGpu>? NvidiaAdapters = null)
+    IReadOnlyList<NvidiaGpu>? NvidiaAdapters = null,
+    IReadOnlyList<GpuAdapter>? Adapters = null)
 {
     /// <summary>The first NVIDIA adapter (the one the NVIDIA steps are for), or <c>null</c>.</summary>
     public NvidiaGpu? Nvidia => NvidiaAdapters?.FirstOrDefault();
+
+    /// <summary>Every NVIDIA adapter by name, joined for one line (a PC with two cards shows both; the steps use the first).</summary>
+    public string NvidiaNames => string.Join(" + ", (NvidiaAdapters ?? []).Select(a => a.Name).Distinct(StringComparer.Ordinal));
+
+    /// <summary>The AMD adapters (PCI vendor 0x1002): a Radeon card or the graphics inside a Ryzen. Mesura detects and names them; it changes none of their settings.</summary>
+    public IReadOnlyList<GpuAdapter> Amd => [.. (Adapters ?? []).Where(a => a.VendorId == AmdVendorId)];
+
+    /// <summary>The PCI vendor id of AMD's graphics division.</summary>
+    public const int AmdVendorId = 0x1002;
 
     /// <summary>The PCI vendor id of NVIDIA.</summary>
     public const int NvidiaVendorId = 0x10DE;

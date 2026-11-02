@@ -15,6 +15,7 @@ public static class UpdateCli
     public const string Usage = """
           mesura update check [--channel stable|preview] [--base <url>]
           mesura update status
+          mesura update copies [remove --yes]
           mesura update stage --package <msi> --manifest <json> --sig <file> --pid <n> [--data <folder>] [--no-elevate 1]
           mesura update apply --package <msi> --manifest <json> --sig <file> --pid <n> --restart <Mesura.exe> --from <v> --to <v>
                               --log <file> --scope user|machine [--folder <install folder>] [--data <folder>] [--language en|ru] [--no-elevate 1]
@@ -34,10 +35,56 @@ public static class UpdateCli
         {
             ["check", .. var rest] => Check(Options(rest)),
             ["status"] => Status(),
+            ["copies"] => Copies(remove: false, confirmed: false),
+            ["copies", "remove", "--yes"] => Copies(remove: true, confirmed: true),
+            ["copies", "remove"] => Copies(remove: true, confirmed: false),
             ["stage", .. var rest] => Stage(Options(rest)),
             ["apply", .. var rest] => Apply(Options(rest)),
             _ => Usage_(),
         };
+    }
+
+    /// <summary>
+    /// Lists the Windows Installer registrations of Mesura and what moving to the other kind of copy would do (the same decision the Settings page makes);
+    /// <c>remove --yes</c> removes the other copy exactly as its button does (never the copy this program belongs to). Without <c>--yes</c> nothing is changed.
+    /// </summary>
+    private static int Copies(bool remove, bool confirmed)
+    {
+        var registrations = new WindowsInstallerCopies();
+        var copies = registrations.Read();
+        var self = Environment.ProcessPath ?? "";
+        var running = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(self)) ?? "", "Mesura.exe"); // cli\mesura.exe sits beside Mesura.exe's folder
+        foreach (var c in copies)
+        {
+            Console.WriteLine($"{c.Scope,-8} {c.ProductCode} version {c.Version} in {c.Folder}");
+        }
+
+        if (copies.Count == 0)
+        {
+            Console.WriteLine("No Windows Installer registration of Mesura was found.");
+        }
+
+        var plan = CopyTransition.Plan(running, copies);
+        Console.WriteLine(plan.Kind switch
+        {
+            TransitionKind.Offer => $"The other copy ({plan.Other!.Scope}, {plan.Other.ProductCode}) can be removed.",
+            TransitionKind.Manual => $"The other copy ({plan.Other!.Scope}) must be removed by hand: {plan.Reason}.",
+            _ => $"Nothing to move{(plan.Reason.Length > 0 ? " (" + plan.Reason + ")" : "")}.",
+        });
+        if (!remove)
+        {
+            return 0;
+        }
+
+        if (!confirmed)
+        {
+            Console.Error.WriteLine("Nothing was removed: add --yes to remove the other copy.");
+            return 2;
+        }
+
+        var result = CopyTransition.Remove(plan, elevated: false, running, registrations, new MsiexecUninstaller());
+        Console.WriteLine($"{result.Status}: {result.Detail}");
+        return result.Status == RemovalStatus.Removed ? 0 : 1;
     }
 
     private static int Usage_()

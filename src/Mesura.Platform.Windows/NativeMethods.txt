@@ -57,6 +57,7 @@ GetSystemFirmwareTable
 GetSystemPowerStatus
 // the effective AC value of a power setting, as powercfg /q reports it (read; the Setup writer uses powercfg)
 PowerReadACValueIndex
+PowerReadDCValueIndex
 // the power schemes Windows offers (as powercfg /l lists them), and the power capabilities (a system battery that isn't a
 // UPS; Modern Standby). GetPwrCapabilities only retrieves; CallNtPowerInformation, which can also set, is not listed.
 PowerEnumerate

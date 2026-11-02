@@ -209,6 +209,28 @@ public sealed class UpdateStagerTests : IDisposable
     }
 
     [Fact]
+    public void A_real_protected_folder_made_elevated_is_owned_by_administrators_passes_the_trust_check_and_is_read_only_to_users()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        Assert.SkipUnless(new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator), "Needs an elevated process (run in Windows Sandbox: tools/sandbox, scenario nvpi-elevated).");
+
+        var folder = new ProgramDataProtectedFolders().Create("run-selftest-" + Guid.NewGuid().ToString("N")[..6]);
+        try
+        {
+            var security = new DirectoryInfo(folder).GetAccessControl();
+            Assert.Equal(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), security.GetOwner(typeof(SecurityIdentifier)));
+            Assert.Null(Mesura.Core.Support.ProgramFolderTrust.Why(folder));
+            var users = new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null);
+            var userRules = security.GetAccessRules(true, true, typeof(SecurityIdentifier)).Cast<FileSystemAccessRule>().Where(r => r.IdentityReference.Equals(users)).ToList();
+            Assert.All(userRules, r => Assert.Equal(0, (int)(r.FileSystemRights & (FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete | FileSystemRights.ChangePermissions))));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Someone_who_is_not_an_administrator_cannot_make_a_protected_folder_at_all()
     {
         using var identity = WindowsIdentity.GetCurrent();

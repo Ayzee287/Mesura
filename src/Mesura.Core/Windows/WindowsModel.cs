@@ -22,6 +22,22 @@ public enum RiskClass
     Manual,
 }
 
+/// <summary>
+/// How far Mesura can confirm that an operation's setting is what Windows is using, beyond "the command succeeded" (0.5). An exit code is never proof: this is
+/// about what is read back afterwards, and from where.
+/// </summary>
+public enum Confirmation
+{
+    /// <summary>The value is stored (in the registry) and read back from there; Windows offers no way to ask whether it honours it.</summary>
+    Stored,
+
+    /// <summary>The state is read from the part of Windows that owns it: the network driver, the power plan, the service manager, the TCP stack, a system tool.</summary>
+    SystemReported,
+
+    /// <summary>A second, independent reading says the setting is in effect (an <see cref="EffectCheck"/>: the graphics kernel, the file system).</summary>
+    InEffect,
+}
+
 /// <summary>What has to happen before a change is visible.</summary>
 public enum Activation
 {
@@ -134,6 +150,9 @@ public sealed record TcpGlobalSetting(string Name, string Value)
         ["autotuninglevel"] = ["disabled", "highlyrestricted", "restricted", "normal", "experimental"],
         ["rss"] = ["enabled", "disabled"],
         ["rsc"] = ["enabled", "disabled"],
+
+        // Window scaling heuristics: `netsh interface tcp set heuristics`, read from MSFT_NetTCPSetting.ScalingHeuristics (0.5).
+        ["heuristics"] = ["enabled", "disabled"],
     };
 
     public string Target => $"TCP global {Name}";
@@ -327,10 +346,31 @@ public sealed record FeatureSetting(string Name, bool Enabled)
 /// <summary>
 /// A power scheme to make active. When <see cref="CreateIfMissing"/> is set and the scheme isn't installed (Ultimate
 /// Performance often isn't), it is first duplicated from the built-in template with the same GUID.
+/// <para>
+/// A <b>Mesura plan</b> (<see cref="BasedOn"/> set, 0.5) is a scheme of Mesura's own: a copy of a built-in scheme under its own GUID
+/// and name, with <see cref="Values"/> written into it (AC and/or battery) and then made active. No built-in scheme is changed or
+/// deleted, and undoing the run activates the previous scheme again and deletes the copy.
+/// </para>
 /// </summary>
-public sealed record PowerPlanSetting(string SchemeGuid, string Name, bool CreateIfMissing)
+public sealed record PowerPlanSetting(string SchemeGuid, string Name, bool CreateIfMissing,
+    string? BasedOn = null, string Description = "", IReadOnlyList<PowerPlanValue>? Values = null)
 {
     public string Target => "active power scheme";
+
+    /// <summary>Whether this is a Mesura plan (a copy with its own values) rather than a built-in scheme to switch to.</summary>
+    public bool IsMesuraPlan => BasedOn is not null;
+
+    public IReadOnlyList<PowerPlanValue> PlanValues => Values ?? [];
+}
+
+/// <summary>
+/// One power setting of a Mesura plan. <see cref="Ac"/> and <see cref="Dc"/> are the values on mains and on battery;
+/// <c>null</c> leaves that side as the scheme it is copied from has it (so the battery side of a plan is the base scheme's unless a
+/// value says otherwise). <see cref="Requires"/> lists what this PC must be for the value to be written (for example no battery).
+/// </summary>
+public sealed record PowerPlanValue(string Subgroup, string Setting, string Name, uint? Ac, uint? Dc, IReadOnlyList<DeviceRequirement>? Requires = null)
+{
+    public IReadOnlyList<DeviceRequirement> Needs => Requires ?? [];
 }
 
 /// <summary>
@@ -340,6 +380,36 @@ public sealed record PowerPlanSetting(string SchemeGuid, string Name, bool Creat
 public sealed record PowerSetting(string Subgroup, string Setting, string Name, uint AcValue)
 {
     public string Target => $"power: {Name} (on AC)";
+}
+
+/// <summary>
+/// A second, independent reading of the result of an operation's registry values: what Windows itself reports is in effect (0.5). A value
+/// can be stored and still do nothing (the graphics card or driver doesn't support hardware-accelerated GPU scheduling; Windows treats the
+/// NTFS last-access setting as system-managed), so such an operation is "set" only when this reading agrees. <see cref="Kind"/> is one of
+/// <see cref="Allowed"/>; <see cref="Expect"/> is the word the reading must have once the registry values are in place.
+/// </summary>
+public sealed record EffectCheck(string Kind, string Expect)
+{
+    public const string GpuScheduling = "gpuScheduling";
+    public const string NtfsLastAccess = "ntfsLastAccess";
+
+    /// <summary>The signed-in session's Sticky, Filter, Toggle and Mouse Keys hotkeys, as <c>SystemParametersInfo</c> reports them (read only): <c>disabled</c> when none can be started from the keyboard.</summary>
+    public const string AccessibilityHotkeys = "accessibilityHotkeys";
+
+    /// <summary>The session's pointer acceleration ("Enhance pointer precision"), as <c>SystemParametersInfo</c> reports it (read only): <c>disabled</c> when the acceleration level is 0.</summary>
+    public const string PointerAcceleration = "pointerAcceleration";
+
+    /// <summary>The readings Mesura knows, with the word each must have for the operation's goal: <c>enabled</c> or <c>disabled</c>.</summary>
+    public static readonly IReadOnlyDictionary<string, string> Allowed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        [GpuScheduling] = "enabled",
+        [NtfsLastAccess] = "disabled",
+        [AccessibilityHotkeys] = "disabled",
+        [PointerAcceleration] = "disabled",
+    };
+
+    public static bool IsAllowed(string kind, string expect) =>
+        Allowed.TryGetValue(kind, out var word) && string.Equals(word, expect, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -397,8 +467,13 @@ public sealed record WindowsOperation(
     IReadOnlyList<RegistryEachSetting>? RegistryEach = null,
     IReadOnlyList<SystemSetting>? System = null,
     IReadOnlyList<string>? Sources = null,
-    IReadOnlyList<AppxSetting>? Appx = null)
+    IReadOnlyList<AppxSetting>? Appx = null,
+    EffectCheck? Effect = null,
+    IReadOnlyList<AdapterSetting>? Adapter = null)
 {
+    /// <summary>What it sets on network adapters (properties, bindings, the power switch), adapter by adapter.</summary>
+    public IReadOnlyList<AdapterSetting> AdapterSettings => Adapter ?? [];
+
     /// <summary>Packaged apps it removes for the signed-in user.</summary>
     public IReadOnlyList<AppxSetting> AppxSettings => Appx ?? [];
 
@@ -469,18 +544,27 @@ public sealed record WindowsOperation(
     /// <summary>Whether applying it needs an elevated process (machine registry, services, features).</summary>
     public bool NeedsElevation =>
         Registry.Any(r => r.NeedsElevation) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0
-        || PowerPlan is { CreateIfMissing: true } || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0;
+        || PowerPlan is { CreateIfMissing: true } || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0 || AdapterSettings.Count > 0;
 
     /// <summary>Whether it changes per-user settings, which go to the signed-in user (<see cref="UserContext"/>).</summary>
     public bool PerUser => Registry.Any(r => r.Hive == "HKCU") || RegistryEachSettings.Any(r => r.Hive == "HKCU") || AppxSettings.Count > 0
         || (Observation?.Reads.Any(r => r.Hive == "HKCU") ?? false);
 
     /// <summary>Whether it changes machine-wide state (HKLM, services, features, power).</summary>
-    public bool MachineWide => Registry.Any(r => r.Machine) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0
+    public bool MachineWide => Registry.Any(r => r.Machine) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0 || AdapterSettings.Count > 0
         || PowerPlan is not null || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0;
 
     /// <summary>Whether the product can apply it at all (not manual, not an observation).</summary>
     public bool Applicable => Manual is null && Observation is null;
+
+    /// <summary>
+    /// How its state is confirmed: by an independent effect check where it has one, otherwise as stored when it writes registry values (Windows can't be asked
+    /// whether it honours them), otherwise from the part of Windows that owns what it changes.
+    /// </summary>
+    public Confirmation Confirmation =>
+        Effect is not null ? Confirmation.InEffect
+        : Registry.Count > 0 || RegistryEachSettings.Count > 0 ? Confirmation.Stored
+        : Confirmation.SystemReported;
 }
 
 /// <summary>

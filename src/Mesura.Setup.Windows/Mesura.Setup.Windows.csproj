@@ -17,6 +17,11 @@
     <InternalsVisibleTo Include="Mesura.Setup.Tests" />
   </ItemGroup>
 
+  <!-- UI Automation (the client side, UIAutomationClient) to drive NVCleanstall's window by AutomationId: the WPF part of the desktop runtime, referenced alone. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+  </ItemGroup>
+
   <!-- WMI for the licensing owner (LicensingWriter, D031); the same package and version as Platform. -->
   <ItemGroup>
     <PackageReference Include="System.Management" Version="10.0.12" />

@@ -533,6 +533,7 @@ public sealed class ProfilesViewModel : Observable, IPageState
                 new StepLine(Tone.Warn, $"{Loc.Name(w.Operation)} · {Loc.Get("Common.NeedsAdmin")}"),
             OperationState.NotApplied or OperationState.Partial => new StepLine(Tone.Accent, Loc.Name(w.Operation)),
             OperationState.Applied => new StepLine(Tone.Ok, $"{Loc.Name(w.Operation)} · {Loc.Get("Step.AlreadyApplied")}"),
+            OperationState.PendingRestart => new StepLine(Tone.Warn, $"{Loc.Name(w.Operation)} · {Loc.Get("State.PendingRestart")}"),
             OperationState.Inapplicable => new StepLine(Tone.Muted, $"{Loc.Name(w.Operation)} · {Loc.Get("State.Inapplicable")}"),
             OperationState.Observation or OperationState.Manual => new StepLine(Tone.Info, $"{Loc.Name(w.Operation)} · {Loc.Get("Profiles.Guide")}"),
             _ => new StepLine(Tone.Danger, $"{Loc.Name(w.Operation)} · {Loc.Get($"State.{w.State}")}", w.Reason),

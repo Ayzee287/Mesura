@@ -249,9 +249,9 @@ public sealed class AppUpdateTests
     {
         var upgradable = AppCatalog.Default.Packages.Where(p => p.Upgradable).Select(p => p.Id).Order().ToList();
 
-        Assert.Equal(["firefox", "git", "notepadpp", "obs", "sevenzip", "vlc", "vscode"], upgradable);
+        Assert.Equal(["firefox", "git", "notepadpp", "nvpi", "obs", "sevenzip", "vlc", "vscode"], upgradable); // nvpi: unlisted, a portable winget package nothing else updates; the setup brings an old copy up to date itself
         Assert.All(AppCatalog.Default.Packages.Where(p => p.Upgradable), p => Assert.Equal(AppSource.Winget, p.Source));
-        foreach (var selfUpdating in new[] { "brave", "chrome", "discord", "spotify", "telegram", "ayugram", "steam", "medal", "vencord", "nvpi", "nvcleanstall" })
+        foreach (var selfUpdating in new[] { "brave", "chrome", "discord", "spotify", "telegram", "ayugram", "steam", "medal", "vencord", "nvcleanstall" })
         {
             Assert.False(AppCatalog.Default.ById(selfUpdating)!.Upgradable, selfUpdating);
         }

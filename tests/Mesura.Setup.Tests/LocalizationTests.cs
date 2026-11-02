@@ -243,6 +243,30 @@ public sealed partial class LocalizationTests
         }
     }
 
+    /// <summary>
+    /// Optional is "Опциональные" (the owner's word), and a count of cores or threads has all its Russian forms. The rest of the vocabulary is
+    /// the one the app had before the 0.5 audit: the owner asked not to redesign it.
+    /// </summary>
+    [Fact]
+    public void The_russian_words_for_the_four_contested_ideas_are_each_used_one_way()
+    {
+        var ru = Strings("ru");
+        Assert.Equal("Опциональные", ru["Recommendation.Optional"]); // the owner's word for it
+
+        Assert.Equal("4 ядра", Ru("System.Cores", 4, ru));
+        Assert.Equal("24 потока", Ru("System.Threads", 24, ru));
+        Assert.Equal("12 потоков", Ru("System.Threads", 12, ru));
+        Assert.Equal("21 ядро", Ru("System.Cores", 21, ru));
+        Assert.Equal("11 ядер", Ru("System.Cores", 11, ru));
+    }
+
+    /// <summary>The same plural rule as <c>Loc.Plural</c> (one, few, many) applied to a table, so the test needs no running app.</summary>
+    private static string Ru(string key, int n, Dictionary<string, string> table)
+    {
+        var form = n % 10 == 1 && n % 100 != 11 ? "one" : n % 10 is >= 2 and <= 4 && n % 100 is < 12 or > 14 ? "few" : "many";
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture, table[$"{key}.{form}"], n);
+    }
+
     [GeneratedRegex(@"Loc\.(?<kind>Get|Format|Plural)\(""(?<key>[A-Za-z0-9_.\-]+)""|\{l:T (?<key>[A-Za-z0-9_.\-]+)\}")]
     private static partial Regex UsedKey();
 

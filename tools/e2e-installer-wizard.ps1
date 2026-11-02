@@ -78,6 +78,21 @@ try {
     $pressed = Press $w @('Next', 'Далее', '&Next')
     Check 'Next is pressed on the welcome page' ([bool]$pressed) $pressed
   }
+  # 1b. Who it is for (0.5): "Only for me" is the default and needs no administrator rights
+  $w = Wait-Page 'Who is Mesura for|Для кого установить Mesura' 20
+  Check 'the second page asks who Mesura is for' ([bool]$w)
+  if ($w) {
+    $t = Texts $w; Shot $w (Join-Path $Out '1b-scope.png'); Say ('      page 1b: ' + (Texts $w))
+    Check 'it offers both scopes' ($t -match 'Only for me|Только для меня' -and $t -match 'For all users|Для всех пользователей') $t
+    $radio = @($w.FindAll($TS::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, $CT::RadioButton)))) | Where-Object { $_.Current.Name -match 'Only for me|Только для меня' } | Select-Object -First 1
+    $selected = $false
+    if ($radio) { try { $selected = $radio.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected } catch { } }
+    # "For all users" is the default; this script installs per-user as a throwaway user, so it chooses "Only for me" itself.
+    $mine = Press $w @('Only for me', 'Только для меня')
+    Check '"Only for me" can be chosen' ([bool]$mine) $mine
+    $pressed = Press $w @('Next', 'Далее', '&Next')
+    Check 'Next is pressed on the scope page' ([bool]$pressed) $pressed
+  }
   # 2. The page with the Install button (not the licence, features or folder page)
   $w = Wait-Page 'Ready to install|Все готово к установке|Всё готово к установке' 20
   Check 'the second page offers Install' ([bool]$w)

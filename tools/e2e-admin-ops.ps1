@@ -29,6 +29,8 @@ function Mesura([string[]]$arguments) {
   $text = (& $Cli @arguments 2>&1 | ForEach-Object { "$_" }) -join "`n"
   [pscustomobject]@{ Text = $text; Run = $(if ($text -match 'history run ([0-9A-Za-z-]+)') { $Matches[1] } else { $null }); Exit = $LASTEXITCODE }
 }
+# Since 0.5 a card says Applied only where Windows' own component confirmed it; a value that is only stored says Set, one that waits says Restart / Sign-out / Explorer. All of them mean "the value is in place".
+function InPlace([string]$s) { $s -like 'applied*' -or $s -like 'set*' -or $s -like 'restart*' -or $s -like 'sign*' -or $s -like 'explorer*' }
 function State([string]$id) { $t = (Mesura @('windows', 'show', '--id', $id)).Text; if ($t -match 'State here: ([^.]*)\.') { $Matches[1].Trim() } else { '?' } }
 
 function Test-Service([string]$name, [string]$opId) {
@@ -45,7 +47,7 @@ function Test-Service([string]$name, [string]$opId) {
     $now = (Get-ItemProperty $key).Start
     Check "[$opId] the registry (read independently) says Automatic after apply" ($now -eq 2) "Start=$now"
     Check "[$opId] sc.exe says AUTO_START after apply" ((sc.exe qc $name | Out-String) -match 'AUTO_START') ''
-    Check "[$opId] Mesura reads it as applied" ((State $opId) -like 'applied*') (State $opId)
+    Check "[$opId] Mesura reads it as applied" (InPlace (State $opId)) (State $opId)
     $revert = Mesura @('windows', 'revert', '--run', $apply.Run, '--apply')
     $back = (Get-ItemProperty $key).Start
     Check "[$opId] revert put the start type back to Manual (3)" ($back -eq 3) "Start=$back; revert exit $($revert.Exit)"
@@ -95,7 +97,7 @@ function Test-NetBios {
     Check "[$op] apply recorded a run" ([bool]$apply.Run) "$($apply.Run) exit $($apply.Exit)"
     $after = @(Read-All)
     Check "[$op] every interface reads NetbiosOptions=2 afterwards (registry, independent)" (@($after | Where-Object { $_ -notlike '*=2' }).Count -eq 0) (($after | ForEach-Object { $_.Split('=')[1] }) -join ',')
-    Check "[$op] Mesura reads it as applied" ((State $op) -like 'applied*') (State $op)
+    Check "[$op] Mesura reads it as applied" (InPlace (State $op)) (State $op)
     $revert = Mesura @('windows', 'revert', '--run', $apply.Run, '--apply')
     $restored = @(Read-All)
     Check "[$op] revert restored every interface to its own original value" ((($restored -join '|') -eq ($before -join '|'))) "exit $($revert.Exit)"
@@ -131,7 +133,7 @@ function ApplyRevert([string]$op, [scriptblock]$readAfter, [string]$afterLabel, 
   Check "[$op] apply recorded a run" ([bool]$apply.Run) "$($apply.Run) exit $($apply.Exit)"
   $a = & $readAfter
   Check "[$op] $afterLabel (read independently)" ([bool]$a[0]) "$($a[1])"
-  Check "[$op] Mesura reads it as applied" ((State $op) -like 'applied*') (State $op)
+  Check "[$op] Mesura reads it as applied" (InPlace (State $op)) (State $op)
   $revert = Mesura @('windows', 'revert', '--run', $apply.Run, '--apply')
   $b = & $readBack
   Check "[$op] $backLabel after revert" ([bool]$b[0]) "$($b[1]); revert exit $($revert.Exit)"

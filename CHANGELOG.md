@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.5 (the first Stable; reliability, performance and hardware work, docs/reliability-0.5.md, docs/release-0.5.5.md)
+
+- **NVIDIA setup steps.** The profile backup before a driver install, the check after it and the import of the NVIDIA profile are reliable on a PC whose NVIDIA Profile Inspector sits in a per-user winget folder (below). The
+  driver itself stays the guided step: NVCleanstall opens with your configuration and you click Install there; the automated driver step is built and tested but is held for the next update. Two NVIDIA profiles exist:
+  the main one (unchanged) and an extra gaming profile.
+- **NVIDIA Profile Inspector just works, wherever winget put it.** Reading profiles (the backup) uses your own rights; writing them runs a copy of the tool that Mesura has verified against the project's published
+  release in a folder only administrators can change. A build nobody listed is checked against its GitHub release automatically; an old copy is updated by the setup. Nothing has to be moved or reinstalled.
+- **Installer.** Opening the installer for the very version that is already installed (it cannot make a second copy) now says so and says how to switch between "for me" and "for all users".
+- **Quieter messages.** The note that explains why administrator mode is not offered from a per-user copy no longer ends with an English technical reason in the Russian interface.
+- **Two Mesura power plans.** "Balanced Mesura" is Windows' Balanced without its brakes on mains power (boost policy 100, USB selective suspend off, USB 3 link power saving at minimum, drives off after 20 minutes
+  instead of 30 seconds, and without a battery PCI Express link savings at moderate; nothing is pinned). "Maximum Performance Mesura" asks for speed: minimum processor state 100, energy preference 0, boost 100, no throttle
+  states, shallow idle states, PCI Express and USB link power saving off, drives never switched off, with the efficiency-core values only on a hybrid processor. Each is a copy of Windows' Balanced plan under its own GUID,
+  written on mains power only: the battery side stays Balanced's, so a laptop away from its charger behaves as before. A value is written only where this PC registers it. No Windows plan is changed or deleted; undo activates
+  the previous plan and deletes the copy. The Recommended profile (Mesura Reference) includes Balanced Mesura and the Maximum performance profile activates Maximum Performance Mesura instead of Windows' High performance; each is also a separate action. Every value and its reason are in docs/power-plan-0.5.md.
+- **Every card says how sure it is.** "Applied" only where the state was read back from the part of Windows that owns it (driver, power plan, service manager, TCP stack, package list) or confirmed by an independent check; "Set" where only the stored registry value was read back; "Restart needed", "Sign-out needed" or "Explorer restart needed" for a set value that waits for that (remembered across sessions until Windows restarts); "Not supported" and "Error" instead of "Not for this PC" and "Failed". GPU scheduling, NTFS last access, the accessibility hotkeys and pointer acceleration carry an independent reading (the graphics kernel, fsutil, and what the signed-in session is really using); a card that cannot use GPU scheduling reads "Not supported". The details name how each setting is confirmed.
+- **Graphics.** Every adapter is listed with its maker; an AMD card or the graphics inside a Ryzen is named with its driver and pointed at AMD's own software. A card NVIDIA has moved to security-update drivers is told so.
+  The claim that DLSS Frame Generation needs GPU scheduling is gone.
+- **Installer.** The wizard asks who Mesura is for: "For all users of this PC (recommended)" (Program Files; Windows asks for administrator approval) is selected, "Only for me" is the other choice. If a copy of the other kind is
+  already installed, the page says so, and Settings > Installed copies removes it after you confirm (never the copy you are running). Updates and the command line are unchanged.
+- **Words.** Undo is "Откатить", the Activity page is "Действия", optional is "Необязательные", the baseline is "Эталон Mesura"; cores and threads take their Russian forms; the privacy line no longer says the NVIDIA lookup is Mesura's only own request (it also checks GitHub for updates).
+
 ## 0.4.4
 
 - **The background is rethought.** The five moving shapes of 0.4.3 are gone. The picture is now a dark room with a soft light in it, after the calm of the photographer's site that was the reference: a very large, very faint key light that wanders over about forty seconds, a violet

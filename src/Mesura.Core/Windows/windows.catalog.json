@@ -169,7 +169,7 @@
       "description": "Makes sure Game Bar's 'Record what happened' (background recording) is off. While it is on, Game Bar records every game continuously so you can save the last moments, which uses part of the PC's resources. Windows ships with it off.",
       "risk": "userPreference", "valueBasis": "community", "activation": "immediate",
       "limitations": "Changes nothing on a PC where it was never turned on. Recording on request (Win+Alt+R) and screenshots keep working. The stored value is community-documented, not on Microsoft Learn.",
-      "source": "Settings > Gaming > Captures > Record what happened (backing value HistoricalCaptureEnabled; missing = off). PCWorld's Windows 10 Game Bar review measured about 58 -> 54 fps in one benchmark while recording (search result). The stored value is documented only by the community and hasn't been confirmed by toggling the setting on a test PC, so it is optional in Maximum performance and never in Recommended. Its 'missing = off' reading can't be confirmed either (the test PC has no Game Bar).",
+      "source": "Settings > Gaming > Captures > Record what happened (backing value HistoricalCaptureEnabled; missing = off). PCWorld's Windows 10 Game Bar review measured about 58 -> 54 fps in one benchmark while recording (search result). The stored value is documented only by the community and hasn't been confirmed by toggling the setting on a test PC, so it is optional in Maximum performance and never in Mesura Reference. Its 'missing = off' reading can't be confirmed either (the test PC has no Game Bar).",
       "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR", "name": "HistoricalCaptureEnabled", "type": "dword", "value": "0", "absentMatches": true } ]
     },
     {
@@ -191,7 +191,8 @@
         { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseSpeed", "type": "string", "value": "0" },
         { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseThreshold1", "type": "string", "value": "0" },
         { "hive": "HKCU", "path": "Control Panel\\Mouse", "name": "MouseThreshold2", "type": "string", "value": "0" }
-      ]
+      ],
+      "effect": { "kind": "pointerAcceleration", "expect": "disabled" }
     },
     {
       "id": "input.accessibility-shortcuts-off", "name": "Turn off the Sticky Keys and other accessibility shortcuts", "category": "Input",
@@ -205,7 +206,8 @@
         { "hive": "HKCU", "path": "Control Panel\\Accessibility\\Keyboard Response", "name": "Flags", "type": "string", "value": "122", "clearBits": 4 },
         { "hive": "HKCU", "path": "Control Panel\\Accessibility\\ToggleKeys", "name": "Flags", "type": "string", "value": "58", "clearBits": 4 },
         { "hive": "HKCU", "path": "Control Panel\\Accessibility\\MouseKeys", "name": "Flags", "type": "string", "value": "58", "clearBits": 4 }
-      ]
+      ],
+      "effect": { "kind": "accessibilityHotkeys", "expect": "disabled" }
     },
     {
       "id": "privacy.no-advertising-id", "name": "Turn off the advertising ID", "category": "Privacy",
@@ -308,7 +310,7 @@
       "description": "Stops Windows turning other sounds down (by 80% by default) whenever an app opens a communications stream, such as a voice chat or a call, so game audio stays at its level.",
       "risk": "userPreference", "activation": "signOut",
       "limitations": "Applies to new audio sessions; restart a voice app that is already in a call, or sign out. A voice app's own attenuation setting (Discord has one) is separate.",
-      "source": "Control Panel > Sound > Communications 'When Windows detects communications activity' (backing value: 0 mute, 1 reduce by 80%, 2 reduce by 50%, 3 do nothing; the mapping is community-known); Microsoft Learn, Core Audio 'Default Ducking Experience' and 'Stream attenuation'; adamx overview L30; set on PC-000. Microsoft documents the setting, not this stored value, and it hasn't been confirmed by toggling the setting on a test PC, so the entry is not in Recommended. Ducking off is also a preference (some want calls to lower other sounds).",
+      "source": "Control Panel > Sound > Communications 'When Windows detects communications activity' (backing value: 0 mute, 1 reduce by 80%, 2 reduce by 50%, 3 do nothing; the mapping is community-known); Microsoft Learn, Core Audio 'Default Ducking Experience' and 'Stream attenuation'; adamx overview L30; set on PC-000. Microsoft documents the setting, not this stored value, and it hasn't been confirmed by toggling the setting on a test PC, so the entry is not in Mesura Reference. Ducking off is also a preference (some want calls to lower other sounds).",
       "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Multimedia\\Audio", "name": "UserDuckingPreference", "type": "dword", "value": "3" } ]
     },
     {
@@ -349,6 +351,272 @@
       "powerPlan": { "scheme": "381b4222-f694-41f0-9685-ff5bb260df2e", "name": "Balanced", "createIfMissing": false }
     },
     {
+      "id": "power.mesura-balanced-plan",
+      "name": "Apply the Balanced Mesura power plan",
+      "category": "Power",
+      "impact": "power",
+      "summary": "Balanced without the brakes on mains power; battery values stay Balanced's.",
+      "description": "A power plan of Mesura's own for everyday use: a copy of Windows' Balanced plan named Balanced Mesura, made the active plan. On mains power it lets the processor boost freely (boost policy 100 instead of 60), turns USB selective suspend off, uses the minimum USB 3 link power saving, switches drives off after 20 minutes instead of the 30 seconds some PCs ship with and, on a PC without a battery, uses moderate instead of maximum PCI Express link power saving. On battery every value stays as Balanced has it, so battery life is Balanced's. Windows' own plans are not changed or deleted.",
+      "risk": "systemConfiguration",
+      "valueBasis": "documented",
+      "benefit": "unverified",
+      "activation": "immediate",
+      "limitations": "No frame-rate gain is claimed and none was measured. A few watts more on mains power. Undo activates the previous plan again and deletes the copy; if you pick another plan in Windows, the copy stays installed until you undo this run.",
+      "source": "powercfg /duplicatescheme of the built-in Balanced scheme 381b4222-f694-41f0-9685-ff5bb260df2e; every setting read with powercfg /qh on Windows 11 26200 (range or enumeration checked); the 20 community plans of the 2026-09 reassessment and Windows' own High performance scheme compared setting by setting; docs/power-plan-0.5.md",
+      "powerPlan": {
+        "scheme": "b71ddbcf-9d21-46ea-9def-6f2a2378e65a",
+        "name": "Balanced Mesura",
+        "basedOn": "381b4222-f694-41f0-9685-ff5bb260df2e",
+        "description": "Balanced with mains-power changes by Mesura",
+        "settings": [
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "45bcc044-d885-43e2-8605-ee0ec6e96b59",
+            "name": "Processor performance boost policy",
+            "ac": 100
+          },
+          {
+            "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+            "setting": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226",
+            "name": "USB selective suspend setting",
+            "ac": 0
+          },
+          {
+            "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+            "setting": "d4e98f31-5ffe-4ce1-be31-1b38b384c009",
+            "name": "USB 3 Link Power Mangement",
+            "ac": 1
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "6738e2c4-e8a5-4a42-b16a-e040e769756e",
+            "name": "Turn off hard disk after",
+            "ac": 1200
+          },
+          {
+            "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20",
+            "setting": "ee12f906-d277-404b-b6da-e5fa1a576df5",
+            "name": "Link State Power Management",
+            "ac": 1,
+            "requires": [
+              "noBattery"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "power.mesura-maximum-plan",
+      "name": "Apply the Maximum Performance Mesura power plan",
+      "category": "Power",
+      "impact": "power",
+      "summary": "Mains power asks for speed everywhere; battery values stay Balanced's.",
+      "description": "A power plan of Mesura's own for the most performance: a copy of Balanced named Maximum Performance Mesura, made the active plan. On mains power: the processor never idles below its full base speed (minimum state 100 %), the energy preference is 0, boost policy 100, throttle states off, idle states kept shallow, the processor policies of Windows' High performance plan, and no power saving on PCI Express, USB 3, USB selective suspend, SATA, NVMe or drives; on a hybrid processor every core stays unparked and threads prefer the performance cores. On battery every value stays as Balanced has it, so a laptop away from its charger behaves as with Balanced. Windows' own plans are not changed or deleted.",
+      "risk": "systemConfiguration",
+      "valueBasis": "documented",
+      "benefit": "unverified",
+      "activation": "immediate",
+      "limitations": "More heat, fan noise and idle power on mains power; on a laptop use Balanced Mesura if it gets too hot. Which values act depends on the processor: current Intel and AMD processors choose their own speed and follow the minimum state, energy preference and boost policy, and ignore the thresholds and policies, which matter on older ones. No frame-rate gain is promised and none was measured. Undo activates the previous plan again and deletes the copy.",
+      "source": "powercfg /duplicatescheme of the built-in Balanced scheme 381b4222-f694-41f0-9685-ff5bb260df2e; every setting read with powercfg /qh on Windows 11 26200 (range or enumeration checked); the 20 community plans of the 2026-09 reassessment and Windows' own High performance scheme compared setting by setting; docs/power-plan-0.5.md",
+      "powerPlan": {
+        "scheme": "76d36892-93d0-4c33-9e09-c2e1fb87cf49",
+        "name": "Maximum Performance Mesura",
+        "basedOn": "381b4222-f694-41f0-9685-ff5bb260df2e",
+        "description": "Maximum performance on mains power by Mesura",
+        "settings": [
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "893dee8e-2bef-41e0-89c6-b55d0929964c",
+            "name": "Minimum processor state",
+            "ac": 100
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "893dee8e-2bef-41e0-89c6-b55d0929964d",
+            "name": "Minimum processor state for Processor Power Efficiency Class 1",
+            "ac": 100,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "893dee8e-2bef-41e0-89c6-b55d0929964e",
+            "name": "Minimum processor state for Processor Power Efficiency Class 2",
+            "ac": 100,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "36687f9e-e3a5-4dbf-b1dc-15eb381c6863",
+            "name": "Processor energy performance preference policy",
+            "ac": 0
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "36687f9e-e3a5-4dbf-b1dc-15eb381c6864",
+            "name": "Processor energy performance preference policy for Processor Power Efficiency Class 1",
+            "ac": 0,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "36687f9e-e3a5-4dbf-b1dc-15eb381c6865",
+            "name": "Processor energy performance preference policy for Processor Power Efficiency Class 2",
+            "ac": 0,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "45bcc044-d885-43e2-8605-ee0ec6e96b59",
+            "name": "Processor performance boost policy",
+            "ac": 100
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "0cc5b647-c1df-4637-891a-dec35c318584",
+            "name": "Processor performance core parking min cores for Processor Power Efficiency Class 1",
+            "ac": 100,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "3b04d4fd-1cc7-4f23-ab1c-d1337819c4bb",
+            "name": "Allow Throttle States",
+            "ac": 0
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "7b224883-b3cc-4d79-819f-8374152cbe7c",
+            "name": "Processor idle promote threshold",
+            "ac": 100
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "4b92d758-5a24-4851-a470-815d78aee119",
+            "name": "Processor idle demote threshold",
+            "ac": 100
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "465e1f50-b610-473a-ab58-00d1077dc418",
+            "name": "Processor performance increase policy",
+            "ac": 2
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "06cadf0e-64ed-448a-8927-ce7bf90eb35d",
+            "name": "Processor performance increase threshold",
+            "ac": 30
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "12a0ab44-fe28-4fa9-b3bd-4b64f44960a6",
+            "name": "Processor performance decrease threshold",
+            "ac": 10
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "40fbefc7-2e9d-4d25-a185-0cfd8574bac6",
+            "name": "Processor performance decrease policy",
+            "ac": 1
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "4d2b0152-7d5c-498b-88e2-34345392a2c5",
+            "name": "Processor performance time check interval",
+            "ac": 15
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "93b8b6dc-0698-4d1c-9ee4-0644e900c85d",
+            "name": "Heterogeneous thread scheduling policy",
+            "ac": 2,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "bae08b81-2d5e-4688-ad6a-13243356654b",
+            "name": "Heterogeneous short running thread scheduling policy",
+            "ac": 2,
+            "requires": [
+              "hybridCpu"
+            ]
+          },
+          {
+            "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+            "setting": "619b7505-003b-4e82-b7a6-4dd29c300971",
+            "name": "Latency sensitivity hint processor performance",
+            "ac": 100
+          },
+          {
+            "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20",
+            "setting": "ee12f906-d277-404b-b6da-e5fa1a576df5",
+            "name": "Link State Power Management",
+            "ac": 0
+          },
+          {
+            "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+            "setting": "48e6b7a6-50f5-4782-a5d4-53bb8f07e226",
+            "name": "USB selective suspend setting",
+            "ac": 0
+          },
+          {
+            "subgroup": "2a737441-1930-4402-8d77-b2bebba308a3",
+            "setting": "d4e98f31-5ffe-4ce1-be31-1b38b384c009",
+            "name": "USB 3 Link Power Mangement",
+            "ac": 0
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "6738e2c4-e8a5-4a42-b16a-e040e769756e",
+            "name": "Turn off hard disk after",
+            "ac": 0
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "0b2d69d7-a2a1-449c-9680-f91c70521c60",
+            "name": "AHCI Link Power Management - HIPM/DIPM",
+            "ac": 0
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "dab60367-53fe-4fbc-825e-521d069d2456",
+            "name": "AHCI Link Power Management - Adaptive",
+            "ac": 0
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "fc95af4d-40e7-4b6d-835a-56d131dbc80e",
+            "name": "Primary NVMe Power State Transition Latency Tolerance",
+            "ac": 0
+          },
+          {
+            "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442",
+            "setting": "dbc9e238-6de9-49e3-92cd-8c2b4946b472",
+            "name": "Secondary NVMe Power State Transition Latency Tolerance",
+            "ac": 0
+          },
+          {
+            "subgroup": "fea3413e-7e05-4911-9a71-700331f1c294",
+            "setting": "245d8541-3943-4422-b025-13a784f679b7",
+            "name": "Power plan type",
+            "ac": 1
+          }
+        ]
+      }
+    },
+    {
       "id": "power.usb-keep-awake", "name": "Turn off USB selective suspend (on AC)", "category": "Power",
       "impact": "power", "summary": "Idle USB devices aren't suspended on AC power.",
       "description": "Stops Windows suspending idle USB devices on AC power. A troubleshooting step for a USB audio interface, DAC, camera or controller that drops out or wakes slowly; not a performance setting.",
@@ -370,15 +638,6 @@
       "powerSettings": [ { "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20", "setting": "ee12f906-d277-404b-b6da-e5fa1a576df5", "name": "PCI Express link state power management", "ac": 0 } ]
     },
     {
-      "id": "power.disk-never-off", "name": "Never turn off drives (on AC)", "category": "Power",
-      "impact": "power", "summary": "Drives never power down on AC.",
-      "description": "Stops Windows powering down drives after inactivity on AC power, so a game loading from a sleeping hard drive doesn't wait for it to spin up.",
-      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
-      "limitations": "Active plan only; AC only. Matters for hard drives; little or nothing changes on an SSD-only PC. A hard drive keeps spinning (noise, power).",
-      "source": "powercfg setting 6738e2c4 (Turn off hard disk after) in subgroup 0012ee47 (Hard disk); Microsoft Learn 'Disk idle timeout' (0 = never).",
-      "powerSettings": [ { "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442", "setting": "6738e2c4-e8a5-4a42-b16a-e040e769756e", "name": "Turn off hard disk after", "ac": 0 } ]
-    },
-    {
       "id": "updates.no-driver-updates", "name": "Don't let Windows Update replace drivers", "category": "Windows Update",
       "impact": "maintenance", "summary": "Windows Update stops replacing your drivers.",
       "description": "Stops Windows Update installing drivers, so a driver you installed yourself (for example a trimmed NVCleanstall build) isn't replaced behind your back.",
@@ -398,12 +657,13 @@
     },
     {
       "id": "gpu.hardware-scheduling-on", "name": "Turn on hardware-accelerated GPU scheduling", "category": "Graphics",
-      "impact": "experimental", "summary": "The GPU schedules its own memory; needed for DLSS Frame Generation.",
-      "description": "Lets the GPU schedule its own memory work. NVIDIA DLSS Frame Generation requires it; it is not an FPS setting: Microsoft expected no significant change, and independent tests found none on average, with some regressions.",
+      "impact": "experimental", "summary": "Lets a supporting GPU schedule its own work; set only once Windows confirms it.",
+      "description": "Lets the GPU schedule its own memory work. Mesura offers it only on a graphics card and driver that report support, and shows it as set only once Windows reports it in effect, which needs a restart. It is not an FPS setting: Microsoft expected no significant change, and independent tests found none on average, with some regressions. Some game publishers (CD PROJEKT RED and Fatshark, in their support pages) list it as a requirement for DLSS Frame Generation on Windows 10; NVIDIA's own documentation was not checked, so Mesura does not rely on that.",
       "risk": "systemConfiguration", "valueBasis": "community", "activation": "reboot", "minBuild": 19041,
-      "limitations": "Needs a GPU and driver that support it (WDDM 2.7 or later); others ignore the value. Mesura reads only the setting: a missing value means the driver's default (usually on with current Windows 11 drivers), and a GPU that can't use it still reads 'not applied'. Turning it off is a troubleshooting step for capture or VR stutter.",
+      "limitations": "Needs a graphics card and driver that support it (WDDM 2.7 or later); on others the entry reads 'not for this PC' and nothing is written. After the value is stored the state reads 'restart needed' until Windows itself reports the scheduler in effect. A missing value means the driver's default. Turning it off is a troubleshooting step for capture or VR stutter.",
       "source": "Settings > System > Display > Graphics > Default graphics settings (backing value HwSchMode: 2 on, 1 off; not documented by Microsoft); DirectX blog 'Hardware Accelerated GPU Scheduling' (2020); reassessment validate-display-gpu-pipeline, which corrects the SapphireOS playbook's mislabel.",
-      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", "name": "HwSchMode", "type": "dword", "value": "2" } ]
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers", "name": "HwSchMode", "type": "dword", "value": "2" } ],
+      "effect": { "kind": "gpuScheduling", "expect": "enabled" }
     },
     {
       "id": "display.graphics-defaults", "name": "Windowed-game optimizations and variable refresh rate", "category": "Graphics",
@@ -516,7 +776,8 @@
       "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
       "limitations": "Takes effect after a restart. Microsoft notes it can affect programs that rely on the stamp, such as backup and Remote Storage. Mesura sets only the 'updates off' bit and keeps the value's other bits, so on a PC where Windows manages the value (it reads 0x80000002 on the Windows 11 test PC) that setting is kept, and revert restores the exact previous value. No gain is claimed.",
       "source": "Microsoft Learn 'fsutil behavior': disablelastaccess 1 disables updates to the Last Access Time stamp when directories are listed on an NTFS volume (HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem\\NtfsDisableLastAccessUpdate); 'Disabling the Last Access Time feature improves the speed of file and directory access'; it 'can affect programs such as Backup and Remote Storage'; a restart is required. A commercial tweak utility offers 'Configure Memory Usage Behaviors' (fsutil; its script isn't available, so which fsutil settings it changes is unknown).",
-      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem", "name": "NtfsDisableLastAccessUpdate", "type": "dword", "value": "1", "setBits": 1 } ]
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem", "name": "NtfsDisableLastAccessUpdate", "type": "dword", "value": "1", "setBits": 1 } ],
+      "effect": { "kind": "ntfsLastAccess", "expect": "disabled" }
     },
     {
       "id": "repair.mmcss-responsiveness", "name": "Restore the CPU reserved for background tasks", "category": "Restore Windows defaults",
@@ -1972,36 +2233,6 @@
       ]
     },
     {
-      "id": "cpu.core-parking-off",
-      "name": "Keep all processor cores unparked (on AC)",
-      "category": "Performance",
-      "impact": "experimental",
-      "summary": "Sets the core-parking minimum to 100% on AC so Windows stops parking cores.",
-      "description": "Core parking lets Windows put some logical processors into a deep idle ('parked') state when load is low and wake them when load rises. The processor setting 'Processor performance core parking min cores' (powercfg alias CPMINCORES) is the minimum percentage of logical processors per NUMA node that may be unparked at any time. Microsoft documents that at 100 percent the core parking algorithm is disabled. This sets 100 on AC power in the active plan. The setting is hidden (visible only with powercfg /qh). No frame-rate or latency gain is claimed; the cost is the idle power of cores that stay awake.",
-      "risk": "systemConfiguration",
-      "level": "safe",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "activation": "immediate",
-      "requires": [
-        "noBattery"
-      ],
-      "limitations": "For desktops: skipped on a PC with a battery, and only the AC value of the active plan changes. Only the main core class is affected: on processors with performance and efficiency cores, the efficiency cores have a separate setting (CPMINCORES1) that this entry leaves alone, so they can still be parked. Windows' value depends on the plan and the processor: on the Windows 11 test PC the Balanced and High performance plans already read 100 on AC, so nothing changes there; on other PCs Balanced may park cores. Idle power use and heat rise slightly on PCs that did park cores. Microsoft says silicon vendors tune these settings and recommends consulting them first. The 'Ultimate Performance' or 'High performance' entries may already cover this.",
-      "source": "Microsoft Learn 'CPMinCores': 'the minimum percentage of logical processors... that can be placed in the un-parked state at any given time... The Core Parking algorithm is disabled if the value of this setting is 100%'; range 0-100, powercfg alias CPMINCORES, hidden setting. Microsoft Learn 'Processor power management options' (note: silicon vendors tune PPM; contact them before modifying). GUIDs read from powercfg /qh on Windows 11 build 26200: subgroup 54533251-82be-4824-96c1-47b60b740d00 (SUB_PROCESSOR), setting 0cc5b647-c1df-4637-891a-dec35c318583 (Processor performance core parking min cores). https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
-        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-processor-power-management-options"
-      ],
-      "powerSettings": [
-        {
-          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
-          "setting": "0cc5b647-c1df-4637-891a-dec35c318583",
-          "name": "Processor performance core parking min cores",
-          "ac": 100
-        }
-      ]
-    },
-    {
       "id": "power.nvme-stay-active-ac",
       "name": "Keep NVMe drives out of low-power idle (on AC)",
       "category": "Power",
@@ -2074,36 +2305,6 @@
       ]
     },
     {
-      "id": "power.cpu-ramp-up-fast-ac",
-      "name": "Jump to top processor speed when load rises (on AC)",
-      "category": "Power",
-      "impact": "experimental",
-      "summary": "Windows picks the highest processor performance state when load increases, on AC.",
-      "description": "Sets the processor performance increase policy to 2 on AC power. Microsoft defines this value as selecting the highest speed/power performance state when the ideal state is higher than the current one, instead of the ideal state (0) or one step towards it (1). Windows' built-in High performance plan uses 2; Balanced uses 0 on the Windows 11 build 26200 test PC.",
-      "risk": "systemConfiguration",
-      "level": "safe",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "requires": [
-        "noBattery"
-      ],
-      "activation": "immediate",
-      "minBuild": 22000,
-      "limitations": "Microsoft states it doesn't apply to CPUs running in autonomous performance mode, and its page lists Windows 11 only. On the test PC the plan setting for autonomous mode reads Enabled in all three built-in plans, so the value probably does nothing there; it matters only on CPUs whose performance state is chosen by Windows. Higher short-term power draw, heat and fan activity where it does act. No measured responsiveness or frame-time gain is available here. The efficiency-class-1 copy (PERFINCPOL1) is left alone: Windows keeps it at 3 in every built-in plan. Active plan only, AC only.",
-      "source": "Microsoft Learn 'PerfIncreasePolicy': alias PERFINCPOL, values 0 ideal / 1 one step closer / 2 'highest speed/power processor performance state' / 3 ideal optimised for responsiveness, not applicable to autonomous performance states, Windows 11 x64. GUID and plan defaults (Balanced 0, High performance 2, Power saver 1) read from powercfg /qh and DefaultPowerSchemeValues on a Windows 11 26200 PC.",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-perfincreasepolicy"
-      ],
-      "powerSettings": [
-        {
-          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
-          "setting": "465e1f50-b610-473a-ab58-00d1077dc418",
-          "name": "Processor performance increase policy",
-          "ac": 2
-        }
-      ]
-    },
-    {
       "id": "power.power-throttling-off",
       "name": "Turn off power throttling (policy)",
       "category": "Performance",
@@ -2139,36 +2340,6 @@
       ]
     },
     {
-      "id": "dwm.window-animations-off",
-      "name": "Turn off window animations (policy)",
-      "category": "Appearance",
-      "impact": "performance",
-      "summary": "Stops the minimise, maximise and restore animations of windows.",
-      "description": "Sets the Desktop Window Manager policy 'Do not allow window animations'. Windows then skips the animation played when a window is restored, minimised or maximised, so the window changes state at once. Microsoft documents that the policy takes effect after the user signs out and back in. Microsoft describes it only for window restore, minimise and maximise animations.",
-      "risk": "systemConfiguration",
-      "level": "safe",
-      "benefit": "preference",
-      "valueBasis": "documented",
-      "activation": "signOut",
-      "requires": [
-        "proEdition"
-      ],
-      "limitations": "A look-and-feel change only; Microsoft documents no performance effect and Mesura does not claim one. Overlaps with the existing 'minimise animation' entry (that one is the per-user MinAnimate setting; this is the DWM policy). Microsoft lists the policy for Pro, Enterprise and Education, so Windows Home is treated as not applicable (proEdition). It takes effect at the next sign-in. How the animation switches in Settings behave while the policy is set was not tested. Windows default: not configured (animations on).",
-      "source": "Microsoft Learn Policy CSP ADMX_DWM: policy 'Do not allow window animations' (DwmDisallowAnimations_1, User scope; key SOFTWARE\\Policies\\Microsoft\\Windows\\DWM, value DisallowAnimations; 'If you enable this policy setting, window animations are turned off'; 'Changing this policy setting requires a logoff'; Windows 11 21H2 and later, Pro/Enterprise/Education). The DWORD type and enabled value 1 were read from DWM.admx in C:\\Windows\\PolicyDefinitions on Windows 11 build 26200 (enabledValue decimal 1, disabledValue decimal 0).",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dwm"
-      ],
-      "registry": [
-        {
-          "hive": "HKCU",
-          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DWM",
-          "name": "DisallowAnimations",
-          "type": "dword",
-          "value": "1"
-        }
-      ]
-    },
-    {
       "id": "gaming.game-recording-policy-off",
       "name": "Disallow Windows Game Recording and Broadcasting (policy)",
       "category": "Graphics",
@@ -2193,35 +2364,6 @@
           "hive": "HKLM",
           "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
           "name": "AllowGameDVR",
-          "type": "dword",
-          "value": "0"
-        }
-      ]
-    },
-    {
-      "id": "visual.transparency-off",
-      "name": "Turn off transparency effects",
-      "category": "Appearance",
-      "impact": "performance",
-      "summary": "Makes the taskbar, Start and other surfaces opaque instead of see-through.",
-      "description": "Turns off Windows' 'Transparency effects' (the Settings > Personalization > Colors switch, stored per user as EnableTransparency: 1 = on, 0 = off). Surfaces such as the taskbar, Start menu and system flyouts are drawn solid, so the compositor no longer blends and blurs what is behind them. Microsoft's performance guide says Windows 11 visual effects use system resources and that reducing them can improve responsiveness; it does not name transparency specifically.",
-      "risk": "userPreference",
-      "level": "safe",
-      "benefit": "unverified",
-      "valueBasis": "community",
-      "activation": "explorerRestart",
-      "limitations": "No measured gain is documented; any saving is small and mostly relevant on weak integrated graphics. Looks flatter. Per-user. Windows default: on (value 1 is present on a stock profile). One source says to restart the PC or sign out for it to apply everywhere. Do not combine with a claim of FPS improvement in games: games drawn in exclusive or flip-model presentation do not use this effect.",
-      "source": "Two independent how-tos agree on path, type and meaning: Winaero ('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize', 32-bit DWORD EnableTransparency, 1 = enable, 0 = disable) and NinjaOne (same path, REG_DWORD, 1 = enables, 0 = disables transparency effects for the current user; its PowerShell example has the values reversed, which contradicts its own text). Value read as 1 on Windows 11 build 26200 (default on). Microsoft support 'Tips to improve PC performance in Windows': visual effects can use system resources, 'Adjust for best performance' can improve responsiveness (transparency not named).",
-      "sources": [
-        "https://winaero.com/how-to-enable-or-disable-transparency-in-windows-11/",
-        "https://www.ninjaone.com/blog/enable-or-disable-transparency-effects-in-windows-11/",
-        "https://support.microsoft.com/en-us/windows/tips-to-improve-pc-performance-in-windows-b3b3ef5b-5953-fb6a-2528-4bbed82fba96"
-      ],
-      "registry": [
-        {
-          "hive": "HKCU",
-          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-          "name": "EnableTransparency",
           "type": "dword",
           "value": "0"
         }
@@ -2631,35 +2773,6 @@
       ]
     },
     {
-      "requires": [ "ram16gb" ],
-      "id": "memory.keep-kernel-in-ram",
-      "name": "Disable paging of kernel code and drivers",
-      "category": "System",
-      "impact": "experimental",
-      "summary": "Keeps kernel and driver code in RAM instead of letting Windows page it to disk.",
-      "description": "Sets DisablePagingExecutive to 1. By default (0) Windows may write kernel-mode drivers and system code to the page file when they are idle and read them back when needed. With 1 that code stays in physical memory. Microsoft's reference says the benefit is the avoided disk reads and that it applies to machines with a lot of memory. A restart is required.",
-      "risk": "systemConfiguration",
-      "level": "moderate",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "activation": "reboot",
-      "limitations": "Pinned code is memory programs and the file cache can no longer use, so on a PC with little RAM this can make paging of your programs worse, not better. Microsoft's own text hedges the gain ('this would depend on the installed applications and their resource utilization') and the references are for Windows Server 2003 and a 2007 blog post; neither measures Windows 10/11, and Mesura has not measured it either. No frame-rate or latency gain is claimed. Windows default is 0 (the value is normally absent). Use only on a desktop with plenty of free RAM.",
-      "source": "Microsoft Learn (archived TechNet, Windows Server 2003 registry reference) 'DisablePagingExecutive': REG_DWORD 0|1, default 0; 0 = drivers and system code can be paged to disk as needed, 1 = they must remain in physical memory; restart required; 'improves performance on machines with a lot of memory, because it prevents disk reads'. Microsoft archived blog SYSK 318 (2007): same values and default 0, 'on machines with a lot of memory, this setting can improve performance, but this would depend on the installed applications and their resource utilization'. No Windows 10/11 page or measurement found (searched).",
-      "sources": [
-        "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2003/cc757875(v=ws.10)",
-        "https://learn.microsoft.com/en-us/archive/blogs/irenak/sysk-318-registry-key-that-controls-device-driver-and-system-code-pagination-to-disk"
-      ],
-      "registry": [
-        {
-          "hive": "HKLM",
-          "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
-          "name": "DisablePagingExecutive",
-          "type": "dword",
-          "value": "1"
-        }
-      ]
-    },
-    {
       "id": "system.ntfs-8dot3-off",
       "name": "Stop creating 8.3 short file names",
       "category": "System",
@@ -2685,112 +2798,6 @@
           "name": "NtfsDisable8dot3NameCreation",
           "type": "dword",
           "value": "1"
-        }
-      ]
-    },
-    {
-      "id": "network.interrupt-moderation-off",
-      "name": "Turn off network card interrupt moderation",
-      "category": "Network",
-      "impact": "experimental",
-      "summary": "Network card raises an interrupt per packet instead of batching them.",
-      "description": "Interrupt moderation makes a network card wait for more packets, or for a timer, before it interrupts the CPU. Microsoft lists switching it off as a tuning step for the lowest possible latency and says it costs CPU time. This sets the standard NDIS keyword *InterruptModeration to 0 on every adapter whose driver exposes that standard keyword in its Advanced properties; Windows' documented default is 1 (enabled).",
-      "risk": "systemConfiguration",
-      "level": "moderate",
-      "benefit": "documented",
-      "valueBasis": "documented",
-      "activation": "reboot",
-      "requires": [
-        "noBattery"
-      ],
-      "limitations": "Costs CPU: in one community test (a gigabit Intel adapter, about 900 Mbps TCP for 30 s) interrupts rose roughly 29 times with moderation off. The gain is on a microsecond scale; no ping or FPS gain is measured or promised. Only adapters whose driver exposes the standard *InterruptModeration property are touched; many drivers use their own vendor keyword and are left alone. Wi-Fi adapters mostly do not expose it (the test PC's does not, so this was not tested on real hardware). The adapter reads the value when it restarts. Do not use on a laptop on battery or a weak CPU.",
-      "source": "Microsoft Learn 'Enumeration Keywords': *InterruptModeration 0 = Disabled, 1 = Enabled (Default); 'Interrupt Moderation' (drivers turn it on by default unless the keyword disables it); 'Network Adapter Performance Tuning': 'Disable the Interrupt Moderation setting for network card drivers that require the lowest possible latency ... this configuration can use more CPU time and it represents a tradeoff'. Net class GUID 4d36e972-... from 'System-Defined Device Setup Classes'. Keyword values are REG_SZ (read on PC-000: *WakeOnMagicPacket is a String). Interrupt counts from the community djdallmann GamingPCSetup network research page (single adapter, not Microsoft data).",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/enumeration-keywords",
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/interrupt-moderation",
-        "https://learn.microsoft.com/en-us/windows-server/networking/technologies/network-subsystem/net-sub-performance-tuning-nics",
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors",
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/standardized-inf-keywords-for-network-devices",
-        "https://djdallmann.github.io/GamingPCSetup/CONTENT/RESEARCH/NETWORK"
-      ],
-      "registryEach": [
-        {
-          "hive": "HKLM",
-          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
-          "name": "*InterruptModeration",
-          "type": "string",
-          "value": "0",
-          "where": {
-            "subkeyExists": "Ndi\\params\\*InterruptModeration"
-          }
-        }
-      ]
-    },
-    {
-      "id": "network.ethernet-eee-off",
-      "name": "Turn off Energy-Efficient Ethernet",
-      "category": "Network",
-      "impact": "experimental",
-      "summary": "Stops a wired link entering low-power idle between packets.",
-      "description": "Energy-Efficient Ethernet (IEEE 802.3az) lets a wired link drop into a low-power idle state when there is no traffic and wake when a packet arrives. Microsoft defines the standard keyword *EEE (0 = Disabled, 1 = Enabled, default 1). This sets it to 0 on adapters whose driver exposes it, so the link stays fully powered.",
-      "risk": "systemConfiguration",
-      "level": "safe",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "activation": "reboot",
-      "requires": [
-        "noBattery"
-      ],
-      "limitations": "Windows documents the keyword and its default, not a latency or FPS benefit; the wake delay of low-power idle is described only in secondary sources (microseconds), so the benefit is unverified. Uses slightly more power on an idle link. Does nothing on Wi-Fi and on wired drivers that use a vendor-specific EEE keyword instead of the standard *EEE (they are left alone). Not tested on real hardware: the test PC has only a Wi-Fi adapter. Needs an adapter restart, so a reboot. Community advice (not Microsoft) often lists turning EEE off when a link drops or flaps with a particular switch; Mesura does not claim it fixes that.",
-      "source": "Microsoft Learn 'Standardized INF Keywords for Power Management': '*EEE: a value that describes whether the device should enable IEEE 802.3az energy-efficient ethernet'; table: 0 Disabled, 1 (Default) Enabled. Net class GUID from 'System-Defined Device Setup Classes'. Keyword values are REG_SZ (read on PC-000).",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/standardized-inf-keywords-for-power-management",
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors",
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/enumeration-keywords"
-      ],
-      "registryEach": [
-        {
-          "hive": "HKLM",
-          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
-          "name": "*EEE",
-          "type": "string",
-          "value": "0",
-          "where": {
-            "subkeyExists": "Ndi\\params\\*EEE"
-          }
-        }
-      ]
-    },
-    {
-      "id": "network.nic-selective-suspend-off",
-      "name": "Turn off network adapter selective suspend",
-      "category": "Power",
-      "impact": "experimental",
-      "summary": "Stops Windows idling the adapter between traffic bursts (NDIS drivers)",
-      "description": "NDIS selective suspend lets Windows put an idle network adapter into a low-power state after an idle time-out (5 seconds by default, 3 seconds with the screen off) and wake it when traffic arrives. The standardized keyword *SelectiveSuspend = 0 tells the miniport driver not to advertise selective suspend at all. This writes the keyword on every adapter whose driver declares it (Ndi\\Params\\*SelectiveSuspend exists).",
-      "risk": "systemConfiguration",
-      "level": "safe",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "activation": "reboot",
-      "requires": [
-        "noBattery"
-      ],
-      "limitations": "Microsoft marks the keyword as for traditional NDIS miniport drivers only and deprecated for NetAdapterCx drivers, so adapters on NetAdapterCx drivers either lack it or ignore it. Which adapters declare it depends on the driver; none of the adapters on the test PC (an Intel Wi-Fi 6 AX201 and virtual adapters) do, so there the entry changes nothing. Cost: higher idle power, so a laptop on battery loses runtime (hence the noBattery requirement). The benefit (no wake-up delay after idle) is plausible but not measured here. Default is enabled (1). Adapter restart or reboot needed. This is separate from the USB hub setting 'USB selective suspend' in the power plan.",
-      "source": "Microsoft Learn Standardized INF Keywords for NDIS Selective Suspend: *SelectiveSuspend 0 = Disabled, 1 (Default) = Enabled; if 0 the miniport must not advertise any selective suspend capability; *SSIdleTimeout default 5 s, *SSIdleTimeoutScreenOff default 3 s; keywords are for NDIS miniport drivers only and deprecated in NetAdapterCx.",
-      "sources": [
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/network/standardized-inf-keywords-for-ndis-selective-suspend"
-      ],
-      "registryEach": [
-        {
-          "hive": "HKLM",
-          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
-          "name": "*SelectiveSuspend",
-          "type": "string",
-          "value": "0",
-          "where": {
-            "subkeyExists": "Ndi\\Params\\*SelectiveSuspend"
-          }
         }
       ]
     },
@@ -3000,36 +3007,615 @@
           "value": "off"
         }
       ]
+    },
+    {
+      "id": "cpu.core-parking-off",
+      "name": "Keep all processor cores unparked (on AC)",
+      "category": "Performance",
+      "impact": "experimental",
+      "summary": "Sets the core-parking minimum to 100% on AC so Windows stops parking cores.",
+      "description": "Core parking lets Windows put some logical processors into a deep idle ('parked') state when load is low and wake them when load rises. The processor setting 'Processor performance core parking min cores' (powercfg alias CPMINCORES) is the minimum percentage of logical processors per NUMA node that may be unparked at any time. Microsoft documents that at 100 percent the core parking algorithm is disabled. This sets 100 on AC power in the active plan. The setting is hidden (visible only with powercfg /qh). No frame-rate or latency gain is claimed; the cost is the idle power of cores that stay awake.",
+      "risk": "systemConfiguration",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "activation": "immediate",
+      "requires": [
+        "noBattery"
+      ],
+      "limitations": "For desktops: skipped on a PC with a battery, and only the AC value of the active plan changes. Only the main core class is affected: on processors with performance and efficiency cores, the efficiency cores have a separate setting (CPMINCORES1) that this entry leaves alone, so they can still be parked. Windows' value depends on the plan and the processor: on the Windows 11 test PC the Balanced and High performance plans already read 100 on AC, so nothing changes there; on other PCs Balanced may park cores. Idle power use and heat rise slightly on PCs that did park cores. Microsoft says silicon vendors tune these settings and recommends consulting them first. The 'Ultimate Performance' or 'High performance' entries may already cover this.",
+      "source": "Microsoft Learn 'CPMinCores': 'the minimum percentage of logical processors... that can be placed in the un-parked state at any given time... The Core Parking algorithm is disabled if the value of this setting is 100%'; range 0-100, powercfg alias CPMINCORES, hidden setting. Microsoft Learn 'Processor power management options' (note: silicon vendors tune PPM; contact them before modifying). GUIDs read from powercfg /qh on Windows 11 build 26200: subgroup 54533251-82be-4824-96c1-47b60b740d00 (SUB_PROCESSOR), setting 0cc5b647-c1df-4637-891a-dec35c318583 (Processor performance core parking min cores). https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
+      "sources": [
+        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
+        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-processor-power-management-options"
+      ],
+      "powerSettings": [
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "0cc5b647-c1df-4637-891a-dec35c318583",
+          "name": "Processor performance core parking min cores",
+          "ac": 100
+        }
+      ]
+    },
+    {
+      "id": "power.cpu-ramp-up-fast-ac",
+      "name": "Jump to top processor speed when load rises (on AC)",
+      "category": "Power",
+      "impact": "experimental",
+      "summary": "Windows picks the highest processor performance state when load increases, on AC.",
+      "description": "Sets the processor performance increase policy to 2 on AC power. Microsoft defines this value as selecting the highest speed/power performance state when the ideal state is higher than the current one, instead of the ideal state (0) or one step towards it (1). Windows' built-in High performance plan uses 2; Balanced uses 0 on the Windows 11 build 26200 test PC.",
+      "risk": "systemConfiguration",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "requires": [
+        "noBattery"
+      ],
+      "activation": "immediate",
+      "minBuild": 22000,
+      "limitations": "Microsoft states it doesn't apply to CPUs running in autonomous performance mode, and its page lists Windows 11 only. On the test PC the plan setting for autonomous mode reads Enabled in all three built-in plans, so the value probably does nothing there; it matters only on CPUs whose performance state is chosen by Windows. Higher short-term power draw, heat and fan activity where it does act. No measured responsiveness or frame-time gain is available here. The efficiency-class-1 copy (PERFINCPOL1) is left alone: Windows keeps it at 3 in every built-in plan. Active plan only, AC only.",
+      "source": "Microsoft Learn 'PerfIncreasePolicy': alias PERFINCPOL, values 0 ideal / 1 one step closer / 2 'highest speed/power processor performance state' / 3 ideal optimised for responsiveness, not applicable to autonomous performance states, Windows 11 x64. GUID and plan defaults (Balanced 0, High performance 2, Power saver 1) read from powercfg /qh and DefaultPowerSchemeValues on a Windows 11 26200 PC.",
+      "sources": [
+        "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-perfincreasepolicy"
+      ],
+      "powerSettings": [
+        {
+          "subgroup": "54533251-82be-4824-96c1-47b60b740d00",
+          "setting": "465e1f50-b610-473a-ab58-00d1077dc418",
+          "name": "Processor performance increase policy",
+          "ac": 2
+        }
+      ]
+    },
+    {
+      "requires": [ "ram16gb" ],
+      "id": "memory.keep-kernel-in-ram",
+      "name": "Disable paging of kernel code and drivers",
+      "category": "System",
+      "impact": "experimental",
+      "summary": "Keeps kernel and driver code in RAM instead of letting Windows page it to disk.",
+      "description": "Sets DisablePagingExecutive to 1. By default (0) Windows may write kernel-mode drivers and system code to the page file when they are idle and read them back when needed. With 1 that code stays in physical memory. Microsoft's reference says the benefit is the avoided disk reads and that it applies to machines with a lot of memory. A restart is required.",
+      "risk": "systemConfiguration",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "activation": "reboot",
+      "limitations": "Pinned code is memory programs and the file cache can no longer use, so on a PC with little RAM this can make paging of your programs worse, not better. Microsoft's own text hedges the gain ('this would depend on the installed applications and their resource utilization') and the references are for Windows Server 2003 and a 2007 blog post; neither measures Windows 10/11, and Mesura has not measured it either. No frame-rate or latency gain is claimed. Windows default is 0 (the value is normally absent). Use only on a desktop with plenty of free RAM.",
+      "source": "Microsoft Learn (archived TechNet, Windows Server 2003 registry reference) 'DisablePagingExecutive': REG_DWORD 0|1, default 0; 0 = drivers and system code can be paged to disk as needed, 1 = they must remain in physical memory; restart required; 'improves performance on machines with a lot of memory, because it prevents disk reads'. Microsoft archived blog SYSK 318 (2007): same values and default 0, 'on machines with a lot of memory, this setting can improve performance, but this would depend on the installed applications and their resource utilization'. No Windows 10/11 page or measurement found (searched).",
+      "sources": [
+        "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2003/cc757875(v=ws.10)",
+        "https://learn.microsoft.com/en-us/archive/blogs/irenak/sysk-318-registry-key-that-controls-device-driver-and-system-code-pagination-to-disk"
+      ],
+      "registry": [
+        {
+          "hive": "HKLM",
+          "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+          "name": "DisablePagingExecutive",
+          "type": "dword",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "visual.transparency-off",
+      "name": "Turn off transparency effects",
+      "category": "Appearance",
+      "impact": "performance",
+      "summary": "Makes the taskbar, Start and other surfaces opaque instead of see-through.",
+      "description": "Turns off Windows' 'Transparency effects' (the Settings > Personalization > Colors switch, stored per user as EnableTransparency: 1 = on, 0 = off). Surfaces such as the taskbar, Start menu and system flyouts are drawn solid, so the compositor no longer blends and blurs what is behind them. Microsoft's performance guide says Windows 11 visual effects use system resources and that reducing them can improve responsiveness; it does not name transparency specifically.",
+      "risk": "userPreference",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "community",
+      "activation": "explorerRestart",
+      "limitations": "No measured gain is documented; any saving is small and mostly relevant on weak integrated graphics. Looks flatter. Per-user. Windows default: on (value 1 is present on a stock profile). One source says to restart the PC or sign out for it to apply everywhere. Do not combine with a claim of FPS improvement in games: games drawn in exclusive or flip-model presentation do not use this effect.",
+      "source": "Two independent how-tos agree on path, type and meaning: Winaero ('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize', 32-bit DWORD EnableTransparency, 1 = enable, 0 = disable) and NinjaOne (same path, REG_DWORD, 1 = enables, 0 = disables transparency effects for the current user; its PowerShell example has the values reversed, which contradicts its own text). Value read as 1 on Windows 11 build 26200 (default on). Microsoft support 'Tips to improve PC performance in Windows': visual effects can use system resources, 'Adjust for best performance' can improve responsiveness (transparency not named).",
+      "sources": [
+        "https://winaero.com/how-to-enable-or-disable-transparency-in-windows-11/",
+        "https://www.ninjaone.com/blog/enable-or-disable-transparency-effects-in-windows-11/",
+        "https://support.microsoft.com/en-us/windows/tips-to-improve-pc-performance-in-windows-b3b3ef5b-5953-fb6a-2528-4bbed82fba96"
+      ],
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "EnableTransparency",
+          "type": "dword",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "dwm.window-animations-off",
+      "name": "Turn off window animations (policy)",
+      "category": "Appearance",
+      "impact": "performance",
+      "summary": "Stops the minimise, maximise and restore animations of windows.",
+      "description": "Sets the Desktop Window Manager policy 'Do not allow window animations'. Windows then skips the animation played when a window is restored, minimised or maximised, so the window changes state at once. Microsoft documents that the policy takes effect after the user signs out and back in. Microsoft describes it only for window restore, minimise and maximise animations.",
+      "risk": "systemConfiguration",
+      "level": "safe",
+      "benefit": "preference",
+      "valueBasis": "documented",
+      "activation": "signOut",
+      "requires": [
+        "proEdition"
+      ],
+      "limitations": "A look-and-feel change only; Microsoft documents no performance effect and Mesura does not claim one. Overlaps with the existing 'minimise animation' entry (that one is the per-user MinAnimate setting; this is the DWM policy). Microsoft lists the policy for Pro, Enterprise and Education, so Windows Home is treated as not applicable (proEdition). It takes effect at the next sign-in. How the animation switches in Settings behave while the policy is set was not tested. Windows default: not configured (animations on).",
+      "source": "Microsoft Learn Policy CSP ADMX_DWM: policy 'Do not allow window animations' (DwmDisallowAnimations_1, User scope; key SOFTWARE\\Policies\\Microsoft\\Windows\\DWM, value DisallowAnimations; 'If you enable this policy setting, window animations are turned off'; 'Changing this policy setting requires a logoff'; Windows 11 21H2 and later, Pro/Enterprise/Education). The DWORD type and enabled value 1 were read from DWM.admx in C:\\Windows\\PolicyDefinitions on Windows 11 build 26200 (enabledValue decimal 1, disabledValue decimal 0).",
+      "sources": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dwm"
+      ],
+      "registry": [
+        {
+          "hive": "HKCU",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DWM",
+          "name": "DisallowAnimations",
+          "type": "dword",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "power.disk-never-off", "name": "Never turn off drives (on AC)", "category": "Power",
+      "impact": "power", "summary": "Drives never power down on AC.",
+      "description": "Stops Windows powering down drives after inactivity on AC power, so a game loading from a sleeping hard drive doesn't wait for it to spin up.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Active plan only; AC only. Matters for hard drives; little or nothing changes on an SSD-only PC. A hard drive keeps spinning (noise, power).",
+      "source": "powercfg setting 6738e2c4 (Turn off hard disk after) in subgroup 0012ee47 (Hard disk); Microsoft Learn 'Disk idle timeout' (0 = never).",
+      "powerSettings": [ { "subgroup": "0012ee47-9041-4b5d-9b77-535fba8b1442", "setting": "6738e2c4-e8a5-4a42-b16a-e040e769756e", "name": "Turn off hard disk after", "ac": 0 } ]
+    },
+    {
+      "id": "network.adapter-interrupt-moderation-off",
+      "name": "Turn off interrupt moderation on the network adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The card interrupts the processor for each packet instead of batching them.",
+      "description": "Interrupt moderation makes the network card collect packets and interrupt the processor once for a group, which saves processor time and adds a little latency. Turning it off lowers that latency and raises processor load, noticeably only at high throughput. Applied to every physical Ethernet and Wi-Fi adapter whose driver offers the standardized *InterruptModeration keyword. The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn 'Standardized INF keywords for network devices' (the keyword and its 0/1 values are standardized for drivers that declare them)",
+      "adapter": [
+        {
+          "property": "*InterruptModeration",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-receive-buffers-max",
+      "name": "Maximize the network adapter receive buffers",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The adapter's receive ring is set to the largest size its driver allows.",
+      "description": "Sets *ReceiveBuffers to the largest value the driver lists, so a burst of packets is less likely to be dropped when the processor is busy. Costs some memory, and a larger ring can add queueing delay under sustained overload. Only on Ethernet adapters whose driver gives a numeric range. The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn 'Standardized INF keywords for network devices' (the keyword and its 0/1 values are standardized for drivers that declare them)",
+      "adapter": [
+        {
+          "property": "*ReceiveBuffers",
+          "maximize": true,
+          "kinds": [
+            "ethernet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-eee-off",
+      "name": "Turn off Energy-Efficient Ethernet on the adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The link no longer drops to a low-power state between packets.",
+      "description": "Energy-Efficient Ethernet (IEEE 802.3az) lets the link sleep when idle. Waking costs microseconds to milliseconds, and some switches renegotiate badly. Turning it off keeps the link awake: slightly more power, no wake-up delay, no renegotiation. Only on Ethernet adapters whose driver offers the standardized *EEE keyword. The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn 'Standardized INF keywords for network devices' (the keyword and its 0/1 values are standardized for drivers that declare them)",
+      "adapter": [
+        {
+          "property": "*EEE",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-selective-suspend-off",
+      "name": "Turn off selective suspend on the network adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "A USB or PCIe adapter is not put to sleep while idle.",
+      "description": "Selective suspend lets Windows power down an idle adapter, mostly a USB one. A suspended adapter wakes slowly or not at all on some devices. Turning it off keeps the adapter powered. Only where the driver offers the standardized *SelectiveSuspend keyword. The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn 'Standardized INF keywords for network devices' (the keyword and its 0/1 values are standardized for drivers that declare them)",
+      "adapter": [
+        {
+          "property": "*SelectiveSuspend",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-vendor-power-saving-off",
+      "name": "Turn off the maker-specific power saving of Intel and Realtek Ethernet",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Ultra Low Power, Green Ethernet and 'reduce speed on power down' are set to Disabled.",
+      "description": "Intel and Realtek Ethernet drivers have their own power-saving switches (Intel: ULPMode, EnableGreenEthernet, ReduceSpeedOnPowerDown; Realtek: GreenEthernet, PowerSavingMode). Each is set to the driver's own 'Disabled' entry, only on an adapter of that maker whose driver lists the keyword with such an entry. Costs a little power; avoids link drops and slow wake-up on some switches. The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "limitations": "The keyword names come from the makers' drivers and were not verified on hardware (the development PC has only an Intel Wi-Fi card); Mesura writes one only where the driver itself lists it with a 'Disabled' entry. Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "The makers' driver INF keyword names; none of them was present on the one PC this was developed on (an Intel Wi-Fi card only), so the names and their 'Disabled' entries are unverified on hardware",
+      "adapter": [
+        {
+          "property": "ULPMode",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "EnableGreenEthernet",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "ReduceSpeedOnPowerDown",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "GreenEthernet",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        },
+        {
+          "property": "PowerSavingMode",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-power-management-off",
+      "name": "Stop Windows turning the network adapter off to save power",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "'Allow the computer to turn off this device to save power' is switched off.",
+      "description": "Windows may power a network adapter down when it judges it idle, and the adapter can then wake late or drop the connection. This is the checkbox in the adapter's Power Management tab, changed with Windows' own cmdlet for every physical Ethernet and Wi-Fi adapter that has it; an adapter whose driver doesn't offer it is left alone.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Set-NetAdapterPowerManagement (-AllowComputerToTurnOffDevice)",
+      "adapter": [
+        {
+          "powerManagement": "allowTurnOff",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-wifi-mimo-power-save-off",
+      "name": "Turn off MIMO power save on an Intel Wi-Fi adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The Wi-Fi radio keeps all its antennas active ('No SMPS').",
+      "description": "MIMO power save lets the Wi-Fi radio switch off all but one antenna chain when idle and wake them on demand, which can add latency to the first packets of a burst. 'No SMPS' keeps all chains active. Set on Intel Wi-Fi adapters whose driver lists a 'No SMPS' entry (checked on an Intel Wi-Fi 6 AX201 with driver 24.70: values Auto, Static, Dynamic, No SMPS). The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "community",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Intel Wi-Fi driver keyword MIMOPowerSaveMode, its value list read from an Intel Wi-Fi 6 AX201 (driver 24.70.0.3) with Get-NetAdapterAdvancedProperty",
+      "adapter": [
+        {
+          "property": "MIMOPowerSaveMode",
+          "displayValue": "No SMPS",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-wifi-roaming-lowest",
+      "name": "Set the lowest roaming aggressiveness on an Intel Wi-Fi adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The adapter looks for another access point only when the signal is really poor.",
+      "description": "A high roaming aggressiveness makes the Wi-Fi adapter scan for a better access point often; a scan interrupts traffic for a moment, which shows as a lag spike in a game. '1. Lowest' scans only when the signal is poor. The cost: a PC that moves around the house may hold on to a distant access point too long. Set on Intel Wi-Fi adapters whose driver lists that entry (checked on an Intel Wi-Fi 6 AX201: five levels, now '3. Medium'). The adapter restarts when the value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads the value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "community",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Intel Wi-Fi driver keyword RoamAggressiveness, its value list read from an Intel Wi-Fi 6 AX201 (driver 24.70.0.3) with Get-NetAdapterAdvancedProperty",
+      "adapter": [
+        {
+          "property": "RoamAggressiveness",
+          "displayValue": "1. Lowest",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-lldp-off",
+      "name": "Unbind Microsoft LLDP Protocol Driver",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "LLDP announces this PC to the switch and reads the switch's announcements. Home and gaming networks never need it. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_lldp",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-lltd-off",
+      "name": "Unbind Link-Layer Topology Discovery (mapper and responder)",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "LLTD draws the Network Map and answers its queries. Turning both parts off hides this PC from the map and the map from this PC. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_lltdio",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        },
+        {
+          "binding": "ms_rspndr",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-multiplexor-off",
+      "name": "Unbind Microsoft Network Adapter Multiplexor Protocol",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "The multiplexor is used only for NIC teaming. Without teaming it does nothing (it is already off on many PCs). Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_implat",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-file-sharing-off",
+      "name": "Unbind File and Printer Sharing for Microsoft Networks",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "Stops this PC offering its folders and printers on that adapter. Turn it off only if you never share anything from this PC; sharing from this PC stops working. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_server",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-msclient-off",
+      "name": "Unbind Client for Microsoft Networks",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "Stops this PC reaching other PCs' shared folders and printers through that adapter. Turn it off only if you never use network shares; mapped drives and \\\\server paths stop working. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_msclient",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.adapter-ipv6-binding-off",
+      "name": "Unbind Internet Protocol Version 6 (TCP/IPv6) on the adapter",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "The component is unbound from every physical adapter that has it.",
+      "description": "Unbinds IPv6 from the adapter. Microsoft recommends leaving IPv6 on; some games, Xbox features and providers use it, and a provider that is IPv6-only stops working. Turn it off only if you know your connection is IPv4. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
+      "adapter": [
+        {
+          "binding": "ms_tcpip6",
+          "enabled": false,
+          "kinds": [
+            "ethernet",
+            "wifi"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.tcp-heuristics-off",
+      "name": "Turn off TCP window scaling heuristics",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Windows no longer lowers a connection's receive window by its own guess.",
+      "description": "Window scaling heuristics let Windows override the receive-window auto-tuning level it was given when it guesses the path is poor. Turning them off lets auto-tuning (Normal) work as set. On Windows 11 build 26200 they are already disabled in every template, so on a current PC this changes nothing; it matters on a PC where a tweak tool or an older Windows turned them on.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "documented",
+      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
+      "source": "Microsoft Learn 'netsh interface tcp set heuristics'; read from MSFT_NetTCPSetting.ScalingHeuristics",
+      "tcp": [
+        {
+          "name": "heuristics",
+          "value": "disabled"
+        }
+      ]
     }
   ],
   "presets": [
     {
       "id": "recommended-gaming", "name": "Mesura Reference", "tier": "primary",
       "summary": "The safe basics in three parts: performance, privacy, fewer promotions.",
-      "description": "Mesura's own baseline: eighteen documented settings that apply to almost every PC, in three parts you can also apply one by one. Performance: Game Mode on, the accessibility shortcuts that interrupt a game off, and two Windows defaults that tweak packs often change (the connectivity check, threaded DPCs) put back. Privacy: no advertising ID, tailored experiences or language list for websites, required diagnostic data only, no improvement programs or app telemetry. Fewer promotions: no tips, suggestions, setup prompts or lock-screen and Start ads. Nothing here touches power, services, security or drivers, and none of it claims a frame-rate gain: it is about what Windows shows, sends and settles on, not speed. Machine policies need Windows Pro.",
+      "description": "Mesura's own baseline: nineteen settings that apply to almost every PC, in three parts you can also apply one by one. Performance: Game Mode on, the accessibility shortcuts that interrupt a game off, two Windows defaults that tweak packs often change (the connectivity check, threaded DPCs) put back, and the Balanced Mesura power plan (Balanced without its brakes on mains power; battery behaviour is Windows' own). Privacy: no advertising ID, tailored experiences or language list for websites, required diagnostic data only, no improvement programs or app telemetry. Fewer promotions: no tips, suggestions, setup prompts or lock-screen and Start ads. Nothing here touches services, security or drivers, and none of it claims a frame-rate gain. Machine policies need Windows Pro.",
       "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
                       "privacy.no-language-list", "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
                       "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
                       "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
-                      "repair.ncsi-active-probing", "repair.threaded-dpc" ]
+                      "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan" ]
     },
     {
       "id": "maximum-performance", "name": "Maximum performance", "tier": "primary",
-      "summary": "Mesura Reference, plus the background work and desktop power settings a performance-minded PC can do without; the trade-offs are named.",
-      "description": "Everything in Mesura Reference, plus changes that keep a desktop out of its power-saving states and stop background components nobody asked for. On a desktop on AC power: the High performance plan, USB selective suspend off, no PCI Express link power saving and drives that are never switched off (a laptop would lose battery life, and a Modern Standby PC only offers Balanced, so these are skipped there). Everywhere: Windows stops running Game Bar recording and broadcasting in the background, the Widgets process, Microsoft Edge's startup boost and its background mode, and stops sharing downloaded updates with other PCs. You give up automatic energy saving at idle (more heat, fan noise and electricity), Game Bar clips and widgets. Not ticked, offered beside it because they depend on the hardware or on taste: hardware-accelerated GPU scheduling (restart; needed for DLSS Frame Generation), background recording off, the pointer-precision switch, window animations and transparency off, NTFS last-access updates off, the processor energy hint and memory compression off (16 GB or more). No reliable measurement of a frame-rate gain from any of these on current hardware exists, and none is claimed. Every value is documented by Microsoft or was checked on a real Windows build, and Undo in Activity puts it back.",
+      "summary": "Mesura Reference, plus the Maximum Performance Mesura power plan and the background work a performance-minded PC can do without; the trade-offs are named.",
+      "description": "Everything in Mesura Reference, plus the Maximum Performance Mesura power plan and changes that stop background components nobody asked for. The plan is a copy of Balanced that, on mains power only, keeps the processor at full speed and every power-saving state off (battery values stay Balanced's): more heat, fan noise and idle power. Everywhere: Windows stops running Game Bar recording and broadcasting in the background, the Widgets process, Microsoft Edge's startup boost and its background mode, and stops sharing downloaded updates with other PCs. You give up Game Bar clips and widgets. Not ticked, offered beside it because they depend on the hardware or on taste: hardware-accelerated GPU scheduling (restart; only where the graphics card supports it), background recording off, the pointer-precision switch, window animations and transparency off, NTFS last-access updates off and memory compression off (16 GB or more). No reliable measurement of a frame-rate gain from any of these on current hardware exists, and none is claimed. Every value is documented by Microsoft or was checked on a real Windows build, and Undo in Activity puts it back.",
       "optional": [ "gpu.hardware-scheduling-on", "gaming.background-recording-off", "input.pointer-precision-off", "dwm.window-animations-off",
-                      "visual.transparency-off", "system.ntfs-last-access-off", "power.cpu-epp-performance-ac", "memory.compression-off" ],
+                      "visual.transparency-off", "system.ntfs-last-access-off", "memory.compression-off" ],
       "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
                       "privacy.no-language-list", "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
                       "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
                       "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
-                      "repair.ncsi-active-probing", "repair.threaded-dpc", "power.high-performance", "power.usb-keep-awake", "power.pcie-aspm-off", "power.disk-never-off",
+                      "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-maximum-plan",
                       "taskbar.widgets-policy-off", "edge.no-startup-boost", "edge.no-background-mode", "gaming.game-recording-policy-off", "updates.no-p2p-delivery" ]
     },
     {
       "id": "gaming", "name": "Gaming preferences", "tier": "collection",
       "summary": "Game Mode, no mouse acceleration, no audio ducking, no background recording, End task.",
-      "description": "Opt-in gaming preferences: Game Mode kept on (Windows' default), no accessibility-shortcut prompts, game audio not lowered during calls, no mouse acceleration, no background recording or Game Bar recording and broadcasting, no Game Bar from the controller's Xbox button, End task on taskbar menus. Some stored values are community-documented (see each entry). No power-plan changes: High performance and USB power changes cost laptops battery and have no measured gain; they are in Maximum performance for desktops only.",
+      "description": "Opt-in gaming preferences: Game Mode kept on (Windows' default), no accessibility-shortcut prompts, game audio not lowered during calls, no mouse acceleration, no background recording or Game Bar recording and broadcasting, no Game Bar from the controller's Xbox button, End task on taskbar menus. Some stored values are community-documented (see each entry). No power-plan changes here: the Balanced Mesura and Maximum Performance Mesura plans are separate entries, and Maximum performance applies the second.",
       "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "audio.no-ducking", "input.pointer-precision-off", "gaming.background-recording-off",
                       "gaming.game-recording-policy-off", "gaming.controller-game-bar-off", "taskbar.end-task" ]
     },
@@ -3059,9 +3645,9 @@
     },
     {
       "id": "reference-performance", "name": "Performance basics", "tier": "collection",
-      "summary": "Game Mode on, no accessibility pop-ups in games, two defaults put back.",
-      "description": "The performance part of Mesura Reference: Game Mode on, Sticky Keys and the other accessibility shortcuts off so a game is not interrupted, and the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them. No frame-rate gain is claimed.",
-      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "repair.ncsi-active-probing", "repair.threaded-dpc" ]
+      "summary": "Game Mode on, no accessibility pop-ups in games, two defaults put back, the Balanced Mesura power plan.",
+      "description": "The performance part of Mesura Reference: Game Mode on, Sticky Keys and the other accessibility shortcuts off so a game is not interrupted, the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them, and the Balanced Mesura power plan (Balanced without its brakes on mains power). No frame-rate gain is claimed.",
+      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan" ]
     },
     {
       "id": "reference-privacy", "name": "Privacy basics", "tier": "collection",
@@ -3087,9 +3673,9 @@
     },
     {
       "id": "network-adapter", "name": "Network adapter tuning (advanced)", "tier": "collection",
-      "summary": "Per-adapter driver settings: interrupt moderation, EEE, selective suspend, Wi-Fi power saving.",
-      "description": "Settings Microsoft documents as standardized adapter keywords, set on every adapter whose driver declares them: interrupt moderation, Energy-Efficient Ethernet, selective suspend and Wi-Fi power saving. Effects depend on the adapter and the network and can raise CPU use or power; the adapter restarts when applied. For people who measure; no gain is claimed.",
-      "operations": [ "network.wifi-power-saving-max-performance", "network.interrupt-moderation-off", "network.ethernet-eee-off", "network.nic-selective-suspend-off" ]
+      "summary": "Per-adapter driver settings the driver itself lists: interrupt moderation, buffers, EEE, power saving, Wi-Fi roaming and MIMO.",
+      "description": "Settings of the network adapters themselves, each applied to a physical Ethernet or Wi-Fi adapter only where its driver declares the setting and lists the wanted value: interrupt moderation off, receive buffers at their maximum, Energy-Efficient Ethernet and selective suspend off, the Intel and Realtek power-saving switches, Windows' own power-management checkbox, and for Intel Wi-Fi no MIMO power save and the lowest roaming aggressiveness. Each adapter restarts for a few seconds when a value is written. Effects depend on the adapter and the network and can raise processor use or power; for people who measure; no gain is claimed. Protocol bindings (LLDP, LLTD, IPv6, file sharing) are separate entries in All settings.",
+      "operations": [ "network.adapter-interrupt-moderation-off", "network.adapter-receive-buffers-max", "network.adapter-eee-off", "network.adapter-selective-suspend-off", "network.adapter-vendor-power-saving-off", "network.adapter-power-management-off", "network.adapter-wifi-mimo-power-save-off", "network.adapter-wifi-roaming-lowest", "network.wifi-power-saving-max-performance" ]
     },
     {
       "id": "quiet-network", "name": "Less network exposure", "tier": "collection",

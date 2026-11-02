@@ -1915,6 +1915,72 @@
       "impact": "Maintenance",
       "summary": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
       "description": "Retired in 0.4 (docs/catalog-audit-0.4.tsv). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.interrupt-moderation-off",
+      "name": "Turn off network card interrupt moderation",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
+          "name": "*InterruptModeration",
+          "type": "string",
+          "value": "0",
+          "where": {
+            "subkeyExists": "Ndi\\params\\*InterruptModeration"
+          }
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.ethernet-eee-off",
+      "name": "Turn off Energy-Efficient Ethernet",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
+          "name": "*EEE",
+          "type": "string",
+          "value": "0",
+          "where": {
+            "subkeyExists": "Ndi\\params\\*EEE"
+          }
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.nic-selective-suspend-off",
+      "name": "Turn off network adapter selective suspend",
+      "risk": "systemConfiguration",
+      "activation": "reboot",
+      "registryEach": [
+        {
+          "hive": "HKLM",
+          "pathPattern": "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\*",
+          "name": "*SelectiveSuspend",
+          "type": "string",
+          "value": "0",
+          "where": {
+            "subkeyExists": "Ndi\\Params\\*SelectiveSuspend"
+          }
+        }
+      ],
+      "category": "Retired",
+      "impact": "Maintenance",
+      "summary": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
     }
   ]
 }

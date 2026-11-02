@@ -291,7 +291,7 @@ public sealed class SystemInfoViewModel : Observable, IPageState
 
         var cpuGroups = r.Processors.Select(cpu => new InfoGroup(r.Processors.Count > 1 ? Plain(cpu.Name) ?? "" : "", "", [
             Row("System.Processor", Plain(cpu.Name)),
-            Row("System.CoresThreads", cpu.Cores is { } c ? Loc.Format("System.CoresThreadsValue", c, cpu.Threads?.ToString(CultureInfo.InvariantCulture) ?? "?") : null),
+            Row("System.CoresThreads", cpu.Cores is { } c ? Loc.Format("System.CoresThreadsValue", Loc.Plural("System.Cores", c), cpu.Threads is { } t ? Loc.Plural("System.Threads", t) : "?") : null),
             Row("System.MaxClock", cpu.MaxMhz is { } mhz ? SystemReportText.Ghz(mhz) : null),
         ], [])).ToList();
         if (cpuGroups.Count == 0)
@@ -336,7 +336,7 @@ public sealed class SystemInfoViewModel : Observable, IPageState
 
         var gpuGroups = r.Gpus.Select(gpu => new InfoGroup(Plain(gpu.Name) ?? Missing,
             gpu.Integrated switch { true => Loc.Get("System.Integrated"), false => Loc.Get("System.Discrete"), _ => "" },
-            [Row("System.Driver", gpu.DriverVersion), Row("System.VideoMemory", gpu.MemoryBytes is { } vram ? Bytes(vram) : null)], [])).ToList();
+            [Row("System.Vendor", gpu.Vendor), Row("System.Driver", gpu.DriverVersion), Row("System.VideoMemory", gpu.MemoryBytes is { } vram ? Bytes(vram) : null)], [])).ToList();
         if (gpuGroups.Count == 0)
         {
             gpuGroups.Add(new InfoGroup("", "", [Row("System.Graphics", null)], []));

@@ -28,6 +28,15 @@ public enum ChangeKind
     /// from Windows' staged copy; where none is left, the Store has to reinstall it.
     /// </summary>
     Appx,
+
+    /// <summary>An advanced property of one network adapter (interface GUID in Path, registry keyword in Name, its registry values in Before/After).</summary>
+    AdapterProperty,
+
+    /// <summary>A protocol binding of one adapter (interface GUID in Path, component id in Name; <c>True</c>/<c>False</c>).</summary>
+    AdapterBinding,
+
+    /// <summary>One adapter's "allow the computer to turn off this device" switch (interface GUID in Path; <c>True</c>/<c>False</c>).</summary>
+    AdapterPower,
 }
 
 /// <summary>
@@ -50,7 +59,8 @@ public sealed record RecordedChange(
     RegistryKind? WrittenKind = null,
     bool KeyCreated = false,
     string? UserSid = null,
-    string? Scheme = null)
+    string? Scheme = null,
+    bool Dc = false)
 {
     /// <summary>Whether restoring this change needs elevation, by the same rule applying it did.</summary>
     public bool NeedsElevation => Kind switch

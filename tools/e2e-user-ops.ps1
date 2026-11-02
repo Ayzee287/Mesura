@@ -26,6 +26,8 @@ function Mesura([string[]]$arguments) {
   $text = (& $Cli @arguments 2>&1 | ForEach-Object { "$_" }) -join "`n"
   [pscustomobject]@{ Text = $text; Run = $(if ($text -match 'history run ([0-9A-Za-z-]+)') { $Matches[1] } else { $null }); Exit = $LASTEXITCODE }
 }
+# Since 0.5 a card says Applied only where Windows' own component confirmed it; a value that is only stored says Set, one that waits says Restart / Sign-out / Explorer. All of them mean "the value is in place".
+function InPlace([string]$s) { $s -like 'applied*' -or $s -like 'set*' -or $s -like 'restart*' -or $s -like 'sign*' -or $s -like 'explorer*' }
 function State([string]$id) { $t = (Mesura @('windows', 'show', '--id', $id)).Text; if ($t -match 'State here: ([^.]*)\.') { $Matches[1].Trim() } else { '?' } }
 function Val([string]$key, [string]$name) {
   $k = Get-Item -LiteralPath "Registry::$key" -ErrorAction SilentlyContinue
@@ -40,14 +42,14 @@ function Run-Op([string]$op, [scriptblock]$read, [scriptblock]$expectAfter, [str
   Say "== ${op}: this PC's value = $($original | ConvertTo-Json -Compress)"
   try {
     # An operation already in place on this PC is first put into a not-applied state by hand, so that there is something to apply (it is put back at the end).
-    if ((State $op) -like 'applied*') { & $prime $original; Say '      it was already applied here: set to a not-applied value first' }
+    if (InPlace (State $op)) { & $prime $original; Say '      it was already applied here: set to a not-applied value first' }
     $before = & $read
     Check "[$op] Mesura reads it as not applied" ((State $op) -like '-*' -or (State $op) -like 'not applied*') (State $op)
     $apply = Mesura @('windows', 'apply', '--id', $op, '--apply')
     Check "[$op] apply recorded a run" ([bool]$apply.Run) "$($apply.Run) exit $($apply.Exit)"
     $after = & $read
     Check "[$op] $afterLabel (registry, read independently)" ([bool](& $expectAfter $before $after)) ($after | ConvertTo-Json -Compress)
-    Check "[$op] Mesura reads it as applied" ((State $op) -like 'applied*') (State $op)
+    Check "[$op] Mesura reads it as applied" (InPlace (State $op)) (State $op)
     $revert = Mesura @('windows', 'revert', '--run', $apply.Run, '--apply')
     $back = & $read
     Check "[$op] revert restored exactly the value from before the apply" (($back | ConvertTo-Json -Compress) -eq ($before | ConvertTo-Json -Compress)) "$($back | ConvertTo-Json -Compress); exit $($revert.Exit)"

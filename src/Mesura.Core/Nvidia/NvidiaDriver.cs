@@ -18,7 +18,15 @@ public sealed record NvidiaGpu(string Name, int DeviceId, string DriverVersion)
 }
 
 /// <summary>The latest driver NVIDIA's lookup service offers for a GPU, as it reported it.</summary>
-public sealed record NvidiaDriverRelease(string Version, string Name, string ReleaseDate, string DetailsUrl, string DownloadUrl, string Size);
+public sealed record NvidiaDriverRelease(string Version, string Name, string ReleaseDate, string DetailsUrl, string DownloadUrl, string Size)
+{
+    /// <summary>
+    /// Whether NVIDIA lists this as a security update rather than a Game Ready driver: the answer for a GPU whose generation has left the
+    /// Game Ready branches (checked 2026-11-01: GTX 1060 and GTX 970 get "GeForce Security Update Driver 582.78", an RTX 4070 gets
+    /// "GeForce Game Ready Driver 621.01"). Such a card is not going to get newer drivers, and the app says so.
+    /// </summary>
+    public bool SecurityUpdateOnly => Name.Contains("Security Update", StringComparison.OrdinalIgnoreCase);
+}
 
 /// <summary>
 /// Reading NVIDIA driver versions and NVIDIA's driver lookup service, without any I/O: the query is built here and the

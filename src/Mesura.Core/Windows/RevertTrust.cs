@@ -24,7 +24,12 @@ public static class RevertTrust
             ChangeKind.TcpGlobal => operation.TcpSettings.Any(t => Same(t.Name, change.Name)),
             ChangeKind.SystemSetting => operation.SystemSettings.Any(s => Same(s.Kind, change.Path) && Same(s.Name, change.Name)),
             ChangeKind.Appx => operation.AppxSettings.Any(a => change.Path is not null && change.Path.Contains(a.Name, StringComparison.OrdinalIgnoreCase)),
-            ChangeKind.PowerSetting => operation.PowerSettings.Any(p => Same(p.Subgroup, change.Path) && Same(p.Setting, change.Name)),
+            ChangeKind.PowerSetting => operation.PowerSettings.Any(p => Same(p.Subgroup, change.Path) && Same(p.Setting, change.Name))
+                || (operation.PowerPlan is { IsMesuraPlan: true } plan && Same(plan.SchemeGuid, change.Scheme)
+                    && plan.PlanValues.Any(v => Same(v.Subgroup, change.Path) && Same(v.Setting, change.Name))),
+            ChangeKind.AdapterProperty => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.Property && Same(s.Key, change.Name)),
+            ChangeKind.AdapterBinding => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.Binding && Same(s.Key, change.Name)),
+            ChangeKind.AdapterPower => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.PowerManagement),
             ChangeKind.PowerScheme => operation.PowerPlan is not null,
             ChangeKind.PowerSchemeCreated => operation.PowerPlan is { } plan
                 && (Same(plan.SchemeGuid, change.After) || Same(plan.SchemeGuid, change.Before)),

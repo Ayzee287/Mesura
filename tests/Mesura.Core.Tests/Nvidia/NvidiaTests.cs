@@ -70,6 +70,17 @@ public sealed class NvidiaTests
     }
 
     [Fact]
+    public void A_card_that_has_left_the_game_ready_branches_is_told_so()
+    {
+        // NVIDIA's service answered a GTX 1060 (1C03) and a GTX 970 (13C2) with this on 2026-11-01: a security update, not a Game Ready driver.
+        var legacy = NvidiaDriver.ParseLookup(Answer.Replace("GeForce%20Game%20Ready%20Driver", "GeForce%20Security%20Update%20Driver", StringComparison.Ordinal)
+            .Replace("621.01", "582.78", StringComparison.Ordinal));
+
+        Assert.True(legacy!.SecurityUpdateOnly);
+        Assert.False(NvidiaDriver.ParseLookup(Answer)!.SecurityUpdateOnly);
+    }
+
+    [Fact]
     public void No_driver_a_strange_version_or_a_foreign_link_is_not_taken()
     {
         Assert.Null(NvidiaDriver.ParseLookup("""

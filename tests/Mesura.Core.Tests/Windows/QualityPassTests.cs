@@ -173,7 +173,7 @@ public sealed class QualityPassTests
         Assert.Equal(OperationImpact.Performance, op.Impact);
         Assert.Equal(OperationBenefit.Unverified, op.Evidence); // Microsoft says it helps, not by how much
 
-        var pc = new FakeWindows();
+        var pc = new FakeWindows { Effect = "enabled" }; // fsutil reports updates on
         pc.Registry[LastAccess] = (RegistryKind.DWord, "2147483650"); // 0x80000002, as read on PC-000: managed flag set, updates on
         Assert.Equal(OperationState.NotApplied, WindowsEvaluator.Evaluate(op, pc).State);
 
@@ -181,6 +181,8 @@ public sealed class QualityPassTests
         Assert.Equal(WindowsOpStatus.Applied, outcome.Status);
         Assert.Equal("2147483651", pc.Registry[LastAccess].Value); // 0x80000003: the managed flag is kept, the updates bit is set
         Assert.Equal(Activation.Reboot, outcome.Activation);
+        Assert.Equal(OperationState.PendingRestart, WindowsEvaluator.Evaluate(op, pc).State); // stored, and Windows doesn't report it off yet
+        pc.Effect = "disabled"; // after the restart fsutil reports updates off
         Assert.Equal(OperationState.Applied, WindowsEvaluator.Evaluate(op, pc).State);
 
         Assert.All(new WindowsConfigurator(pc, pc).Revert([outcome]), r => Assert.Equal(WindowsOpStatus.Reverted, r.Status));
@@ -193,7 +195,7 @@ public sealed class QualityPassTests
         var op = Op("system.ntfs-last-access-off");
         foreach (var met in new[] { "1", "3", "2147483649", "2147483651" })
         {
-            var pc = new FakeWindows();
+            var pc = new FakeWindows { Effect = "disabled" };
             pc.Registry[LastAccess] = (RegistryKind.DWord, met);
             Assert.Equal(OperationState.Applied, WindowsEvaluator.Evaluate(op, pc).State);
             Assert.Empty(new WindowsConfigurator(pc, pc).Apply([op], TestContext.Current.CancellationToken).Single().Changes); // nothing to write
@@ -322,7 +324,7 @@ public sealed class QualityPassTests
         Assert.Equal(["gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
                       "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "notifications.no-feedback-prompts",
                       "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations",
-                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc"],
+                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan"],
             Catalog.PresetById("recommended-gaming")!.OperationIds);
     }
 

@@ -79,12 +79,24 @@ public interface ISystemReader
     /// </summary>
     uint? ReadPowerSetting(string scheme, string subgroup, string setting);
 
+    /// <summary>The same setting's value on battery (DC); <c>null</c> when this machine doesn't have the setting or the reader can't tell.</summary>
+    uint? ReadPowerSettingDc(string scheme, string subgroup, string setting) => null;
+
     /// <summary>
     /// A global TCP/IP setting by its netsh name (<see cref="TcpGlobalSetting"/>), in netsh's lower-case words
     /// (<c>normal</c>, <c>enabled</c>), or <c>null</c> when it couldn't be read. For <c>autotuninglevel</c> every TCP
     /// setting template that reports a level is read, and the value is <c>normal</c> only when all of them are.
     /// </summary>
     string? ReadTcpGlobal(string name) => null;
+
+    /// <summary>The network adapters with their drivers' advanced properties, bindings and power switch; <c>null</c> when they can't be read.</summary>
+    IReadOnlyList<AdapterReading>? ReadAdapters() => null;
+
+    /// <summary>
+    /// What Windows itself reports for an operation's <see cref="EffectCheck"/>: <c>enabled</c>, <c>disabled</c>, <c>unsupported</c>
+    /// (this PC can't use the setting at all), or <c>null</c> when it couldn't be read.
+    /// </summary>
+    string? ReadEffect(string kind) => null;
 
     /// <summary>
     /// The names of the subkeys of a key (empty when it doesn't exist or can't be read), for settings that apply to every
@@ -115,6 +127,9 @@ public interface ISystemSettingSource
     /// <summary>The setting in the words of its allowed values, or <c>null</c> when it can't be read here.</summary>
     string? Read(string kind, string name);
 
+    /// <summary>What Windows reports for an <see cref="EffectCheck"/> kind it reads through a tool; <c>null</c> when it can't be read here.</summary>
+    string? ReadEffect(string kind) => null;
+
     /// <summary>Forgets what was read before.</summary>
     void Refresh();
 }
@@ -141,6 +156,9 @@ public enum OperationState
 
     /// <summary>A procedure the user carries out by hand.</summary>
     Manual,
+
+    /// <summary>The values are stored, but Windows reports the setting isn't in effect yet (a restart is needed): not shown as applied.</summary>
+    PendingRestart,
 
     /// <summary>Shown for information only; the change is made in Windows' own settings.</summary>
     Observation,
@@ -179,24 +197,8 @@ public static class WindowsEvaluator
 
         foreach (var requirement in op.Requirements)
         {
-            var (holds, unmet, unread) = requirement switch
-            {
-                DeviceRequirement.NoBattery => (reader.HasBattery is null ? (bool?)null : !reader.HasBattery.Value,
-                    "Meant for PCs without a battery (desktops); this PC has one, so it would cost battery life.",
-                    "Couldn't tell whether this PC has a battery, so it is left alone."),
-                DeviceRequirement.ProEdition => (reader.PolicyEdition,
-                    "This is a Windows Home edition, which doesn't apply this machine policy; the value would be written and ignored.",
-                    "Couldn't tell which Windows edition this is, so this machine policy is left alone."),
-                DeviceRequirement.Ram16Gb => (reader.PhysicalMemoryBytes is null ? (bool?)null : reader.PhysicalMemoryBytes.Value >= 15UL * 1024 * 1024 * 1024,
-                    "This PC has less than 16 GB of memory: the setting trades memory for CPU time, so it is left alone.",
-                    "Couldn't tell how much memory this PC has, so it is left alone."),
-                DeviceRequirement.HybridCpu => (reader.HybridCpu,
-                    "This PC's processor has one kind of core, so a preference between core types means nothing here.",
-                    "Couldn't tell whether this processor has more than one kind of core, so it is left alone."),
-                _ => (reader.ModernStandby is null ? (bool?)null : !reader.ModernStandby.Value,
-                    "This is a Modern Standby PC: Windows offers only the Balanced plan here; use Settings > System > Power > Power mode instead.",
-                    "Couldn't tell whether this is a Modern Standby PC, so it is left alone."),
-            };
+            var holds = RequirementHolds(requirement, reader);
+            var (unmet, unread) = RequirementWords(requirement);
             if (holds is null)
             {
                 return new(op, OperationState.Unknown, unread, []);
@@ -216,6 +218,18 @@ public static class WindowsEvaluator
         if (op.Observation is { } observation)
         {
             return Observe(op, observation, reader);
+        }
+
+        string? effect = null;
+        if (op.Effect is { } check)
+        {
+            effect = reader.ReadEffect(check.Kind);
+            if (string.Equals(effect, "unsupported", StringComparison.OrdinalIgnoreCase))
+            {
+                return new(op, OperationState.Inapplicable, check.Kind == EffectCheck.GpuScheduling
+                    ? "This PC's graphics card or driver doesn't support hardware-accelerated GPU scheduling, so the value would be written and ignored."
+                    : "Windows doesn't report this setting on this PC.", []);
+            }
         }
 
         var items = new List<ItemState>();
@@ -269,6 +283,25 @@ public static class WindowsEvaluator
                 string.Equals(current, system.Value, StringComparison.OrdinalIgnoreCase), true));
         }
 
+        if (op.AdapterSettings.Count > 0)
+        {
+            var adapters = reader.ReadAdapters();
+            unknown |= adapters is null;
+            foreach (var adapter in adapters ?? [])
+            {
+                foreach (var setting in op.AdapterSettings.Where(s => s.Matches(adapter)))
+                {
+                    if (setting.Wanted(adapter) is not { } wanted)
+                    {
+                        continue; // this adapter's driver doesn't offer it (or doesn't list the value): not for this adapter
+                    }
+
+                    var current = setting.Current(adapter) ?? "unknown";
+                    items.Add(new ItemState($"{adapter.Label}: {setting.Key}", current, wanted, string.Equals(current, wanted, StringComparison.OrdinalIgnoreCase), true));
+                }
+            }
+        }
+
         if (op.PowerSettings.Count > 0)
         {
             var active = reader.ReadPower().ActiveScheme;
@@ -283,7 +316,11 @@ public static class WindowsEvaluator
             }
         }
 
-        if (op.PowerPlan is { } plan)
+        if (op.PowerPlan is { IsMesuraPlan: true } mesuraPlan)
+        {
+            MesuraPlanItems(mesuraPlan, reader, items, ref unknown);
+        }
+        else if (op.PowerPlan is { } plan)
         {
             var power = reader.ReadPower();
             var installed = power.Schemes.Contains(plan.SchemeGuid.ToLowerInvariant());
@@ -313,12 +350,104 @@ public static class WindowsEvaluator
             : "";
         if (present.All(i => i.Matches))
         {
+            if (op.Effect is { } expected)
+            {
+                if (effect is null)
+                {
+                    return new(op, OperationState.Unknown, "The value is stored, but whether Windows has it in effect couldn't be read.", items);
+                }
+
+                if (!string.Equals(effect, expected.Expect, StringComparison.OrdinalIgnoreCase))
+                {
+                    items.Add(new ItemState($"in effect ({expected.Kind})", effect, expected.Expect, false, true));
+                    var until = op.Activation switch
+                    {
+                        Activation.SignOut => "sign out and back in",
+                        Activation.ExplorerRestart => "restart Explorer or sign out",
+                        _ => "restart Windows",
+                    };
+                    return new(op, OperationState.PendingRestart, $"The value is stored, but Windows reports the setting isn't in effect yet; {until}.", items);
+                }
+            }
+
             return new(op, OperationState.Applied, "Already in the target state; nothing to do." + absentNote, items);
         }
 
         return present.Any(i => i.Matches)
             ? new(op, OperationState.Partial, "Partly in the target state." + absentNote, items)
             : new(op, OperationState.NotApplied, "Not applied." + absentNote, items);
+    }
+
+    /// <summary>Whether this PC meets a requirement: yes, no, or <c>null</c> when the reader can't tell.</summary>
+    public static bool? RequirementHolds(DeviceRequirement requirement, ISystemReader reader)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        return requirement switch
+        {
+            DeviceRequirement.NoBattery => reader.HasBattery is null ? null : !reader.HasBattery.Value,
+            DeviceRequirement.ProEdition => reader.PolicyEdition,
+            DeviceRequirement.Ram16Gb => reader.PhysicalMemoryBytes is null ? null : reader.PhysicalMemoryBytes.Value >= 15UL * 1024 * 1024 * 1024,
+            DeviceRequirement.HybridCpu => reader.HybridCpu,
+            _ => reader.ModernStandby is null ? null : !reader.ModernStandby.Value,
+        };
+    }
+
+    private static (string Unmet, string Unread) RequirementWords(DeviceRequirement requirement) => requirement switch
+    {
+        DeviceRequirement.NoBattery => ("Meant for PCs without a battery (desktops); this PC has one, so it would cost battery life.",
+            "Couldn't tell whether this PC has a battery, so it is left alone."),
+        DeviceRequirement.ProEdition => ("This is a Windows Home edition, which doesn't apply this machine policy; the value would be written and ignored.",
+            "Couldn't tell which Windows edition this is, so this machine policy is left alone."),
+        DeviceRequirement.Ram16Gb => ("This PC has less than 16 GB of memory: the setting trades memory for CPU time, so it is left alone.",
+            "Couldn't tell how much memory this PC has, so it is left alone."),
+        DeviceRequirement.HybridCpu => ("This PC's processor has one kind of core, so a preference between core types means nothing here.",
+            "Couldn't tell whether this processor has more than one kind of core, so it is left alone."),
+        _ => ("This is a Modern Standby PC: Windows offers only the Balanced plan here; use Settings > System > Power > Power mode instead.",
+            "Couldn't tell whether this is a Modern Standby PC, so it is left alone."),
+    };
+
+    /// <summary>
+    /// The state of a Mesura plan: the scheme is installed, it is the active one, and every value that applies to this PC reads as the
+    /// plan says (before the scheme exists, the values are read from the Balanced scheme it would be copied from, so the preview shows
+    /// what would change). A setting this PC doesn't register is left out, as everywhere else.
+    /// </summary>
+    private static void MesuraPlanItems(PowerPlanSetting plan, ISystemReader reader, List<ItemState> items, ref bool unknown)
+    {
+        var power = reader.ReadPower();
+        var installed = power.Schemes.Contains(plan.SchemeGuid.ToLowerInvariant());
+        unknown |= power.ActiveScheme is null;
+        items.Add(new ItemState($"power scheme {plan.Name}", installed ? "installed" : "not installed", "installed", installed, true));
+        items.Add(new ItemState(plan.Target, power.ActiveScheme ?? "unknown", plan.SchemeGuid.ToLowerInvariant(),
+            string.Equals(power.ActiveScheme, plan.SchemeGuid, StringComparison.OrdinalIgnoreCase), true));
+        var scheme = installed ? plan.SchemeGuid : plan.BasedOn!;
+        foreach (var value in plan.PlanValues)
+        {
+            var applies = true;
+            foreach (var need in value.Needs)
+            {
+                // A requirement that can't be read leaves the value out (as the apply does); it doesn't make the whole plan unknown.
+                applies &= RequirementHolds(need, reader) == true;
+            }
+
+            if (!applies)
+            {
+                continue;
+            }
+
+            foreach (var (wanted, dc) in new[] { (value.Ac, false), (value.Dc, true) })
+            {
+                if (wanted is not { } target)
+                {
+                    continue;
+                }
+
+                var current = dc ? reader.ReadPowerSettingDc(scheme, value.Subgroup, value.Setting) : reader.ReadPowerSetting(scheme, value.Subgroup, value.Setting);
+                var name = $"power: {value.Name} ({(dc ? "on battery" : "on AC")})";
+                items.Add(current is null
+                    ? new ItemState(name, "absent", target.ToString(CultureInfo.InvariantCulture), false, false)
+                    : new ItemState(name, current.Value.ToString(CultureInfo.InvariantCulture), target.ToString(CultureInfo.InvariantCulture), current.Value == target, true));
+            }
+        }
     }
 
     /// <summary>Whether a registry reading equals a target value (a DWORD compared as a number).</summary>

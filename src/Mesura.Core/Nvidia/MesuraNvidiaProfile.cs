@@ -53,12 +53,15 @@ public static class MesuraNvidiaProfile
     ];
 
     /// <summary>The profile as a Profile Inspector <c>.nip</c> file: UTF-16 with a byte-order mark, as the tool writes it.</summary>
-    public static byte[] Render()
+    public static byte[] Render() => Render(Settings);
+
+    /// <summary>The same file layout for any list of settings (the gaming profile reuses it); <see cref="Render()"/> is unchanged byte for byte.</summary>
+    public static byte[] Render(IReadOnlyList<NvidiaProfileSetting> settings)
     {
         var xml = new StringBuilder();
         xml.Append("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfProfile>\r\n  <Profile>\r\n")
             .Append("    <ProfileName>Base Profile</ProfileName>\r\n    <Executeables />\r\n    <Settings>\r\n");
-        foreach (var s in Settings)
+        foreach (var s in settings)
         {
             xml.Append("      <ProfileSetting>\r\n")
                 .Append(CultureInfo.InvariantCulture, $"        <SettingNameInfo>{SecurityElement.Escape(s.Name)}</SettingNameInfo>\r\n")

@@ -165,6 +165,92 @@ public sealed partial class WindowsWriter : IWindowsWriter
         }
     }
 
+    public void DuplicatePowerScheme(string sourceGuid, string newGuid, string name, string description)
+    {
+        var source = Guid.Parse(sourceGuid).ToString("D");
+        var destination = Guid.Parse(newGuid).ToString("D");
+        if (!PlanText().IsMatch(name) || !PlanText().IsMatch(description.Length == 0 ? "-" : description))
+        {
+            throw new ArgumentException("A power scheme's name and description are plain text.", nameof(name));
+        }
+
+        var code = Run("powercfg.exe", ["/duplicatescheme", source, destination]);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"powercfg couldn't copy the power scheme {source} (exit code {code}).");
+        }
+
+        string[] rename = description.Length == 0 ? ["/changename", destination, name] : ["/changename", destination, name, description];
+        code = Run("powercfg.exe", rename);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"powercfg couldn't name the power scheme {destination} (exit code {code}).");
+        }
+    }
+
+    /// <summary>
+    /// Sets an advanced property with Windows' own cmdlet, on the adapter named by its interface GUID (never by position or a class-key index): the
+    /// cmdlet validates the value against the driver's own list and restarts the adapter; the script then waits (up to 40 seconds) for the adapter to be
+    /// up again. The GUID, keyword and value are checked against plain patterns first, so nothing of a catalog edit is part of the command line.
+    /// </summary>
+    public void SetAdapterProperty(string interfaceGuid, string keyword, string registryValue)
+    {
+        if (!AdapterGuid().IsMatch(interfaceGuid) || !AdapterKeyword().IsMatch(keyword) || !AdapterRegistryValue().IsMatch(registryValue))
+        {
+            throw new ArgumentException("An adapter property, its value and the adapter are plain words and a GUID.", nameof(keyword));
+        }
+
+        RunAdapterCommand($"Set-NetAdapterAdvancedProperty -RegistryKeyword '{keyword}' -RegistryValue '{registryValue}' -ErrorAction Stop", interfaceGuid, waitForLink: true);
+    }
+
+    public void SetAdapterBinding(string interfaceGuid, string componentId, bool enabled)
+    {
+        if (!AdapterGuid().IsMatch(interfaceGuid) || !AdapterComponent().IsMatch(componentId))
+        {
+            throw new ArgumentException("An adapter binding is a Microsoft component id.", nameof(componentId));
+        }
+
+        RunAdapterCommand($"{(enabled ? "Enable" : "Disable")}-NetAdapterBinding -ComponentID '{componentId}' -ErrorAction Stop", interfaceGuid, waitForLink: false);
+    }
+
+    public void SetAdapterPower(string interfaceGuid, bool allowTurnOff)
+    {
+        if (!AdapterGuid().IsMatch(interfaceGuid))
+        {
+            throw new ArgumentException("An adapter is named by its GUID.", nameof(interfaceGuid));
+        }
+
+        RunAdapterCommand($"Set-NetAdapterPowerManagement -AllowComputerToTurnOffDevice {(allowTurnOff ? "Enabled" : "Disabled")} -ErrorAction Stop", interfaceGuid, waitForLink: false);
+    }
+
+    private static void RunAdapterCommand(string cmdlet, string interfaceGuid, bool waitForLink)
+    {
+        var wait = waitForLink
+            ? "; $end = (Get-Date).AddSeconds(40); do { Start-Sleep -Milliseconds 500; $up = (Get-NetAdapter | Where-Object { $_.InterfaceGuid -eq $guid }).Status -eq 'Up' } until ($up -or (Get-Date) -gt $end); if (-not $up) { exit 3 }"
+            : "";
+        var script = $"$ErrorActionPreference = 'Stop'; $guid = '{interfaceGuid}'; $wasUp = (Get-NetAdapter | Where-Object {{ $_.InterfaceGuid -eq $guid }}).Status -eq 'Up'; "
+            + $"Get-NetAdapter | Where-Object {{ $_.InterfaceGuid -eq $guid }} | {cmdlet}{(waitForLink ? wait.Replace("if (-not $up)", "if ($wasUp -and -not $up)", StringComparison.Ordinal) : "")}";
+        var code = Run("WindowsPowerShell\\v1.0\\powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script]);
+        if (code != 0)
+        {
+            throw new InvalidOperationException(code == 3
+                ? "The adapter didn't come back up within 40 seconds of the change."
+                : $"Windows couldn't change the adapter (exit code {code}); the driver may not accept the value.");
+        }
+    }
+
+    public void SetSchemeValue(string scheme, string subgroup, string setting, uint value, bool dc)
+    {
+        var s = Guid.Parse(scheme).ToString("D");
+        var g = Guid.Parse(subgroup).ToString("D");
+        var p = Guid.Parse(setting).ToString("D");
+        var code = Run("powercfg.exe", [dc ? "/setdcvalueindex" : "/setacvalueindex", s, g, p, value.ToString(CultureInfo.InvariantCulture)]);
+        if (code != 0)
+        {
+            throw new InvalidOperationException($"powercfg couldn't set {p} in the power scheme {s} (exit code {code}).");
+        }
+    }
+
     public void SetPowerSetting(string scheme, string subgroup, string setting, uint acValue)
     {
         var s = Guid.Parse(scheme).ToString("D");
@@ -205,7 +291,10 @@ public sealed partial class WindowsWriter : IWindowsWriter
             throw new ArgumentException($"'{name}={value}' isn't a TCP setting Mesura writes.", nameof(name));
         }
 
-        var code = Run("netsh.exe", ["interface", "tcp", "set", "global", $"{name.ToLowerInvariant()}={value.ToLowerInvariant()}"]);
+        string[] arguments = name.Equals("heuristics", StringComparison.OrdinalIgnoreCase)
+            ? ["interface", "tcp", "set", "heuristics", value.ToLowerInvariant()]
+            : ["interface", "tcp", "set", "global", $"{name.ToLowerInvariant()}={value.ToLowerInvariant()}"];
+        var code = Run("netsh.exe", arguments);
         if (code != 0)
         {
             throw new InvalidOperationException($"netsh couldn't set the TCP setting {name} to {value} (exit code {code}).");
@@ -296,6 +385,22 @@ public sealed partial class WindowsWriter : IWindowsWriter
 
     [GeneratedRegex("^[A-Za-z0-9._-]{1,128}$", RegexOptions.CultureInvariant)]
     private static partial Regex PlainName();
+
+    [GeneratedRegex(@"^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterGuid();
+
+    [GeneratedRegex(@"^\*?[A-Za-z0-9_]{1,64}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterKeyword();
+
+    [GeneratedRegex(@"^[0-9]{1,10}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterRegistryValue();
+
+    [GeneratedRegex(@"^ms_[a-z0-9]{2,32}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterComponent();
+
+    // The catalog's rule for a Mesura power plan's name and description (letters, digits, spaces and . , - ( )).
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9 .,()-]{0,120}$", RegexOptions.CultureInvariant)]
+    private static partial Regex PlanText();
 
     // Name_Version_Architecture_ResourceId_PublisherId, as Windows names an installed package.
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{2,99}_[0-9.]{1,40}_[A-Za-z0-9]{1,10}_[A-Za-z0-9-]{0,40}_[a-z0-9]{13}$", RegexOptions.CultureInvariant)]

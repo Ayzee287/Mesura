@@ -6,6 +6,7 @@ using Mesura.Core.Apps;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows;
 using Mesura.Setup.Windows;
+using Mesura.Updating;
 
 namespace Mesura.App;
 
@@ -76,6 +77,66 @@ public sealed class SettingsViewModel : Observable
         OpenCatalogs = new RelayCommand(() => Note = ShellLauncher.OpenFolder(CatalogFiles.SharedFolder) ?? "");
         CopyCatalogs = new RelayCommand(DoCopyCatalogs, () => MissingCatalogs.Count > 0);
         Loc.Instance.LanguageChanged += () => Raise(string.Empty);
+        RemoveOtherCopy = new RelayCommand(DoRemoveOtherCopy, () => _copyPlan.Kind == TransitionKind.Offer && !_services.Changing);
+        _ = ReadCopiesAsync();
+    }
+
+    // ---- The other installed copy (0.5): a per-user and an all-users install are two products; removing one needs the user's consent ----
+
+    private TransitionPlan _copyPlan = new(TransitionKind.None, null);
+
+    private readonly WindowsInstallerCopies _copies = new();
+
+    private async Task ReadCopiesAsync()
+    {
+        _copyPlan = await Task.Run(() => CopyTransition.Plan(Services.Executable, _copies.Read()));
+        Raise(nameof(HasOtherCopy));
+        Raise(nameof(OtherCopyText));
+        Raise(nameof(CanRemoveOtherCopy));
+        RemoveOtherCopy.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>Whether a copy of the other kind is installed beside this one (shown only then).</summary>
+    public bool HasOtherCopy => _copyPlan.Kind != TransitionKind.None;
+
+    public bool CanRemoveOtherCopy => _copyPlan.Kind == TransitionKind.Offer;
+
+    public string OtherCopyText => _copyPlan.Other is not { } other ? "" : Loc.Format(
+        _copyPlan.Kind == TransitionKind.Offer ? "Settings.CopyOffer" : "Settings.CopyManual",
+        Loc.Get(other.Scope == InstallScope.Machine ? "Settings.CopyScopeMachine" : "Settings.CopyScopeUser"), other.Folder, other.Version);
+
+    public RelayCommand RemoveOtherCopy { get; }
+
+    private void DoRemoveOtherCopy()
+    {
+        if (_copyPlan is not { Kind: TransitionKind.Offer, Other: { } other } plan)
+        {
+            return;
+        }
+
+        var machine = other.Scope == InstallScope.Machine;
+        if (!ConfirmDialog.Ask(Loc.Get("Settings.CopyConfirmTitle"), Loc.Format("Settings.CopyConfirm", other.Folder, other.Version),
+                note: Loc.Get(machine ? "Settings.CopyConfirmAdmin" : "Settings.CopyConfirmUser"), confirm: Loc.Get("Settings.CopyRemove")))
+        {
+            Note = Loc.Get("Settings.CopyKept");
+            return;
+        }
+
+        _ = RemoveAsync(plan);
+    }
+
+    private async Task RemoveAsync(TransitionPlan plan)
+    {
+        using var scope = _services.BeginChange();
+        var result = await Task.Run(() => CopyTransition.Remove(plan, _services.Reader.IsElevated, Services.Executable, _copies, new MsiexecUninstaller()));
+        Note = result.Status switch
+        {
+            RemovalStatus.Removed => Loc.Get(result.ExitCode == 3010 ? "Settings.CopyRemovedRestart" : "Settings.CopyRemoved"),
+            RemovalStatus.Cancelled => Loc.Get("Settings.CopyCancelled"),
+            RemovalStatus.OwnCopyLost => Loc.Get("Settings.CopyOwnLost"),
+            _ => Loc.Format("Settings.CopyFailed", result.Detail),
+        };
+        await ReadCopiesAsync();
     }
 
     public ObservableCollection<FilterChoice> Languages { get; } = [];

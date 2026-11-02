@@ -73,16 +73,20 @@ public sealed record NvidiaTarget(
     IReadOnlyList<string>? Tweaks = null,
     string InterruptPolicy = NvidiaDriverConfig.DefaultChoice,
     string InterruptPriority = NvidiaDriverConfig.DefaultChoice,
-    NvidiaProfileRef? Profile = null)
+    NvidiaProfileRef? Profile = null,
+    string? DriverUrl = null)
 {
-    /// <summary>A target from the GPU, the drivers and a configuration.</summary>
-    public static NvidiaTarget From(string gpu, string driverAtStart, string? latest, NvidiaDriverConfig config)
+    /// <summary>A target from the GPU, the drivers and a configuration; <paramref name="driverUrl"/> is the address NVIDIA's own lookup gave for the newest driver (used to download it for the automated route).</summary>
+    public static NvidiaTarget From(string gpu, string driverAtStart, string? latest, NvidiaDriverConfig config, string? driverUrl = null)
     {
         ArgumentNullException.ThrowIfNull(config);
         var normal = NvidiaDriverConfig.Normalize(config);
         return new NvidiaTarget(gpu, driverAtStart, latest, normal.Components, normal.CleanInstall, normal.Tweaks,
-            normal.InterruptPolicy, normal.InterruptPriority, normal.Profile);
+            normal.InterruptPolicy, normal.InterruptPriority, normal.Profile, driverUrl);
     }
+
+    /// <summary>The configuration this target stands for, for the NVCleanstall automation.</summary>
+    public NvidiaDriverConfig Config => NvidiaDriverConfig.Normalize(new NvidiaDriverConfig(Components, Tweaks ?? (CleanInstall ? [NvidiaTweaks.CleanInstall] : []), InterruptPolicy, InterruptPriority, Profile));
 }
 
 /// <summary>

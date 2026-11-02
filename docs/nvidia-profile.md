@@ -58,3 +58,27 @@ defaults* on the Base Profile. Nothing else about the driver changes with the pr
 Power management mode needs a GeForce 9 series or later GPU (NVIDIA's help). G-SYNC settings need a G-SYNC or G-SYNC
 Compatible display. The profile was not tried on hardware for this release (see the limits in the README): it is
 checked by the tests against the format NVIDIA Profile Inspector reads, not on a GPU.
+
+## The second profile: gaming (0.5)
+
+Two built-in profiles, chosen on the NVIDIA card (Main / Gaming / Undo gaming extras). The main profile above is the default and is **unchanged** (its SHA-256 `C6D3F93F76A6530B06E0D998ACFE8BD067376C5C3D7A88F77D53F33B45A9DF51` is pinned by a test, computed from
+the committed profile before the gaming one existed); nothing is ever imported unless it is the one chosen.
+
+| Profile | Id | Settings |
+|---|---|---|
+| Main (default) | `mesura-responsive` | Power management mode (prefer maximum, desktops only), VRR requested state and Enable G-SYNC globally (full screen and windowed) |
+| Gaming | `mesura-gaming` | the three above, plus the three below |
+| Undo gaming extras | `mesura-gaming-off` | only the three below, at the driver's own defaults |
+
+The three added by the gaming profile, every id and value from NVIDIA's public `NvApiDriverSettings.h` (MIT, read 2026-11-01):
+
+| Setting | id | Value | Why | What it costs |
+|---|---|---|---|---|
+| Vertical Sync | `0x00A879CF` | `VSYNCMODE_FORCEOFF` `0x08416747` (default `VSYNCMODE_PASSIVE` `0x60925292`) | a frame is shown as soon as it is ready: the lowest delay the driver can give | tearing when the frame rate is not matched to the refresh rate; on a variable refresh display the usual advice is sync on with a frame limit |
+| Maximum pre-rendered frames | `0x007BA09E` | `1` (default `0`, application controlled; 1 to 255 a number of frames) | the CPU runs one frame ahead of the GPU: less buffering between input and picture | frame rate can drop or stutter when the CPU is the limit; many DirectX 12 and Vulkan games manage their own queue (not verified here), so the effect varies |
+| Shader disk cache maximum size | `0x00AC8497` | `0xFFFFFFFF`, the header's maximum (default `0x4000`) | the driver stops throwing compiled shaders away to stay under a limit, so games do not recompile them | unbounded disk use of the shader cache; whether it removes stutter depends on the game |
+
+Not included: **Low Latency Mode** (its id is not in the public header, so it is unverified and nothing is written for it); any shader cache value in megabytes (the header does not state the unit).
+Importing a profile changes nothing outside these settings (merge import, all in the Base Profile), and Mesura backs up the user's other NVIDIA profiles before every import. Reversing the gaming profile is the
+"Undo gaming extras" choice, which stores the three defaults explicitly; the backup restores everything else. None of this was imported into a driver (no NVIDIA GPU was available); the effect on frame time or
+input lag is not measured and not claimed.

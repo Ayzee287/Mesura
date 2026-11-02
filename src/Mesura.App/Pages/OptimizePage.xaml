@@ -469,6 +469,14 @@
                                         <TextBlock Style="{StaticResource BodyStrong}">
                                             <Run Text="{l:T Setup.ProfileTitle}" /><Run Text=" · " /><Run Text="{Binding ProfileName, Mode=OneWay}" />
                                         </TextBlock>
+                                        <ItemsControl ItemsSource="{Binding ProfileChoices}" ItemTemplate="{StaticResource ChipTemplate}" Tag="NvidiaProfile" Margin="0,8,0,0" Focusable="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                        <TextBlock Text="{l:T Setup.ProfileChoiceHint}" Style="{StaticResource Caption}" Margin="0,6,0,0" LineHeight="18" />
                                         <TextBlock Text="{l:T Setup.ProfileHow}" Style="{StaticResource Caption}" Margin="0,3,0,0" LineHeight="18" />
                                         <TextBlock Text="{Binding ProfileSource}" Style="{StaticResource Tertiary}" Margin="0,4,0,0"
                                                    Visibility="{Binding ProfileSource, Converter={StaticResource Presence}}" />

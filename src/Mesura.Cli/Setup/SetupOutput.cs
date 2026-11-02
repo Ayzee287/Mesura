@@ -78,6 +78,7 @@ internal static class SetupOutput
                 OperationState.NotApplied or OperationState.Partial when e.Operation.NeedsElevation && !elevated => "needs admin",
                 OperationState.NotApplied or OperationState.Partial => "change",
                 OperationState.Applied => "already done",
+                OperationState.PendingRestart => "restart needed",
                 OperationState.Inapplicable => "not applicable",
                 OperationState.Manual => "manual",
                 OperationState.Observation => "info only",

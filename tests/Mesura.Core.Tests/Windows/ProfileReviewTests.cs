@@ -85,7 +85,11 @@ public sealed class ProfileReviewTests
         var recommended = Catalog.PresetById("recommended-gaming")!;
         var maximum = Catalog.PresetById("maximum-performance")!;
 
-        Assert.All(recommended.OperationIds, id => Assert.Contains(id, maximum.OperationIds));
+        // Maximum keeps every Recommended entry except the Balanced Mesura plan, which Maximum Performance Mesura replaces (one plan is active at a time).
+        Assert.All(recommended.OperationIds.Where(id => id != "power.mesura-balanced-plan"), id => Assert.Contains(id, maximum.OperationIds));
+        Assert.Contains("power.mesura-balanced-plan", recommended.OperationIds);
+        Assert.DoesNotContain("power.mesura-balanced-plan", maximum.OperationIds);
+        Assert.Contains("power.mesura-maximum-plan", maximum.OperationIds);
         Assert.Empty(maximum.OptionalIds.Intersect(maximum.OperationIds));
         Assert.Equal(maximum.OperationIds.Count, maximum.OperationIds.Distinct().Count()); // no setting twice
         Assert.Empty(WindowsConfigurator.Conflicts(Catalog.Resolve(maximum).Concat(maximum.OptionalIds.Select(Op)).ToList()));

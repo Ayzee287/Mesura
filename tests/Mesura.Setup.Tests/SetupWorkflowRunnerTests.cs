@@ -36,6 +36,16 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
             ? new WingetRunResult(true, 0, $"Name Id\n----------\n{package.Name} {package.WingetId}")
             : new WingetRunResult(true, WingetOutput.NoApplicationsFound);
 
+        /// <summary>What an update does to the installed package (a test sets the newer version in place).</summary>
+        public Action? OnUpgrade { get; set; }
+
+        public WingetRunResult Upgrade(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken)
+        {
+            Ran.Add("upgrade " + package.WingetId);
+            OnUpgrade?.Invoke();
+            return new WingetRunResult(true, 0);
+        }
+
         public WingetRunResult Install(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken)
         {
             Ran.Add(package.WingetId);
@@ -53,6 +63,22 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
         public List<string> Imported { get; } = [];
 
         public int Launches { get; private set; }
+
+        /// <summary>What the automated route answers; by default it is not attempted, which leaves the guided route.</summary>
+        public NvAutomationOutcome Automation { get; set; } = new(false, false, "");
+
+        public NvidiaTarget? AutomatedFor { get; private set; }
+
+        public NvPreflight? Preflight { get; private set; }
+
+        public NvAutomationOutcome AutomateDriver(NvidiaTarget target, string nvCleanstallPath, NvPreflight preflight, Func<NvInstallChecklist, bool> confirmInstall, Action<string> progress,
+            CancellationToken cancellationToken)
+        {
+            AutomatedFor = target;
+            Preflight = preflight;
+            progress("Setting NVCleanstall up");
+            return Automation;
+        }
 
         /// <summary>When set, an import "succeeds" (exit 0) without changing anything, as a failed silent import does.</summary>
         public bool ImportIgnored { get; set; }
@@ -72,8 +98,11 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
         public ProfileInspector? FindProfileInspector() =>
             winget.Installed.Contains("Orbmu2k.nvidiaProfileInspector") ? new ProfileInspector(@"C:\npi\nvidiaProfileInspector.exe", InspectorVersion) : null;
 
+        /// <summary>When set, the export hands back exactly these bytes (a half-written file, say) instead of the stand-in's profiles.</summary>
+        public byte[]? ExportBytes { get; set; }
+
         public ProfileExport Export(ProfileInspector inspector, CancellationToken cancellationToken) =>
-            ExportError is { } error ? new(null, error) : new([0xFF, 0xFE, .. Encoding.Unicode.GetBytes(Profiles)], null);
+            ExportError is { } error ? new(null, error) : new(ExportBytes ?? [0xFF, 0xFE, .. Encoding.Unicode.GetBytes(Profiles)], null);
 
         public string? MergeImport(ProfileInspector inspector, string nipPath, CancellationToken cancellationToken)
         {
@@ -208,6 +237,103 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
         new SetupStep(StepKind.NvidiaBackup, []),
         new SetupStep(StepKind.NvidiaDriver, []),
         new SetupStep(StepKind.NvidiaRestore, []));
+
+    [Fact]
+    public void When_the_automated_route_starts_the_installer_the_step_waits_for_the_driver_and_nvcleanstall_is_not_launched_a_second_time()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, true, "NVCleanstall built the package and started NVIDIA's installer.");
+
+        var sitting = SetupWorkflowRunner.Run(Everything(), context, null, CancellationToken.None);
+
+        var step = sitting.Setup.Step(StepKind.NvidiaDriver)!;
+        Assert.Equal(StepState.Waiting, step.State);
+        Assert.Contains("started NVIDIA's installer", step.Detail, StringComparison.Ordinal);
+        Assert.Contains("continues when it changes", step.Detail, StringComparison.Ordinal);
+        Assert.Equal(0, nvidia.Launches); // the automated route opened NVCleanstall itself
+        Assert.Equal("621.01", nvidia.AutomatedFor!.Latest);
+        Assert.Equal([StepState.Done, StepState.Done, StepState.Done, StepState.Done, StepState.Waiting, StepState.Pending], sitting.Setup.Steps.Select(s => s.State));
+    }
+
+    private sealed class FakeRestorePoints(RestoreResult result, params RestorePointInfo[] existing) : IRestorePoints
+    {
+        public int Made { get; private set; }
+
+        public RestoreResult TryCreate(string description)
+        {
+            Made++;
+            return result;
+        }
+
+        public IReadOnlyList<RestorePointInfo> List() => existing;
+    }
+
+    private static NvPreflight PreflightFor(SetupContext context, FakeNvidia nvidia)
+    {
+        SetupWorkflowRunner.Run(Everything(), context, null, CancellationToken.None);
+        return nvidia.Preflight!;
+    }
+
+    [Fact]
+    public void The_first_part_of_the_gate_makes_a_restore_point_before_the_driver_step_and_reads_the_profile_backup_the_setup_made()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, false, "ready");
+        var points = new FakeRestorePoints(new RestoreResult(RestoreFailure.None));
+
+        var preflight = PreflightFor(context with { RestorePoints = points }, nvidia);
+
+        Assert.Equal(1, points.Made);
+        Assert.True(preflight.RestorePointOk);
+        Assert.Equal("made just now", preflight.RestorePoint);
+        Assert.True(preflight.ProfileBackupOk); // the backup step ran and finished before the driver step
+        Assert.StartsWith("done", preflight.ProfileBackup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Windows_skipping_a_second_point_in_24_hours_counts_only_when_a_recent_point_exists_and_it_is_named()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, false, "ready");
+        var recent = new RestorePointInfo(7, "Mesura: before 3 changes", context.Clock().AddHours(-5));
+
+        var skippedWithRecent = PreflightFor(context with { RestorePoints = new FakeRestorePoints(new RestoreResult(RestoreFailure.Skipped), recent) }, nvidia);
+        Assert.True(skippedWithRecent.RestorePointOk);
+        Assert.Contains("before 3 changes", skippedWithRecent.RestorePoint, StringComparison.Ordinal);
+
+        var old = new RestorePointInfo(3, "old", context.Clock().AddDays(-3));
+        Assert.False(PreflightFor(context with { RestorePoints = new FakeRestorePoints(new RestoreResult(RestoreFailure.Skipped), old) }, nvidia).RestorePointOk);
+        Assert.False(PreflightFor(context with { RestorePoints = new FakeRestorePoints(new RestoreResult(RestoreFailure.ProtectionOff)) }, nvidia).RestorePointOk);
+        Assert.False(PreflightFor(context, nvidia).RestorePointOk); // no restore point support in this context: not claimed
+    }
+
+    [Fact]
+    public void When_the_automated_route_stops_part_way_nvcleanstall_is_left_open_and_the_step_waits_with_the_reason()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, false, "The tweak 'msi' wants the check box 'EnableMSI', which is not on the page. (page: Installation Tweaks)");
+
+        var step = SetupWorkflowRunner.Run(Everything(), context, null, CancellationToken.None).Setup.Step(StepKind.NvidiaDriver)!;
+
+        Assert.Equal(StepState.Waiting, step.State);
+        Assert.Contains("automatic setup stopped", step.Detail, StringComparison.Ordinal);
+        Assert.Contains("EnableMSI", step.Detail, StringComparison.Ordinal);
+        Assert.Contains("Finish it in NVCleanstall", step.Detail, StringComparison.Ordinal);
+        Assert.Equal(0, nvidia.Launches); // already open: not started again over the user's window
+    }
+
+    [Fact]
+    public void When_the_automated_route_cannot_be_attempted_the_guided_route_starts_and_says_why()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(false, false, "Mesura isn't running as administrator, and NVCleanstall is.");
+
+        var step = SetupWorkflowRunner.Run(Everything(), context, null, CancellationToken.None).Setup.Step(StepKind.NvidiaDriver)!;
+
+        Assert.Equal(StepState.Waiting, step.State);
+        Assert.Equal(1, nvidia.Launches);
+        Assert.Contains("isn't running as administrator", step.Detail, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void A_setup_runs_in_order_waits_for_the_driver_continues_after_it_and_is_one_record()
@@ -363,6 +489,71 @@ public sealed class SetupWorkflowRunnerTests : IDisposable
         Assert.Equal(0, nvidia.Launches);
         Assert.DoesNotContain("TechPowerUp.NVCleanstall", winget.Ran);
         Assert.True(end.Finished);
+    }
+
+    [Fact]
+    public void An_old_profile_inspector_is_updated_by_the_setup_itself_and_the_backup_goes_on()
+    {
+        var (context, winget, nvidia, _) = Pc();
+        nvidia.InspectorVersion = new Version(3, 0, 1, 16); // can't import without replacing profiles
+        winget.OnUpgrade = () => nvidia.InspectorVersion = new Version(3, 0, 2, 3);
+
+        var end = SetupWorkflowRunner.Run(Plan(new SetupStep(StepKind.NvidiaBackup, [])), context, null, CancellationToken.None).Setup;
+
+        Assert.Contains("upgrade Orbmu2k.nvidiaProfileInspector", winget.Ran);
+        Assert.Equal(StepState.Done, end.Step(StepKind.NvidiaBackup)!.State); // the user never had to do anything
+    }
+
+    [Fact]
+    public void A_half_written_export_is_a_failed_backup_that_blocks_the_driver_and_the_import_and_is_never_called_backed_up()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, true, "must not be reached");
+        var whole = Encoding.Unicode.GetBytes(NipWith("10240"));
+        nvidia.ExportBytes = [0xFF, 0xFE, .. whole.AsSpan(0, whole.Length / 2).ToArray()]; // cut in the middle: the tool died while writing
+
+        var end = SetupWorkflowRunner.Run(Plan(new SetupStep(StepKind.NvidiaBackup, []), new SetupStep(StepKind.NvidiaDriver, []), new SetupStep(StepKind.NvidiaProfile, []),
+            new SetupStep(StepKind.NvidiaRestore, [])), context, null, CancellationToken.None).Setup;
+
+        Assert.Equal(StepState.Failed, end.Step(StepKind.NvidiaBackup)!.State);
+        Assert.Null(end.Step(StepKind.NvidiaBackup)!.Value); // no file is named as the backup
+        Assert.Equal(StepState.Failed, end.Step(StepKind.NvidiaDriver)!.State);
+        Assert.Null(nvidia.AutomatedFor); // the automated route never started: no NVCleanstall, no download, no Install
+        Assert.Equal(StepState.Failed, end.Step(StepKind.NvidiaProfile)!.State);
+        Assert.Contains("no profile was imported", end.Step(StepKind.NvidiaProfile)!.Detail, StringComparison.Ordinal);
+        Assert.Empty(nvidia.Imported);
+    }
+
+    [Fact]
+    public void The_install_gate_counts_a_read_empty_list_as_nothing_to_lose_but_not_a_failed_or_unrun_backup()
+    {
+        var (context, _, nvidia, _) = Pc();
+        nvidia.Automation = new NvAutomationOutcome(true, false, "ready");
+        nvidia.Profiles = EmptyNip; // read, and nothing customised
+
+        var preflight = PreflightFor(context, nvidia);
+        Assert.True(preflight.ProfileBackupOk);
+        Assert.StartsWith("nothing to back up", preflight.ProfileBackup, StringComparison.Ordinal);
+
+        var (failed, _, brokenNvidia, _) = Pc();
+        brokenNvidia.Automation = new NvAutomationOutcome(true, false, "ready");
+        brokenNvidia.ExportError = "NVIDIA Profile Inspector didn't start: The requested operation requires elevation.";
+        var blocked = SetupWorkflowRunner.Run(Plan(new SetupStep(StepKind.NvidiaBackup, []), new SetupStep(StepKind.NvidiaDriver, [])), failed, null, CancellationToken.None);
+        Assert.Null(brokenNvidia.Preflight); // the driver step never asked: the backup failed first
+        Assert.Equal(StepState.Failed, blocked.Setup.Step(StepKind.NvidiaDriver)!.State);
+    }
+
+    [Fact]
+    public void A_backup_that_is_there_is_named_and_reads_back_as_exported()
+    {
+        var (context, _, nvidia, _) = Pc();
+
+        var end = SetupWorkflowRunner.Run(Plan(new SetupStep(StepKind.NvidiaBackup, [])), context, null, CancellationToken.None);
+
+        var step = end.Setup.Step(StepKind.NvidiaBackup)!;
+        Assert.Equal(StepState.Done, step.State);
+        var path = context.Store.RunFilePath(end.Setup.RunId, step.Value!)!;
+        Assert.Equal([0xFF, 0xFE, .. Encoding.Unicode.GetBytes(nvidia.Profiles)], File.ReadAllBytes(path));
     }
 
     [Fact]

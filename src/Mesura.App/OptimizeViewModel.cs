@@ -414,7 +414,22 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     public bool HasNvidia => _summary?.Nvidia is not null;
 
-    public string NvidiaGpu => _summary?.Nvidia?.Name ?? "";
+    public string NvidiaGpu => _summary?.NvidiaNames ?? "";
+
+    /// <summary>The line shown where the NVIDIA steps don't apply: an AMD adapter is named with its driver and pointed at AMD's own software; Mesura changes none of its settings.</summary>
+    private string NoNvidiaLine()
+    {
+        if (_summary is not { } summary)
+        {
+            return Loc.Get("State.Checking");
+        }
+
+        return summary.Amd is { Count: > 0 } amd
+            ? Loc.Format("Setup.AmdLine", string.Join(" + ", amd.Select(a => a.Name).Distinct(StringComparer.Ordinal)), AmdDriver(amd[0]))
+            : Loc.Get("Setup.NoNvidia");
+    }
+
+    private static string AmdDriver(GpuAdapter adapter) => string.IsNullOrWhiteSpace(adapter.DriverVersion) ? Loc.Get("Setup.DriverUnread") : adapter.DriverVersion;
 
     public string NvidiaInstalled => _summary?.Nvidia?.Release is { } release ? release : Loc.Get("Setup.DriverUnread");
 
@@ -422,7 +437,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
     public string NvidiaLatest => _lookingUp ? Loc.Get("Setup.DriverLookingUp")
         : _lookup?.Release is { } release
             ? NvidiaDriver.IsNewer(release.Version, _summary?.Nvidia?.Release)
-                ? Loc.Format("Setup.DriverNewer", release.Version, release.ReleaseDate)
+                ? Loc.Format(release.SecurityUpdateOnly ? "Setup.DriverSecurityOnly" : "Setup.DriverNewer", release.Version, release.ReleaseDate)
                 : Loc.Format("Setup.DriverCurrent", release.Version)
             : _lookup?.Error is not null ? Loc.Get("Setup.DriverLookupFailed") : "";
 
@@ -448,7 +463,39 @@ public sealed class OptimizeViewModel : Observable, IPageState
         });
     }
 
-    public bool IsDefaultSelection => CurrentConfig().IsDefault;
+    /// <summary>Whether the components, tweaks and interrupt settings are the owner's (the choice of NVIDIA profile is separate: <see cref="ProfileChoices"/>).</summary>
+    public bool IsDefaultSelection => (CurrentConfig() with { Profile = NvidiaDriverConfig.Default.Profile }).IsDefault;
+
+    /// <summary>Which NVIDIA profile is imported after the driver: the main one (the default, never changed), the gaming one, or the way back from the gaming one.</summary>
+    public ObservableCollection<FilterChoice> ProfileChoices { get; } = [];
+
+    private void BuildProfileChoices()
+    {
+        ProfileChoices.Clear();
+        var current = Saved(_services).Profile?.Id ?? NvidiaProfiles.Designated.Id;
+        foreach (var (profile, key) in new[] { (NvidiaProfiles.Designated, "Setup.ProfileChoiceMain"), (NvidiaProfiles.Gaming, "Setup.ProfileChoiceGaming"), (NvidiaProfiles.GamingOff, "Setup.ProfileChoiceOff") })
+        {
+            ProfileChoices.Add(new FilterChoice(profile.Id, () => Loc.Get(key), chosen =>
+            {
+                if (NvidiaProfiles.ById(chosen) is not { } picked || (Saved(_services).Profile?.Id ?? NvidiaProfiles.Designated.Id) == picked.Id)
+                {
+                    return;
+                }
+
+                var config = NvidiaDriverConfig.Normalize(CurrentConfig() with { Profile = new NvidiaProfileRef(picked.Id, picked.Sha256) });
+                _services.Settings.NvidiaConfig = config.IsDefault ? null : config;
+                _services.SaveSettings();
+                UpdateNvidia();
+                Raise(nameof(ProfileName));
+                Raise(nameof(ProfileSource));
+                Raise(nameof(ProfileSettings));
+                Raise(nameof(ProfileFit));
+                Raise(nameof(HasProfileFit));
+                Raise(nameof(ComponentsName));
+            })
+            { IsSelected = profile.Id == current });
+        }
+    }
 
     /// <summary>The configuration's name: the default (the owner's), or changed from it.</summary>
     public string ComponentsName => IsDefaultSelection ? Loc.Get("Setup.ConfigDefault") : Loc.Get("Setup.ConfigChanged");
@@ -475,7 +522,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
             try
             {
                 return [.. NipFile.Parse(NipFile.Decode(bytes)).SelectMany(p => p.Settings.Select(s =>
-                    MesuraNvidiaProfile.Settings.FirstOrDefault(m => m.Id == s.Id) is { } known
+                    GamingNvidiaProfile.Settings.Concat(GamingNvidiaProfile.ResetSettings).FirstOrDefault(m => m.Id == s.Id) is { } known
                         ? $"{known.Name} = {known.ValueMeaning}"
                         : $"{p.Name} · 0x{s.Id:X8} = {s.Value}"))];
             }
@@ -707,6 +754,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
     {
         Components.Clear();
         Tweaks.Clear();
+        BuildProfileChoices();
         var saved = Saved(_services);
         foreach (var component in NvidiaComponents.All)
         {
@@ -874,7 +922,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
     {
         if (!HasNvidia)
         {
-            Nvidia.Update(_summary is null ? Loc.Get("State.Checking") : Loc.Get("Setup.NoNvidia"), "", Tone.Muted, false);
+            Nvidia.Update(NoNvidiaLine(), "", Tone.Muted, false);
         }
         else
         {
@@ -1088,7 +1136,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
         var started = DateTimeOffset.UtcNow;
         var nvidia = _summary?.Nvidia is { } gpu && steps.Any(s => s.Kind == StepKind.NvidiaDriver)
-            ? NvidiaTarget.From(gpu.Name, gpu.Release ?? "", _lookup?.Release?.Version, CurrentConfig())
+            ? NvidiaTarget.From(gpu.Name, gpu.Release ?? "", _lookup?.Release?.Version, CurrentConfig(), _lookup?.Release?.DownloadUrl)
             : null;
         var setup = PendingSetup.Create(SetupRun.NewId(started, "setup"), SetupRun.Stamp(started), Selected?.Preset.Id,
             _services.Settings.ConfigureAfterInstall, steps, nvidia);

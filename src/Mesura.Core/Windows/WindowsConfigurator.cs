@@ -24,6 +24,29 @@ public interface IWindowsWriter
 
     void ActivatePowerScheme(string schemeGuid);
 
+    /// <summary>
+    /// Copies a built-in power scheme to a new scheme with its own GUID, name and description (a Mesura plan). The copy is not made
+    /// active; nothing about the source changes.
+    /// </summary>
+    void DuplicatePowerScheme(string sourceGuid, string newGuid, string name, string description) =>
+        throw new NotSupportedException("This writer can't copy a power scheme.");
+
+    /// <summary>Sets one advanced property of one adapter (by its interface GUID) to a registry value the driver lists; the adapter restarts and the call returns when it is up again.</summary>
+    void SetAdapterProperty(string interfaceGuid, string keyword, string registryValue) =>
+        throw new NotSupportedException("This writer can't set an adapter property.");
+
+    /// <summary>Turns one protocol binding of one adapter on or off.</summary>
+    void SetAdapterBinding(string interfaceGuid, string componentId, bool enabled) =>
+        throw new NotSupportedException("This writer can't change an adapter binding.");
+
+    /// <summary>Sets whether Windows may turn one adapter off to save power.</summary>
+    void SetAdapterPower(string interfaceGuid, bool allowTurnOff) =>
+        throw new NotSupportedException("This writer can't change an adapter's power management.");
+
+    /// <summary>Sets one value of one scheme (AC or battery), whether or not the scheme is active; nothing is re-applied.</summary>
+    void SetSchemeValue(string scheme, string subgroup, string setting, uint value, bool dc) =>
+        throw new NotSupportedException("This writer can't set a value of a power scheme.");
+
     /// <summary>Deletes a power scheme this product installed (never the active one).</summary>
     void DeletePowerScheme(string schemeGuid);
 
@@ -197,6 +220,9 @@ public sealed class WindowsConfigurator
                 return Outcome(WindowsOpStatus.Inapplicable, evaluation.Reason);
             case OperationState.Unknown:
                 return Outcome(WindowsOpStatus.Unknown, evaluation.Reason);
+            case OperationState.PendingRestart:
+                // Nothing to write, and nothing to claim: the value is stored but Windows hasn't put it in effect.
+                return new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, evaluation.Reason, op.Activation == Activation.Immediate ? Activation.Reboot : op.Activation, []);
             case OperationState.Blocked:
                 return Outcome(WindowsOpStatus.Blocked, evaluation.Reason);
             case OperationState.Applied:
@@ -357,6 +383,11 @@ public sealed class WindowsConfigurator
                 }
             }
 
+            if (op.AdapterSettings.Count > 0)
+            {
+                ApplyAdapters(op, done);
+            }
+
             if (op.PowerSettings.Count > 0)
             {
                 var active = _reader.ReadPower().ActiveScheme
@@ -380,7 +411,11 @@ public sealed class WindowsConfigurator
                 }
             }
 
-            if (op.PowerPlan is { } plan)
+            if (op.PowerPlan is { IsMesuraPlan: true } mesuraPlan)
+            {
+                restartNeeded |= ApplyMesuraPlan(mesuraPlan, done);
+            }
+            else if (op.PowerPlan is { } plan)
             {
                 var power = _reader.ReadPower();
                 if (!power.Schemes.Contains(plan.SchemeGuid))
@@ -426,6 +461,153 @@ public sealed class WindowsConfigurator
         };
         return new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, detail + AbsentNote(evaluation), activation, done);
     }
+
+    /// <summary>
+    /// Makes a Mesura plan: a copy of the Balanced scheme under the plan's own GUID and name, the plan's values written into the copy
+    /// (only settings this PC registers, only those whose requirements hold), then the copy made active. A copy made now needs no
+    /// per-value before-image: undoing the run activates the previous scheme and deletes the copy. A copy that already exists (a re-run
+    /// after the plan was edited in Windows) records each value it changes. Everything is read back from the scheme.
+    /// </summary>
+    private bool ApplyMesuraPlan(PowerPlanSetting plan, List<RecordedChange> done)
+    {
+        var power = _reader.ReadPower();
+        var baseGuid = plan.BasedOn!;
+        if (!power.Schemes.Contains(baseGuid))
+        {
+            throw new InvalidOperationException("The Balanced power scheme, which the Mesura plan is copied from, isn't on this PC.");
+        }
+
+        var created = false;
+        if (!power.Schemes.Contains(plan.SchemeGuid))
+        {
+            done.Add(new RecordedChange(ChangeKind.PowerSchemeCreated, $"power scheme {plan.Name}", null, null, null, null, null, plan.SchemeGuid));
+            _writer.DuplicatePowerScheme(baseGuid, plan.SchemeGuid, plan.Name, plan.Description);
+            created = true;
+            if (!_reader.ReadPower().Schemes.Contains(plan.SchemeGuid))
+            {
+                throw new InvalidOperationException($"Windows didn't create the power scheme {plan.Name}.");
+            }
+        }
+
+        foreach (var value in plan.PlanValues)
+        {
+            if (!RequirementsHold(value.Needs))
+            {
+                continue; // not for this PC (for example a battery-powered one): left as the Balanced scheme has it
+            }
+
+            foreach (var (wanted, dc) in new[] { (value.Ac, false), (value.Dc, true) })
+            {
+                if (wanted is not { } target)
+                {
+                    continue;
+                }
+
+                var before = dc ? _reader.ReadPowerSettingDc(plan.SchemeGuid, value.Subgroup, value.Setting) : _reader.ReadPowerSetting(plan.SchemeGuid, value.Subgroup, value.Setting);
+                if (before is null || before == target)
+                {
+                    continue; // this PC doesn't register the setting, or it already has the value
+                }
+
+                if (!created)
+                {
+                    done.Add(new RecordedChange(ChangeKind.PowerSetting, $"power: {value.Name} ({(dc ? "on battery" : "on AC")})", null, value.Subgroup, value.Setting, null,
+                        before.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), target.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        Scheme: plan.SchemeGuid, Dc: dc));
+                }
+
+                _writer.SetSchemeValue(plan.SchemeGuid, value.Subgroup, value.Setting, target, dc);
+                var after = dc ? _reader.ReadPowerSettingDc(plan.SchemeGuid, value.Subgroup, value.Setting) : _reader.ReadPowerSetting(plan.SchemeGuid, value.Subgroup, value.Setting);
+                if (after != target)
+                {
+                    throw new InvalidOperationException($"Windows didn't keep {value.Name} ({(dc ? "on battery" : "on AC")}) in the Mesura plan.");
+                }
+            }
+        }
+
+        if (!string.Equals(power.ActiveScheme, plan.SchemeGuid, StringComparison.OrdinalIgnoreCase))
+        {
+            done.Add(new RecordedChange(ChangeKind.PowerScheme, plan.Target, null, null, null, null, power.ActiveScheme, plan.SchemeGuid));
+            _writer.ActivatePowerScheme(plan.SchemeGuid);
+            if (!string.Equals(_reader.ReadPower().ActiveScheme, plan.SchemeGuid, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Windows didn't make {plan.Name} active.");
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Sets an operation's adapter settings adapter by adapter: only on adapters the setting is meant for, only where the driver lists the value, the
+    /// before-image first, then the write (the adapter restarts), then an independent read of what the driver now reports and a check that the adapter is
+    /// up again. A driver that doesn't keep the value, or an adapter that doesn't come back, fails the operation and what was changed is put back.
+    /// </summary>
+    private void ApplyAdapters(WindowsOperation op, List<RecordedChange> done)
+    {
+        var adapters = _reader.ReadAdapters() ?? throw new InvalidOperationException("The network adapters couldn't be read, so nothing was changed.");
+        foreach (var adapter in adapters)
+        {
+            foreach (var setting in op.AdapterSettings.Where(s => s.Matches(adapter)))
+            {
+                var wanted = setting.Wanted(adapter);
+                var before = setting.Current(adapter);
+                if (wanted is null || before is null || string.Equals(before, wanted, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var kind = setting.Kind switch { AdapterSettingKind.Binding => ChangeKind.AdapterBinding, AdapterSettingKind.PowerManagement => ChangeKind.AdapterPower, _ => ChangeKind.AdapterProperty };
+                done.Add(new RecordedChange(kind, $"{adapter.Label}: {setting.Key}", null, adapter.InterfaceGuid, setting.Key, null, before, wanted));
+                WriteAdapter(adapter.InterfaceGuid, setting.Kind, setting.Key, wanted);
+                var now = _reader.ReadAdapters()?.FirstOrDefault(a => string.Equals(a.InterfaceGuid, adapter.InterfaceGuid, StringComparison.OrdinalIgnoreCase));
+                if (now is null || !string.Equals(setting.Current(now), wanted, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"{adapter.Label}: the driver doesn't report {setting.Key} as {wanted} after the change (it may refuse or reset the value).");
+                }
+
+                if (adapter.Up && !now.Up)
+                {
+                    throw new InvalidOperationException($"{adapter.Label} didn't come back up after the change.");
+                }
+            }
+        }
+    }
+
+    private void WriteAdapter(string interfaceGuid, AdapterSettingKind kind, string key, string value)
+    {
+        switch (kind)
+        {
+            case AdapterSettingKind.Binding:
+                _writer.SetAdapterBinding(interfaceGuid, key, bool.Parse(value));
+                break;
+            case AdapterSettingKind.PowerManagement:
+                _writer.SetAdapterPower(interfaceGuid, bool.Parse(value));
+                break;
+            default:
+                _writer.SetAdapterProperty(interfaceGuid, key, value);
+                break;
+        }
+    }
+
+    private string? ReadAdapterValue(RecordedChange change)
+    {
+        var adapter = _reader.ReadAdapters()?.FirstOrDefault(a => string.Equals(a.InterfaceGuid, change.Path, StringComparison.OrdinalIgnoreCase));
+        if (adapter is null)
+        {
+            return null;
+        }
+
+        return change.Kind switch
+        {
+            ChangeKind.AdapterBinding => adapter.Bindings.TryGetValue(change.Name!, out var on) ? on.ToString() : null,
+            ChangeKind.AdapterPower => adapter.AllowTurnOff?.ToString(),
+            _ => adapter.Properties.TryGetValue(change.Name!, out var p) ? p.RegistryValue : null,
+        };
+    }
+
+    private bool RequirementsHold(IReadOnlyList<DeviceRequirement> needs) =>
+        needs.All(n => WindowsEvaluator.RequirementHolds(n, _reader) == true);
 
     private static string AbsentNote(OperationEvaluation evaluation)
     {
@@ -568,11 +750,17 @@ public sealed class WindowsConfigurator
         ChangeKind.SystemSetting => string.Equals(_reader.ReadSystemSetting(change.Path!, change.Name!), change.Before, StringComparison.OrdinalIgnoreCase),
         ChangeKind.Appx => _reader.ReadAppxPackages(change.Name!)?.Contains(change.Path!, StringComparer.OrdinalIgnoreCase) == true,
         ChangeKind.PowerSetting => change.Scheme is not null
-            && _reader.ReadPowerSetting(change.Scheme, change.Path!, change.Name!)?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.Before,
+            && ReadPowerValue(change)?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.Before,
         ChangeKind.PowerScheme => string.Equals(_reader.ReadPower().ActiveScheme, change.Before, StringComparison.OrdinalIgnoreCase),
         ChangeKind.PowerSchemeCreated => change.After is not null && !_reader.ReadPower().Schemes.Contains(change.After),
+        ChangeKind.AdapterProperty or ChangeKind.AdapterBinding or ChangeKind.AdapterPower =>
+            string.Equals(ReadAdapterValue(change), change.Before, StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
+
+    private uint? ReadPowerValue(RecordedChange change) => change.Dc
+        ? _reader.ReadPowerSettingDc(change.Scheme!, change.Path!, change.Name!)
+        : _reader.ReadPowerSetting(change.Scheme!, change.Path!, change.Name!);
 
     private bool StillAsWritten(RecordedChange change) => change.Kind switch
     {
@@ -580,7 +768,7 @@ public sealed class WindowsConfigurator
         ChangeKind.Registry => WindowsEvaluator.Matches(_reader.ReadRegistry(change.Hive!, change.Path!, change.Name!),
             change.WrittenKind ?? change.RegistryKind ?? RegistryKind.DWord, change.After),
         ChangeKind.PowerSetting => change.Scheme is not null
-            && _reader.ReadPowerSetting(change.Scheme, change.Path!, change.Name!)?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.After,
+            && ReadPowerValue(change)?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.After,
         // Recorded the other way round by a revert (the scheme was deleted): still as written while it is absent.
         ChangeKind.PowerSchemeCreated when change.After is null => change.Before is not null && !_reader.ReadPower().Schemes.Contains(change.Before),
         ChangeKind.PowerSchemeCreated => _reader.ReadPower().Schemes.Contains(change.After ?? "")
@@ -594,6 +782,8 @@ public sealed class WindowsConfigurator
         ChangeKind.Appx => (_reader.ReadAppxPackages(change.Name!) is { } apps)
             && (change.After == "removed" ? !apps.Contains(change.Path!, StringComparer.OrdinalIgnoreCase) : apps.Count > 0),
         ChangeKind.PowerScheme => string.Equals(_reader.ReadPower().ActiveScheme, change.After, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.AdapterProperty or ChangeKind.AdapterBinding or ChangeKind.AdapterPower =>
+            string.Equals(ReadAdapterValue(change), change.After, StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
 
@@ -648,7 +838,24 @@ public sealed class WindowsConfigurator
                 _writer.CreatePowerScheme(change.Before); // reverting the revert that deleted it
                 break;
             case ChangeKind.PowerSetting when change.Scheme is not null && uint.TryParse(change.Before, out var value):
-                _writer.SetPowerSetting(change.Scheme, change.Path!, change.Name!, value);
+                if (change.Dc)
+                {
+                    _writer.SetSchemeValue(change.Scheme, change.Path!, change.Name!, value, dc: true);
+                }
+                else
+                {
+                    _writer.SetPowerSetting(change.Scheme, change.Path!, change.Name!, value);
+                }
+
+                break;
+            case ChangeKind.AdapterProperty when change.Path is not null && change.Name is not null && change.Before is not null:
+                _writer.SetAdapterProperty(change.Path, change.Name, change.Before);
+                break;
+            case ChangeKind.AdapterBinding when change.Path is not null && change.Name is not null && bool.TryParse(change.Before, out var binding):
+                _writer.SetAdapterBinding(change.Path, change.Name, binding);
+                break;
+            case ChangeKind.AdapterPower when change.Path is not null && bool.TryParse(change.Before, out var power):
+                _writer.SetAdapterPower(change.Path, power);
                 break;
             default:
                 throw new InvalidOperationException($"No before-image recorded for {change.Target}.");

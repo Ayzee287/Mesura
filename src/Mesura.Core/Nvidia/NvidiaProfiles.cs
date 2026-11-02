@@ -32,7 +32,19 @@ public static class NvidiaProfiles
         "Written for Mesura from NVIDIA's documented driver settings (NvApiDriverSettings.h and the NVIDIA Control Panel help); docs/nvidia-profile.md",
         MesuraNvidiaProfile.Render);
 
-    public static IReadOnlyList<BuiltInNvidiaProfile> All { get; } = [Designated];
+    /// <summary>The gaming profile (0.5): the main profile's settings plus V-Sync, the pre-rendered frame limit and the shader cache size. Never the default; chosen by the user.</summary>
+    public static BuiltInNvidiaProfile Gaming { get; } = new(
+        GamingNvidiaProfile.ProfileId, "Mesura gaming profile (extended)",
+        "The main profile's settings plus Vertical Sync, the pre-rendered frame limit and the shader cache size, from NVIDIA's NvApiDriverSettings.h; docs/nvidia-profile.md",
+        GamingNvidiaProfile.Render);
+
+    /// <summary>Puts the gaming profile's three extra settings back to the driver's defaults (the way back from <see cref="Gaming"/>); leaves the main profile's settings alone.</summary>
+    public static BuiltInNvidiaProfile GamingOff { get; } = new(
+        GamingNvidiaProfile.ResetProfileId, "Undo the gaming profile's extras",
+        "Vertical Sync, the pre-rendered frame limit and the shader cache size at the driver's own defaults (NvApiDriverSettings.h)",
+        GamingNvidiaProfile.RenderReset);
+
+    public static IReadOnlyList<BuiltInNvidiaProfile> All { get; } = [Designated, Gaming, GamingOff];
 
     public static BuiltInNvidiaProfile? ById(string id) => All.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 

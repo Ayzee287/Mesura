@@ -12,7 +12,9 @@
 // WindowsWriter in Setup (registry, service start types, dism and powercfg; D023); ShellLauncher in App (open a settings
 // page or URL, relaunch elevated; D025); NvidiaTools in Setup (start NVCleanstall, run NVIDIA Profile Inspector's export
 // and merge import) and LicensingWriter in Setup (install a user's product key, activate, clear the key from the registry
-// through WMI; D031).
+// through WMI; D031), and NvidiaOfficialSetup in Setup (0.5: create the folder the official NVIDIA package is unpacked into, unpack it with Windows' tar,
+// and run the package's own signed setup.exe after the user's confirmation). 2026-11-02: its neighbours in Setup.Windows\Nvidia take the same pragma: ToolProcess (start NVIDIA Profile Inspector with the
+// user's own token or this process's), ProfileInspectorStager and ProtectedToolFolder (copy a verified NVIDIA Profile Inspector and the profile file into a folder only administrators can write to).
 // Nothing here may be unbanned to make a collector "work", and the diagnostic projects gain no new owner.
 
 // System.IO.File

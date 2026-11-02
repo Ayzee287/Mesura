@@ -91,6 +91,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="{l:T Details.State}" Style="{StaticResource Tertiary}" Margin="0,0,16,4" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,4">
@@ -118,6 +119,10 @@
                            Visibility="{Binding ValueBasisText, Converter={StaticResource Presence}}" />
                 <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ValueBasisText}" Style="{StaticResource Caption}" Margin="0,0,0,4"
                            Visibility="{Binding ValueBasisText, Converter={StaticResource Presence}}" />
+                <TextBlock Grid.Row="7" Text="{l:T Details.Confirmation}" Style="{StaticResource Tertiary}" Margin="0,0,16,4"
+                           Visibility="{Binding ConfirmationText, Converter={StaticResource Presence}}" />
+                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding ConfirmationText}" Style="{StaticResource Caption}" Margin="0,0,0,4"
+                           Visibility="{Binding ConfirmationText, Converter={StaticResource Presence}}" />
                 <TextBlock Grid.Row="6" Text="{l:T Details.Risk}" Style="{StaticResource Tertiary}" Margin="0,0,16,4"
                            Visibility="{Binding Operation.Applicable, Converter={StaticResource BoolToVisibility}}" />
                 <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource Caption}" Margin="0,0,0,4"

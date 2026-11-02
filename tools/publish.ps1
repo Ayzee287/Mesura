@@ -138,7 +138,7 @@ foreach ($doc in 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md', 'CHANGELOG.md
 }
 # The diagnostic collector for a PC where Mesura doesn't start: double-click, read-only, writes one text file to the Desktop.
 foreach ($d in 'Diagnose Mesura.cmd', 'Diagnose-Mesura.ps1') { Copy-Item -LiteralPath (Join-Path $repo "tools\diagnose\$d") -Destination (Join-Path $app $d) }
-foreach ($d in 'Test Mesura operations.cmd', 'Test-MesuraOperations.ps1') { Copy-Item -LiteralPath (Join-Path $repo "tools\tester\$d") -Destination (Join-Path $app $d) }
+foreach ($d in 'Test Mesura operations.cmd', 'Test-MesuraOperations.ps1', 'Collect Mesura stable check.cmd', 'Collect-MesuraStableCheck.ps1') { Copy-Item -LiteralPath (Join-Path $repo "tools\tester\$d") -Destination (Join-Path $app $d) }
 Copy-Item -LiteralPath (Join-Path $repo 'docs\for-testers.md') -Destination (Join-Path $app 'FOR-TESTERS.md')
 # The executables' hashes inside the folder (the zip's own hash can only sit beside the zip: SHA256SUMS.txt).
 $inside = foreach ($rel in 'Mesura.exe', 'cli\mesura.exe') { '{0}  {1}' -f (Get-FileHash (Join-Path $app $rel) -Algorithm SHA256).Hash.ToLowerInvariant(), $rel.Replace('\', '/') }

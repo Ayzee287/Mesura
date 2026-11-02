@@ -2,13 +2,28 @@
   <String Id="LanguageId" Value="1033" />
   <String Id="LanguageCode" Value="en" />
   <String Id="ProductName" Value="Mesura" />
-  <String Id="Description" Value="Mesura: set up Windows and restore your environment" />
+  <String Id="Description" Value="Mesura: set up Windows and your apps" />
   <String Id="DowngradeError" Value="A newer version of Mesura is already installed. Uninstall it first if you really want to go back." />
   <String Id="FeatureMain" Value="Mesura" />
   <String Id="FeatureMainDescription" Value="The Mesura app, its command line and its documentation. Your settings, history and profiles are kept apart from the program and are never removed." />
   <String Id="FeatureDesktop" Value="Desktop shortcut" />
   <String Id="FeatureDesktopDescription" Value="Adds a Mesura shortcut to the desktop." />
   <String Id="LaunchMesura" Value="Start Mesura" />
-  <String Id="WelcomeDlgDescription" Value="Mesura sets up Windows and your apps the way you choose, shows every change before it is made and keeps it undoable. It installs for you alone and needs no administrator rights. Click Next to continue." />
+  <String Id="ScopeTitle" Value="Who is Mesura for?" />
+  <String Id="ScopeDescription" Value="Choose where Mesura is installed." />
+  <String Id="ScopeUser" Value="Only for me" />
+  <String Id="ScopeUserNote" Value="Installs into your own profile. No administrator rights and no Windows prompt. Changes that need administrator rights are not available from this copy: Mesura never asks for them from a folder your own programs can change." />
+  <String Id="ScopeOtherUserCopy" Value="Mesura is already installed only for you. Choosing &quot;For all users&quot; adds a second copy; Mesura then offers to remove the first one (Settings, Installed copies). Your settings stay." />
+  <String Id="ScopeOtherMachineCopy" Value="Mesura is already installed for all users. Choosing &quot;Only for me&quot; adds a second copy beside it; Mesura then offers to remove one. Choose the first option to update the installed one." />
+  <String Id="SameCopyTitle" Value="Mesura is already installed" />
+  <String Id="SameCopyDescription" Value="This installer cannot add a second copy." />
+  <String Id="SameCopyUser" Value="This exact build of Mesura is already installed for you only." />
+  <String Id="SameCopyMachine" Value="This exact build of Mesura is already installed for all users of this PC." />
+  <String Id="SameCopyWhy" Value="Windows Installer keeps one copy of a build, so this installer cannot add a second copy for the other kind of user, and it does not offer that choice again. The next page offers only Change, Repair and Remove for the copy that is installed. A different version of Mesura can be installed beside this copy for the other kind of user." />
+  <String Id="SameCopyHowUser" Value="To have Mesura for all users instead: choose Remove, then run this installer again and choose &quot;For all users&quot;. Your settings, history and profiles stay." />
+  <String Id="SameCopyHowMachine" Value="To have Mesura for you only instead: choose Remove (Windows asks for administrator approval), then run this installer again and choose &quot;Only for me&quot;. Your settings, history and profiles stay." />
+  <String Id="ScopeMachine" Value="For all users of this PC (recommended)" />
+  <String Id="ScopeMachineNote" Value="Installs into Program Files for everyone: programs you run cannot change it. Windows asks you to approve it as administrator when the installation starts. Mesura can then ask for administrator rights each time it starts, to change settings of the whole PC. Each user keeps their own settings and history." />
+  <String Id="WelcomeDlgDescription" Value="Mesura sets up Windows and your apps the way you choose, shows every change before it is made and keeps it undoable. Next you choose whether it is installed for you alone or for everyone on this PC. Click Next to continue." />
   <String Id="VerifyReadyDlgInstallText" Value="Click Install to put Mesura on this PC. Your settings, history and profiles are kept apart from the program and are never removed." />
 </WixLocalization>

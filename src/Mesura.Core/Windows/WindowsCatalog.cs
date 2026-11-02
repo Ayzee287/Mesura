@@ -42,6 +42,21 @@ public sealed partial class WindowsCatalog
 
     private static readonly Lazy<WindowsCatalog> BuiltIn = new(() => Parse(BuiltInJson()));
 
+    private static readonly Lazy<WindowsCatalog> BuiltInFull = new(() => Parse(BuiltInJson(), includeWithheld: true));
+
+    /// <summary>
+    /// What 0.5.5 holds back for the next update: the network adapter tuning collection and the operations that write a physical adapter's driver settings (their writes have run only against a stand-in,
+    /// never on a real adapter). They stay in the built-in file and in the code and tests; the product's catalog does not list them (see <see cref="Experimental"/>).
+    /// </summary>
+    private static readonly HashSet<string> WithheldOperations = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "network.adapter-interrupt-moderation-off", "network.adapter-receive-buffers-max", "network.adapter-eee-off", "network.adapter-selective-suspend-off",
+        "network.adapter-vendor-power-saving-off", "network.adapter-power-management-off", "network.adapter-wifi-mimo-power-save-off", "network.adapter-wifi-roaming-lowest",
+        "network.adapter-lldp-off", "network.adapter-lltd-off", "network.adapter-multiplexor-off", "network.adapter-file-sharing-off", "network.adapter-msclient-off", "network.adapter-ipv6-binding-off",
+    };
+
+    private static readonly HashSet<string> WithheldPresets = new(StringComparer.OrdinalIgnoreCase) { "network-adapter" };
+
     private static readonly Lazy<WindowsCatalog> BuiltInRetired = new(() => Parse(ReadResource(RetiredFileName)));
 
     private WindowsCatalog(IReadOnlyList<WindowsOperation> operations, IReadOnlyList<WindowsPreset> presets)
@@ -51,6 +66,9 @@ public sealed partial class WindowsCatalog
     }
 
     public static WindowsCatalog Default => BuiltIn.Value;
+
+    /// <summary>The built-in catalog with the entries held back from the release included (for the tests of the held-back work).</summary>
+    public static WindowsCatalog Full => BuiltInFull.Value;
 
     /// <summary>
     /// The operations earlier versions had and this one dropped (0.4 removed 103), reduced to the settings they changed. They are never listed
@@ -85,9 +103,13 @@ public sealed partial class WindowsCatalog
     }
 
     /// <exception cref="FormatException">The text is not a valid Windows catalog; the message names the entry.</exception>
-    public static WindowsCatalog Parse(string json)
+    public static WindowsCatalog Parse(string json) => Parse(json, includeWithheld: false);
+
+    /// <param name="includeWithheld">Keep the entries 0.5.5 holds back (also kept when <see cref="Experimental"/> switches the adapter tuning on).</param>
+    public static WindowsCatalog Parse(string json, bool includeWithheld)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        includeWithheld |= Experimental.Enabled(Experimental.NetworkAdapterTuning);
         CatalogFile? file;
         try
         {
@@ -112,6 +134,11 @@ public sealed partial class WindowsCatalog
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in file.Operations ?? [])
         {
+            if (!includeWithheld && entry.Id is { } entryId && WithheldOperations.Contains(entryId))
+            {
+                continue;
+            }
+
             var op = ToOperation(entry);
             if (!ids.Add(op.Id))
             {
@@ -124,6 +151,11 @@ public sealed partial class WindowsCatalog
         var presets = new List<WindowsPreset>();
         foreach (var p in file.Presets ?? [])
         {
+            if (!includeWithheld && p.Id is { } presetId && WithheldPresets.Contains(presetId))
+            {
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(p.Id) || presets.Any(x => x.Id.Equals(p.Id, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new FormatException($"Preset id '{p.Id}' is missing or appears more than once.");
@@ -215,7 +247,9 @@ public sealed partial class WindowsCatalog
                 throw new FormatException(Where($"power scheme '{p.Scheme}' is not a GUID."));
             }
 
-            power = new PowerPlanSetting(p.Scheme!.ToLowerInvariant(), p.Name ?? p.Scheme, p.CreateIfMissing ?? false);
+            power = p.BasedOn is null
+                ? new PowerPlanSetting(p.Scheme!.ToLowerInvariant(), p.Name ?? p.Scheme, p.CreateIfMissing ?? false)
+                : ToMesuraPlan(p, Where);
         }
 
         var powerSettings = (e.PowerSettings ?? []).Select(p =>
@@ -260,7 +294,7 @@ public sealed partial class WindowsCatalog
             : null;
 
         var applyParts = (registry.Count > 0 || registryEach.Count > 0 ? 1 : 0) + (system.Count > 0 ? 1 : 0) + (appx.Count > 0 ? 1 : 0) + (services.Count > 0 ? 1 : 0) + (features.Count > 0 ? 1 : 0) + (power is null ? 0 : 1)
-            + (powerSettings.Count > 0 ? 1 : 0) + (tasks.Count > 0 ? 1 : 0) + (tcp.Count > 0 ? 1 : 0);
+            + (powerSettings.Count > 0 ? 1 : 0) + (tasks.Count > 0 ? 1 : 0) + (tcp.Count > 0 ? 1 : 0) + ((e.Adapter ?? []).Count > 0 ? 1 : 0);
         var kinds = (applyParts > 0 ? 1 : 0) + (manual is null ? 0 : 1) + (observe is null ? 0 : 1);
         if (kinds != 1)
         {
@@ -336,10 +370,118 @@ public sealed partial class WindowsCatalog
             throw new FormatException(Where($"source '{badSource}' isn't a web address."));
         }
 
+        EffectCheck? effect = null;
+        if (e.Effect is { } check)
+        {
+            effect = check.Kind is null || check.Expect is null || !EffectCheck.IsAllowed(check.Kind, check.Expect)
+                ? throw new FormatException(Where($"effect '{check.Kind}' = '{check.Expect}' isn't a reading Mesura knows (gpuScheduling: enabled, ntfsLastAccess: disabled, accessibilityHotkeys: disabled, pointerAcceleration: disabled)."))
+                : new EffectCheck(EffectCheck.Allowed.Keys.First(k => string.Equals(k, check.Kind, StringComparison.OrdinalIgnoreCase)), check.Expect.ToLowerInvariant());
+            if (registry.Count == 0)
+            {
+                throw new FormatException(Where("an effect check goes with registry values it confirms."));
+            }
+        }
+
+        var adapter = (e.Adapter ?? []).Select(a => ToAdapterSetting(a, Where)).ToList();
+        if (adapter.Count > 0 && applyParts0(registry, registryEach, system, appx, services, features, power, powerSettings, tasks, tcp) > 0)
+        {
+            throw new FormatException(Where("an adapter operation holds only adapter settings; make the rest a second operation."));
+        }
+
         return new WindowsOperation(e.Id, e.Name, e.Category ?? "Other", e.Description, risk, activation, e.MinBuild, e.MaxBuild,
             e.Limitations ?? "", e.Source ?? "", registry, services, features, power, powerSettings, tasks, manual, observe, requires,
-            impact, e.Summary ?? "", tcp, benefit, basis, level, registryEach, system, sources, appx);
+            impact, e.Summary ?? "", tcp, benefit, basis, level, registryEach, system, sources, appx, effect, adapter);
     }
+
+    private static int applyParts0(List<RegistrySetting> registry, List<RegistryEachSetting> registryEach, List<SystemSetting> system, List<AppxSetting> appx, List<ServiceSetting> services,
+        List<FeatureSetting> features, PowerPlanSetting? power, List<PowerSetting> powerSettings, List<ScheduledTaskSetting> tasks, List<TcpGlobalSetting> tcp) =>
+        registry.Count + registryEach.Count + system.Count + appx.Count + services.Count + features.Count + (power is null ? 0 : 1) + powerSettings.Count + tasks.Count + tcp.Count;
+
+    /// <summary>The protocol bindings an adapter operation may switch: Microsoft's own network components, never TCP/IPv4 itself.</summary>
+    private static readonly string[] AllowedBindings = ["ms_lldp", "ms_lltdio", "ms_rspndr", "ms_implat", "ms_tcpip6", "ms_server", "ms_msclient", "ms_pacer"];
+
+    private static AdapterSetting ToAdapterSetting(AdapterEntry a, Func<string, string> where)
+    {
+        var kinds = new List<AdapterKind>();
+        foreach (var k in a.Kinds ?? [])
+        {
+            kinds.Add(k?.ToLowerInvariant() switch
+            {
+                "ethernet" => AdapterKind.Ethernet,
+                "wifi" => AdapterKind.WiFi,
+                _ => throw new FormatException(where($"adapter kind '{k}' must be ethernet or wifi (virtual, VPN and other adapters are never touched).")),
+            });
+        }
+
+        if (kinds.Count == 0)
+        {
+            throw new FormatException(where("an adapter setting names the kinds of adapter it is for (ethernet, wifi)."));
+        }
+
+        var vendors = (a.Vendors ?? []).ToList();
+        if (vendors.Any(v => string.IsNullOrWhiteSpace(v) || !AdapterWord().IsMatch(v)))
+        {
+            throw new FormatException(where("an adapter vendor is a plain name."));
+        }
+
+        var given = (a.Property is null ? 0 : 1) + (a.Binding is null ? 0 : 1) + (a.PowerManagement is null ? 0 : 1);
+        if (given != 1)
+        {
+            throw new FormatException(where("an adapter setting names exactly one of: property, binding, powerManagement."));
+        }
+
+        if (a.Binding is { } binding)
+        {
+            return !AllowedBindings.Contains(binding, StringComparer.OrdinalIgnoreCase) || a.Enabled is null
+                ? throw new FormatException(where($"adapter binding '{binding}' isn't one Mesura switches ({string.Join(", ", AllowedBindings)}), or 'enabled' is missing."))
+                : new AdapterSetting(AdapterSettingKind.Binding, binding.ToLowerInvariant(), AdapterGoal.RegistryValue, "", a.Enabled.Value, kinds, vendors);
+        }
+
+        if (a.PowerManagement is { } pm)
+        {
+            return !pm.Equals("allowTurnOff", StringComparison.OrdinalIgnoreCase) || a.Enabled is null
+                ? throw new FormatException(where("the power-management setting is 'allowTurnOff' with 'enabled'."))
+                : new AdapterSetting(AdapterSettingKind.PowerManagement, "allowTurnOff", AdapterGoal.RegistryValue, "", a.Enabled.Value, kinds, vendors);
+        }
+
+        var keyword = a.Property!;
+        if (!AdapterKeyword().IsMatch(keyword))
+        {
+            throw new FormatException(where($"adapter property '{keyword}' isn't a registry keyword."));
+        }
+
+        var goals = (a.RegistryValue is null ? 0 : 1) + (a.DisplayValue is null ? 0 : 1) + (a.Maximize == true ? 1 : 0);
+        if (goals != 1)
+        {
+            throw new FormatException(where($"adapter property '{keyword}' needs exactly one of: registryValue, displayValue, maximize."));
+        }
+
+        if (a.RegistryValue is { } reg)
+        {
+            return !AdapterNumber().IsMatch(reg) ? throw new FormatException(where($"adapter property '{keyword}': registryValue '{reg}' isn't a number."))
+                : new AdapterSetting(AdapterSettingKind.Property, keyword, AdapterGoal.RegistryValue, reg, true, kinds, vendors);
+        }
+
+        if (a.DisplayValue is { } display)
+        {
+            return !AdapterDisplay().IsMatch(display) ? throw new FormatException(where($"adapter property '{keyword}': displayValue '{display}' has characters Mesura doesn't pass on."))
+                : new AdapterSetting(AdapterSettingKind.Property, keyword, AdapterGoal.DisplayValue, display, true, kinds, vendors);
+        }
+
+        return new AdapterSetting(AdapterSettingKind.Property, keyword, AdapterGoal.Maximize, "", true, kinds, vendors);
+    }
+
+    [GeneratedRegex(@"^\*?[A-Za-z0-9_]{1,64}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterKeyword();
+
+    [GeneratedRegex(@"^[0-9]{1,10}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterNumber();
+
+    [GeneratedRegex(@"^[A-Za-z0-9 .,()/+-]{1,64}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterDisplay();
+
+    [GeneratedRegex(@"^[A-Za-z0-9 ._()-]{1,48}$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdapterWord();
 
     private static RegistrySetting ToRegistry(RegistryEntry r, Func<string, string> where)
     {
@@ -408,6 +550,67 @@ public sealed partial class WindowsCatalog
         }
     }
 
+    /// <summary>The only scheme a Mesura plan may be copied from, and the built-in GUIDs it must not reuse.</summary>
+    private const string BalancedScheme = "381b4222-f694-41f0-9685-ff5bb260df2e";
+
+    private static readonly string[] BuiltInSchemes =
+    [
+        BalancedScheme, "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", "a1841308-3541-4fab-bc81-f71556f20b4a", "e9a42b02-d5df-448d-aa00-03f14749eb61",
+    ];
+
+    private static PowerPlanSetting ToMesuraPlan(PowerPlanEntry p, Func<string, string> where)
+    {
+        if (!string.Equals(p.BasedOn, BalancedScheme, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new FormatException(where($"a Mesura power plan is copied from the Balanced scheme ({BalancedScheme}), not '{p.BasedOn}'."));
+        }
+
+        var guid = p.Scheme!.ToLowerInvariant();
+        if (BuiltInSchemes.Contains(guid))
+        {
+            throw new FormatException(where($"a Mesura power plan needs a GUID of its own, not the built-in scheme {guid}."));
+        }
+
+        if (string.IsNullOrWhiteSpace(p.Name) || !PlanText().IsMatch(p.Name) || (p.Description is not null && !PlanText().IsMatch(p.Description)))
+        {
+            throw new FormatException(where("a Mesura power plan needs a plain name and description (letters, digits, spaces and . , - ( ))."));
+        }
+
+        var values = new List<PowerPlanValue>();
+        foreach (var v in p.Settings ?? [])
+        {
+            if (!Guid.TryParse(v.Subgroup, out _) || !Guid.TryParse(v.Setting, out _))
+            {
+                throw new FormatException(where($"power plan setting '{v.Name}' needs GUIDs for 'subgroup' and 'setting'."));
+            }
+
+            if (v.Ac is null && v.Dc is null)
+            {
+                throw new FormatException(where($"power plan setting '{v.Name}' needs an 'ac' or a 'dc' value."));
+            }
+
+            var needs = (v.Requires ?? []).Select(r => r?.ToLowerInvariant() switch
+            {
+                "nobattery" => DeviceRequirement.NoBattery,
+                "nomodernstandby" => DeviceRequirement.NoModernStandby,
+                "hybridcpu" => DeviceRequirement.HybridCpu,
+                "ram16gb" => DeviceRequirement.Ram16Gb,
+                _ => throw new FormatException(where($"power plan setting '{v.Name}': unknown requirement '{r}' (noBattery, noModernStandby, hybridCpu or ram16Gb).")),
+            }).Distinct().ToList();
+            values.Add(new PowerPlanValue(v.Subgroup!.ToLowerInvariant(), v.Setting!.ToLowerInvariant(), string.IsNullOrWhiteSpace(v.Name) ? v.Setting! : v.Name, v.Ac, v.Dc, needs));
+        }
+
+        if (values.Count == 0)
+        {
+            throw new FormatException(where("a Mesura power plan needs at least one setting."));
+        }
+
+        return new PowerPlanSetting(guid, p.Name, true, BalancedScheme, p.Description ?? "", values);
+    }
+
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9 .,()-]{0,120}$", RegexOptions.CultureInvariant)]
+    private static partial Regex PlanText();
+
     private static RegistryEachSetting ToRegistryEach(RegistryEachEntry r, Func<string, string> where)
     {
         if (r.Hive is not ("HKCU" or "HKLM"))
@@ -450,7 +653,12 @@ public sealed partial class WindowsCatalog
         PowerPlanEntry? PowerPlan, List<PowerSettingEntry>? PowerSettings, List<TaskEntry>? Tasks, ManualEntry? Manual, ObserveEntry? Observe,
         List<string?>? Requires = null, string? Impact = null, string? Summary = null, List<TcpEntry>? Tcp = null, string? Benefit = null, string? ValueBasis = null,
         string? Level = null, List<RegistryEachEntry>? RegistryEach = null, List<SystemEntry>? System = null, List<string>? Sources = null,
-        List<AppxEntry>? Appx = null);
+        List<AppxEntry>? Appx = null, EffectEntry? Effect = null, List<AdapterEntry>? Adapter = null);
+
+    internal sealed record AdapterEntry(string? Property, string? Binding, string? PowerManagement, string? RegistryValue, string? DisplayValue, bool? Maximize, bool? Enabled,
+        List<string>? Kinds, List<string>? Vendors);
+
+    internal sealed record EffectEntry(string? Kind, string? Expect);
 
     internal sealed record AppxEntry(string? Name);
 
@@ -475,7 +683,10 @@ public sealed partial class WindowsCatalog
 
     internal sealed record FeatureEntry(string? Name, bool? Enabled);
 
-    internal sealed record PowerPlanEntry(string? Scheme, string? Name, bool? CreateIfMissing);
+    internal sealed record PowerPlanEntry(string? Scheme, string? Name, bool? CreateIfMissing, string? BasedOn = null, string? Description = null,
+        List<PowerPlanValueEntry>? Settings = null);
+
+    internal sealed record PowerPlanValueEntry(string? Subgroup, string? Setting, string? Name, uint? Ac, uint? Dc, List<string?>? Requires = null);
 
     internal sealed record ManualEntry(List<string>? Steps, List<string>? Links);
 

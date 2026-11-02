@@ -97,9 +97,10 @@ public sealed class SettingRow : Observable
     }
 
     /// <summary>
-    /// The status, in one of the words every page shares: already set, applied just now (this session), available, partly
-    /// set, failed or waiting for administrator rights (this session's run), not for this PC, couldn't check, unavailable,
-    /// manual step, check in Windows.
+    /// The status, in one of the words every page shares (0.5): applied (read back from the part of Windows that owns it, or confirmed by an independent
+    /// check), set (the value is stored and read back, but Windows can't be asked whether it honours it), restart / sign-out / Explorer restart needed
+    /// (set, and waiting for that), available, partly set, error or waiting for administrator rights (this session's run), not supported, couldn't
+    /// check, unavailable, manual step, check in Windows. "Applied" is never said on the strength of a command's exit code or a registry write alone.
     /// </summary>
     public string StatusKey
     {
@@ -113,12 +114,20 @@ public sealed class SettingRow : Observable
             var session = _services.SessionWindows(Id);
             return _eval.State switch
             {
-                OperationState.Applied when session == WindowsOpStatus.Applied => "AppliedNow",
                 OperationState.Applied when Operation.AppxSettings.Count > 0 => "NotInstalled",
                 OperationState.Applied when Operation.Category == WindowsCatalog.StartupCategory => "TurnedOff",
+                OperationState.Applied when Operation.Applicable && _services.PendingActivation(Id) is { } waiting => waiting switch
+                {
+                    Activation.Reboot => "NeedsRestart",
+                    Activation.SignOut => "NeedsSignOut",
+                    _ => "NeedsExplorer",
+                },
+                OperationState.Applied when Operation.Applicable && Operation.Confirmation == Confirmation.Stored => "Stored",
                 OperationState.NotApplied when Operation.Category == WindowsCatalog.StartupCategory => "StartsUp",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.Failed => "Failed",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.NeedsElevation => "NeedsAdmin",
+                OperationState.PendingRestart when Operation.Activation == Activation.SignOut => "NeedsSignOut",
+                OperationState.PendingRestart when Operation.Activation == Activation.ExplorerRestart => "NeedsExplorer",
                 var state => state.ToString(),
             };
         }
@@ -129,9 +138,10 @@ public sealed class SettingRow : Observable
     public string StateTone => StatusKey switch
     {
         "Checking" or "Inapplicable" => Tone.Muted,
-        "Applied" or "AppliedNow" or "NotInstalled" or "TurnedOff" => Tone.Ok,
+        "Applied" or "NotInstalled" or "TurnedOff" => Tone.Ok,
+        "Stored" => Tone.Info,
         "NotApplied" => Tone.Neutral,
-        "Partial" or "NeedsAdmin" or "Blocked" or "Unknown" => Tone.Warn,
+        "Partial" or "PendingRestart" or "NeedsRestart" or "NeedsSignOut" or "NeedsExplorer" or "NeedsAdmin" or "Blocked" or "Unknown" => Tone.Warn,
         "Failed" => Tone.Danger,
         _ => Tone.Info,
     };
@@ -176,6 +186,9 @@ public sealed class SettingRow : Observable
     public string BenefitText => Loc.Get($"Benefit.{Operation.Evidence}");
 
     /// <summary>How the stored value is known to be right; empty when the catalog doesn't say (nothing is claimed).</summary>
+    /// <summary>How its state is confirmed (read from the registry only, from the owning part of Windows, or with an independent effect check).</summary>
+    public string ConfirmationText => Operation.Applicable ? Loc.Get($"Confirmation.{Operation.Confirmation}") : "";
+
     public string ValueBasisText => Operation.Applicable && Operation.Basis is { } basis ? Loc.Get($"ValueBasis.{basis}") : "";
 
     private bool TurnsOff => Operation.Services.Any(s => s.Start == ServiceStart.Disabled) || Operation.Features.Any(f => !f.Enabled)
@@ -188,6 +201,8 @@ public sealed class SettingRow : Observable
         OperationState.Blocked => Loc.Get("Reason.Blocked"),
         OperationState.Unknown when !_checking => Loc.Get("Reason.Unknown"),
         OperationState.Partial => Loc.Get("Reason.Partial"),
+        OperationState.PendingRestart => Loc.Get("Reason.PendingRestart"),
+        OperationState.Applied when Operation.Applicable && !_checking && _services.PendingActivation(Id) is { } waiting => Loc.Get($"Reason.Needs{waiting}"),
         _ => "",
     };
 
@@ -222,6 +237,11 @@ public sealed class SettingRow : Observable
         if (Operation.Requirements.Contains(DeviceRequirement.HybridCpu) && reader.HybridCpu == false)
         {
             return Loc.Get("Reason.Hybrid");
+        }
+
+        if (Operation.Effect is { } check && string.Equals(reader.ReadEffect(check.Kind), "unsupported", StringComparison.OrdinalIgnoreCase))
+        {
+            return Loc.Get("Reason.Unsupported");
         }
 
         return Loc.Get("Reason.Absent");

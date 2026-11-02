@@ -203,6 +203,17 @@ public sealed partial class SystemStateReader : ISystemReader
 
     public string? ReadSystemSetting(string kind, string name) => _tools?.Read(kind, name);
 
+    public IReadOnlyList<AdapterReading>? ReadAdapters() => NetworkAdapterReader.Read();
+
+    public string? ReadEffect(string kind) => kind.ToLowerInvariant() switch
+    {
+        "gpuscheduling" => GpuScheduling.Read(),
+        "ntfslastaccess" => _tools?.ReadEffect(kind),
+        "accessibilityhotkeys" => SessionInput.AccessibilityHotkeys(),
+        "pointeracceleration" => SessionInput.PointerAcceleration(),
+        _ => null,
+    };
+
     private const string AppxRepositoryKey = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
 
     /// <summary>
@@ -328,6 +339,26 @@ public sealed partial class SystemStateReader : ISystemReader
                     return levels.Count == 0 ? null : levels.FirstOrDefault(l => l != "normal") ?? "normal";
                 }
 
+                case "heuristics":
+                {
+                    using var searcher = new ManagementObjectSearcher(@"root\StandardCimv2", "SELECT SettingName, ScalingHeuristics FROM MSFT_NetTCPSetting");
+                    using var results = searcher.Get();
+                    var seen = new List<string>();
+                    foreach (var row in results)
+                    {
+                        using (row)
+                        {
+                            if (row["ScalingHeuristics"] is { } value)
+                            {
+                                seen.Add(Convert.ToUInt32(value, CultureInfo.InvariantCulture) switch { 0 => "disabled", 1 => "enabled", _ => "unknown" });
+                            }
+                        }
+                    }
+
+                    // "disabled" only when every template that reports it is; any other word is the first one found, as for auto-tuning.
+                    return seen.Count == 0 ? null : seen.FirstOrDefault(s => s != "disabled") ?? "disabled";
+                }
+
                 case "rss" or "rsc":
                 {
                     var property = name.Equals("rss", StringComparison.OrdinalIgnoreCase) ? "ReceiveSideScaling" : "ReceiveSegmentCoalescing";
@@ -447,6 +478,43 @@ public sealed partial class SystemStateReader : ISystemReader
         })
         {
             var value = ReadRegistry("HKLM", path, "ACSettingIndex");
+            if (value.ValueExists && value.Kind == RegistryKind.DWord
+                && uint.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var stored))
+            {
+                return stored;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The setting's effective battery (DC) value in the scheme, read like <see cref="ReadPowerSetting"/>; <c>null</c> when the setting isn't on this machine.</summary>
+    public unsafe uint? ReadPowerSettingDc(string scheme, string subgroup, string setting)
+    {
+        if (!Guid.TryParse(scheme, out var schemeId) || !Guid.TryParse(subgroup, out var subgroupId) || !Guid.TryParse(setting, out var settingId))
+        {
+            return null;
+        }
+
+        uint dcIndex;
+        var error = (WIN32_ERROR)PInvoke.PowerReadDCValueIndex(default, &schemeId, &subgroupId, &settingId, &dcIndex);
+        if (error == WIN32_ERROR.ERROR_SUCCESS)
+        {
+            return dcIndex;
+        }
+
+        if (error == WIN32_ERROR.ERROR_FILE_NOT_FOUND)
+        {
+            return null;
+        }
+
+        foreach (var path in new[]
+        {
+            $@"{PowerSchemesKey}\{scheme}\{subgroup}\{setting}",
+            $@"SYSTEM\CurrentControlSet\Control\Power\PowerSettings\{subgroup}\{setting}\DefaultPowerSchemeValues\{scheme}",
+        })
+        {
+            var value = ReadRegistry("HKLM", path, "DCSettingIndex");
             if (value.ValueExists && value.Kind == RegistryKind.DWord
                 && uint.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var stored))
             {

@@ -47,6 +47,33 @@ public sealed class SystemTools : ISystemSettingSource
         };
     }
 
+    /// <summary>
+    /// <c>fsutil behavior query disablelastaccess</c> (read only; it answers without administrator rights): the number after the equals
+    /// sign is Windows' own code (bit 0 set: updates disabled; 2 and 3: system managed), whatever the display language.
+    /// </summary>
+    public string? ReadEffect(string kind)
+    {
+        if (!string.Equals(kind, "ntfsLastAccess", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var (code, output) = Run("fsutil.exe", ["behavior", "query", "disablelastaccess"]);
+        if (code != 0)
+        {
+            return null;
+        }
+
+        var equals = output.IndexOf('=', StringComparison.Ordinal);
+        if (equals < 0)
+        {
+            return null;
+        }
+
+        var digits = new string(output[(equals + 1)..].SkipWhile(char.IsWhiteSpace).TakeWhile(char.IsAsciiDigit).ToArray());
+        return uint.TryParse(digits, out var value) && value <= 3 ? ((value & 1) == 1 ? "disabled" : "enabled") : null;
+    }
+
     public void Refresh()
     {
         lock (_gate)

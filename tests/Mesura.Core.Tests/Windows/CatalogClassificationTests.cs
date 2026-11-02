@@ -44,7 +44,7 @@ public sealed class CatalogClassificationTests
         var recommended = Catalog.PresetById("recommended-gaming")!;
         var maximum = Catalog.PresetById("maximum-performance")!;
 
-        Assert.All(recommended.OperationIds, id => Assert.Contains(id, maximum.OperationIds));
+        Assert.All(recommended.OperationIds.Where(id => id != "power.mesura-balanced-plan"), id => Assert.Contains(id, maximum.OperationIds)); // the plan is replaced by the Maximum one
         var added = Catalog.Resolve(maximum).Where(o => !recommended.OperationIds.Contains(o.Id)).ToList();
         Assert.NotEmpty(added);
         Assert.All(added, o =>
@@ -57,11 +57,11 @@ public sealed class CatalogClassificationTests
             Assert.True(o.Risk is RiskClass.SystemConfiguration or RiskClass.UserPreference, o.Id);
             Assert.True(o.Services.Count == 0 && o.Tasks.Count == 0 && o.Features.Count == 0, o.Id);
         });
-        Assert.Contains(added, o => o.Impact == OperationImpact.Power);
 
-        // The plan switch comes before the settings it would otherwise overwrite in the plan being left.
-        var ids = maximum.OperationIds.ToList();
-        Assert.True(ids.IndexOf("power.high-performance") < ids.IndexOf("power.pcie-aspm-off"));
+        // Its power side is its own plan (0.5), which carries the USB, PCI Express and drive settings itself; Windows' High performance is not used.
+        Assert.Contains("power.mesura-maximum-plan", maximum.OperationIds);
+        Assert.DoesNotContain("power.high-performance", maximum.OperationIds);
+        Assert.DoesNotContain("power.pcie-aspm-off", maximum.OperationIds);
         Assert.Empty(WindowsConfigurator.Conflicts(Catalog.Resolve(maximum)));
     }
 

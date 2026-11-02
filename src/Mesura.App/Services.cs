@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Mesura.Core.Apps;
 using Mesura.Core.Config;
+using Mesura.Core.Nvidia;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows.Windows;
@@ -165,7 +166,41 @@ public sealed class Services
     /// <summary>What a setup runs with: the shared installer, configurator, store and NVIDIA tools.</summary>
     public SetupContext SetupContext(ConfigBundleFile? bundle) => new(
         Installer, Apps.Catalog ?? AppCatalog.Default, WindowsCatalog.Catalog ?? Mesura.Core.Windows.WindowsCatalog.Default, Windows, Store, Nvidia,
-        () => DateTimeOffset.UtcNow, bundle, Reader.Refresh, ReadBattery: () => Reader.HasBattery);
+        () => DateTimeOffset.UtcNow, bundle, Reader.Refresh, ReadBattery: () => Reader.HasBattery, RestorePoints: RestorePoints, ConfirmDriverInstall: ConfirmDriverInstall);
+
+    /// <summary>
+    /// The separate confirmation before Install is pressed in NVCleanstall (the owner's condition): the user sees the restore point, the profile backup, the tweaks NVCleanstall has ticked and the state
+    /// of "Rebuild digital signature", and Install is only pressed on an explicit yes. When anything is missing the dialog says what and the answer is no.
+    /// </summary>
+    private bool ConfirmDriverInstall(NvInstallChecklist checklist)
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null)
+        {
+            return false;
+        }
+
+        return app.Dispatcher.Invoke(() =>
+        {
+            if (!checklist.CanInstall)
+            {
+                ConfirmDialog.Tell(Loc.Get("Nvidia.Gate.Title"), Loc.Get("Nvidia.Gate.Blocked"), string.Join("\n", checklist.Blockers));
+                return false;
+            }
+
+            var tweaks = checklist.TweaksTicked.Select(t => NvidiaTweaks.ById(t)?.Label ?? t).ToList();
+            var items = new List<string>
+            {
+                Loc.Format("Nvidia.Gate.RestorePoint", checklist.RestorePoint),
+                Loc.Format("Nvidia.Gate.Backup", checklist.ProfileBackup),
+                Loc.Format("Nvidia.Gate.Driver", checklist.DriverAtStart.Length > 0 ? checklist.DriverAtStart : "?", checklist.DriverTarget ?? "?", checklist.Package),
+                Loc.Format("Nvidia.Gate.Signature", checklist.SignatureRequired ? Loc.Get("Nvidia.Gate.SignatureOn") : Loc.Get("Nvidia.Gate.SignatureNotWanted")),
+                Loc.Format("Nvidia.Gate.Tweaks", tweaks.Count),
+            };
+            items.AddRange(tweaks.Select(t => "   " + t));
+            return ConfirmDialog.Ask(Loc.Get("Nvidia.Gate.Title"), Loc.Get("Nvidia.Gate.Message"), items, Loc.Get("Nvidia.Gate.Note"), Loc.Get("Nvidia.Gate.Confirm"));
+        });
+    }
 
     /// <summary>This executable, for the sign-in entry.</summary>
     public static string Executable => Environment.ProcessPath ?? System.IO.Path.Combine(AppContext.BaseDirectory, "Mesura.exe");
@@ -199,6 +234,7 @@ public sealed class Services
     /// <summary>Tells the pages about a run that was just written to the history.</summary>
     public void Recorded(SetupRun run)
     {
+        _pendingActivation = null;
         NoteSession(run);
         RunRecorded?.Invoke(run.Operation);
     }
@@ -217,12 +253,55 @@ public sealed class Services
         foreach (var step in run.WindowsSteps)
         {
             _sessionWindows[step.OperationId] = step.Status;
+            if (step.Status is WindowsOpStatus.Applied or WindowsOpStatus.Reverted)
+            {
+                _sessionActivation[step.OperationId] = step.Activation;
+            }
         }
 
         foreach (var config in run.Config)
         {
             _sessionConfig[config.PortId] = config.Status;
         }
+    }
+
+    private IReadOnlyDictionary<string, Activation>? _pendingActivation;
+    private readonly Dictionary<string, Activation> _sessionActivation = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// What an applied Windows setting still waits for (a restart, a sign-out, an Explorer restart) before it is in effect, or <c>null</c>: from the recorded
+    /// runs since Windows last started, so it survives closing Mesura. Recomputed after each run.
+    /// </summary>
+    public Activation? PendingActivation(string operationId)
+    {
+        if (_sessionActivation.TryGetValue(operationId, out var now))
+        {
+            return now == Activation.Immediate ? null : now; // this session's latest run, recorded or not
+        }
+
+        _pendingActivation ??= LoadPendingActivation();
+        return _pendingActivation.TryGetValue(operationId, out var activation) ? activation : null;
+    }
+
+    private IReadOnlyDictionary<string, Activation> LoadPendingActivation()
+    {
+        var runs = new List<SetupRun>();
+        foreach (var id in Store.ListRuns().TakeLast(60))
+        {
+            try
+            {
+                if (Store.ReadRunRecord(id) is { } json)
+                {
+                    runs.Add(SetupRun.FromJson(json));
+                }
+            }
+            catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException or FormatException)
+            {
+                // A record that can't be read says nothing about what waits; the Activity page shows the same record as unreadable.
+            }
+        }
+
+        return Mesura.Core.Setup.PendingActivation.For(runs, DateTimeOffset.UtcNow - TimeSpan.FromMilliseconds(Environment.TickCount64));
     }
 
     /// <summary>How a Windows setting fared in this session's latest run that touched it, or <c>null</c>.</summary>

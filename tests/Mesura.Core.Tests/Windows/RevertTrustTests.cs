@@ -133,7 +133,7 @@ public sealed class RevertTrustTests
     public void The_operations_0_4_retired_are_never_listed_and_none_is_also_in_the_catalog()
     {
         var retired = WindowsCatalog.Retired;
-        Assert.Equal(96, retired.Operations.Count);
+        Assert.Equal(99, retired.Operations.Count);
         Assert.Empty(retired.Presets);
         Assert.All(retired.Operations, op =>
         {

@@ -22,6 +22,9 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     public bool? HasBattery { get; set; } = false;
 
     public bool? ModernStandby { get; set; } = false;
+
+    /// <summary>A processor with one kind of core by default.</summary>
+    public bool? HybridCpu { get; set; } = false;
     public bool? PolicyEdition { get; set; } = true;
 
     private static string Key(string hive, string path, string name) => $@"{hive}\{path}\{name}";
@@ -86,6 +89,97 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     {
         Writes.Add($"power {setting}={acValue}");
         PowerSettings[$"{scheme}|{setting}"] = acValue;
+    }
+
+    /// <summary>What Windows reports for an effect check (gpuScheduling, ntfsLastAccess): enabled, disabled, unsupported or null (unreadable).</summary>
+    public string? Effect { get; set; }
+
+    public string? ReadEffect(string kind) => Effect;
+
+    /// <summary>Battery (DC) values by "scheme|setting".</summary>
+    public Dictionary<string, uint> PowerSettingsDc { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public uint? ReadPowerSettingDc(string scheme, string subgroup, string setting) =>
+        PowerSettingsDc.TryGetValue($"{scheme}|{setting}", out var v) ? v : null;
+
+    /// <summary>When set, writing this setting to a scheme fails (a tool that refuses).</summary>
+    public string? FailSchemeValue { get; set; }
+
+    public void DuplicatePowerScheme(string sourceGuid, string newGuid, string name, string description)
+    {
+        Writes.Add($"duplicate {sourceGuid} -> {newGuid} '{name}'");
+        Schemes.Add(newGuid);
+        foreach (var (key, value) in PowerSettings.Where(p => p.Key.StartsWith(sourceGuid + "|", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            PowerSettings[newGuid + key[sourceGuid.Length..]] = value;
+        }
+
+        foreach (var (key, value) in PowerSettingsDc.Where(p => p.Key.StartsWith(sourceGuid + "|", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            PowerSettingsDc[newGuid + key[sourceGuid.Length..]] = value;
+        }
+    }
+
+    public void SetSchemeValue(string scheme, string subgroup, string setting, uint value, bool dc)
+    {
+        if (string.Equals(FailSchemeValue, setting, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("powercfg refused");
+        }
+
+        Writes.Add($"scheme {scheme} {(dc ? "dc" : "ac")} {setting}={value}");
+        (dc ? PowerSettingsDc : PowerSettings)[$"{scheme}|{setting}"] = value;
+    }
+
+    /// <summary>The network adapters the fake reports; <c>null</c>: they can't be read.</summary>
+    public List<AdapterReading>? Adapters { get; set; } = [];
+
+    /// <summary>False: the driver accepts a write and then reports the old value again.</summary>
+    public bool DriverKeeps { get; set; } = true;
+
+    /// <summary>True: an adapter whose setting changed does not come back up.</summary>
+    public bool AdapterStaysDown { get; set; }
+
+    /// <summary>A setting whose write the tool refuses (a driver that rejects the value).</summary>
+    public string? FailAdapterKey { get; set; }
+
+    public IReadOnlyList<AdapterReading>? ReadAdapters() => Adapters?.ToList();
+
+    private void ChangeAdapter(string guid, Func<AdapterReading, AdapterReading> change)
+    {
+        var at = Adapters!.FindIndex(a => string.Equals(a.InterfaceGuid, guid, StringComparison.OrdinalIgnoreCase));
+        Assert.True(at >= 0, "the writer was asked for an adapter the PC doesn't have: " + guid);
+        var changed = DriverKeeps ? change(Adapters[at]) : Adapters[at];
+        Adapters[at] = AdapterStaysDown ? changed with { Up = false } : changed;
+    }
+
+    public void SetAdapterProperty(string interfaceGuid, string keyword, string registryValue)
+    {
+        if (string.Equals(FailAdapterKey, keyword, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Windows couldn't change the adapter");
+        }
+
+        Writes.Add($"adapter {interfaceGuid} {keyword}={registryValue}");
+        ChangeAdapter(interfaceGuid, a => a with
+        {
+            Properties = a.Properties.ToDictionary(p => p.Key, p => p.Key == keyword ? p.Value with { RegistryValue = registryValue } : p.Value, StringComparer.OrdinalIgnoreCase),
+        });
+    }
+
+    public void SetAdapterBinding(string interfaceGuid, string componentId, bool enabled)
+    {
+        Writes.Add($"adapter {interfaceGuid} {componentId}={enabled}");
+        ChangeAdapter(interfaceGuid, a => a with
+        {
+            Bindings = a.Bindings.ToDictionary(b => b.Key, b => b.Key == componentId ? enabled : b.Value, StringComparer.OrdinalIgnoreCase),
+        });
+    }
+
+    public void SetAdapterPower(string interfaceGuid, bool allowTurnOff)
+    {
+        Writes.Add($"adapter {interfaceGuid} power={allowTurnOff}");
+        ChangeAdapter(interfaceGuid, a => a with { AllowTurnOff = allowTurnOff });
     }
 
     public void SetRegistry(string hive, string path, string name, RegistryKind kind, string value)
@@ -686,7 +780,7 @@ public sealed class WindowsConfiguratorTests
     [Fact]
     public void Power_settings_need_elevation_and_are_machine_wide()
     {
-        var op = Op("power.disk-never-off");
+        var op = Op("power.usb-keep-awake");
         Assert.True(op.NeedsElevation);
         Assert.True(op.MachineWide);
         Assert.False(op.PerUser);
@@ -722,7 +816,7 @@ public sealed class WindowsConfiguratorTests
     public void An_accessibility_shortcut_bit_is_cleared_and_every_other_bit_is_kept(string? before, string written)
     {
         var op = Op("input.accessibility-shortcuts-off");
-        var pc = new FakeWindows();
+        var pc = new FakeWindows { Effect = "enabled" }; // the session still has the shortcuts on
         if (before is not null)
         {
             pc.Registry[$@"{Sticky}\Flags"] = (RegistryKind.String, before);
@@ -733,6 +827,8 @@ public sealed class WindowsConfiguratorTests
 
         Assert.Equal(WindowsOpStatus.Applied, applied.Status);
         Assert.Equal((RegistryKind.String, written), pc.Registry[$@"{Sticky}\Flags"]);
+        Assert.Equal(OperationState.PendingRestart, WindowsEvaluator.Evaluate(op, pc).State); // stored, but the session isn't using it until the next sign-in
+        pc.Effect = "disabled";
         Assert.Equal(OperationState.Applied, WindowsEvaluator.Evaluate(op, pc).State);
 
         configurator.Revert([applied]);
@@ -747,7 +843,7 @@ public sealed class WindowsConfiguratorTests
     public void A_bit_field_with_the_shortcut_already_off_is_applied_and_one_that_is_not_a_number_is_left_alone()
     {
         var op = Op("input.accessibility-shortcuts-off");
-        var pc = new FakeWindows();
+        var pc = new FakeWindows { Effect = "disabled" };
         foreach (var setting in op.Registry)
         {
             pc.Registry[$@"{setting.Hive}\{setting.Path}\{setting.Name}"] = (RegistryKind.String, "26"); // PC-000's Sticky Keys value
@@ -841,7 +937,10 @@ public sealed class WindowsConfiguratorTests
         Assert.All(ops, o =>
         {
             Assert.True(o.Risk is RiskClass.UserPreference or RiskClass.SystemConfiguration, o.Id);
-            Assert.True(o.PowerPlan is null && o.PowerSettings.Count == 0 && o.Services.Count == 0 && o.Features.Count == 0 && o.Tasks.Count == 0, o.Id);
+
+            // The one power entry is the Balanced Mesura plan (the owner's decision, 2026-11): mains-only, battery side Balanced's.
+            Assert.True(o.PowerSettings.Count == 0 && o.Services.Count == 0 && o.Features.Count == 0 && o.Tasks.Count == 0, o.Id);
+            Assert.True(o.PowerPlan is null || o.Id == "power.mesura-balanced-plan", o.Id);
             Assert.DoesNotContain(DeviceRequirement.NoBattery, o.Requirements);
             Assert.DoesNotContain(DeviceRequirement.NoModernStandby, o.Requirements);
 

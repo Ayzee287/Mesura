@@ -14,5 +14,5 @@ internal static class EngineFixtures
         WindowsCatalog.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "engine-fixtures.catalog.json"))));
 
     public static WindowsOperation Op(string id) =>
-        WindowsCatalog.Default.ById(id) ?? Fixtures.Value.ById(id) ?? throw new InvalidOperationException("No such entry in the catalog or the fixtures: " + id);
+        WindowsCatalog.Default.ById(id) ?? WindowsCatalog.Full.ById(id) ?? Fixtures.Value.ById(id) ?? throw new InvalidOperationException("No such entry in the catalog or the fixtures: " + id);
 }

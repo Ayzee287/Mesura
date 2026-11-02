@@ -27,19 +27,27 @@ public static class SystemSummaryReader
 
         var gpus = new List<string>();
         var nvidia = new List<string>();
-        var adapters = ReadNvidia(gpus);
+        var all = new List<GpuAdapter>();
+        var adapters = ReadNvidia(gpus, all);
         nvidia.AddRange(adapters?.Select(a => a.Name) ?? []);
 
-        return new SystemSummary(edition, version, reader.Build, reader.HasBattery, reader.ModernStandby, gpus, nvidia, adapters is not null, adapters ?? []);
+        return new SystemSummary(edition, version, reader.Build, reader.HasBattery, reader.ModernStandby, gpus, nvidia, adapters is not null, adapters ?? [], all);
     }
 
     /// <summary>
     /// The NVIDIA adapters now, with their device id and driver version (read again while the NVIDIA driver step waits
     /// for the install to finish), or <c>null</c> when the adapters couldn't be read.
     /// </summary>
-    public static IReadOnlyList<NvidiaGpu>? ReadNvidia() => ReadNvidia(null);
+    public static IReadOnlyList<NvidiaGpu>? ReadNvidia() => ReadNvidia(null, null);
 
-    private static List<NvidiaGpu>? ReadNvidia(List<string>? allNames)
+    /// <summary>Every hardware graphics adapter (any maker) now, or <c>null</c> when the adapters couldn't be read.</summary>
+    public static IReadOnlyList<GpuAdapter>? ReadAdapters()
+    {
+        var all = new List<GpuAdapter>();
+        return ReadNvidia(null, all) is null ? null : all;
+    }
+
+    private static List<NvidiaGpu>? ReadNvidia(List<string>? allNames, List<GpuAdapter>? every)
     {
         try
         {
@@ -56,6 +64,7 @@ public static class SystemSummaryReader
                 var ids = adapter.PciIds.Value is { } pci ? (pci.VendorId, pci.DeviceId)
                     : adapter.HardwareId.Value is { } hw ? (hw.VendorId, hw.DeviceId)
                     : (0, 0);
+                every?.Add(new GpuAdapter(name, ids.Item1, ids.Item2, adapter.DriverVersion.Value ?? "", adapter.IsIntegrated.IsKnown ? adapter.IsIntegrated.Value : null));
                 if (ids.Item1 == SystemSummary.NvidiaVendorId)
                 {
                     nvidia.Add(new NvidiaGpu(name, ids.Item2, adapter.DriverVersion.Value ?? ""));

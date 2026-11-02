@@ -29,7 +29,9 @@ public sealed record SetupContext(
     Action? RefreshReader = null,
     Func<ConfigPortDefinition, IReadOnlyList<LocatedConfigFile>>? Locate = null,
     Func<string, bool>? IsRunning = null,
-    Func<bool?>? ReadBattery = null);
+    Func<bool?>? ReadBattery = null,
+    IRestorePoints? RestorePoints = null,
+    Func<NvInstallChecklist, bool>? ConfirmDriverInstall = null);
 
 /// <summary>One sitting of a setup: where it stands now, its history record so far, and anything to tell the user.</summary>
 /// <param name="KeptSettings">Apps this sitting installed that already had settings on this PC, which were left as they were.</param>
@@ -317,6 +319,9 @@ public static class SetupWorkflowRunner
             : (StepState.Failed, $"{applied} of {outcomes.Count} applied; {outcomes.Count(o => !o.Ok)} didn't.", null);
     }
 
+    /// <summary>The backup step's value when its export was read and held no customised profile.</summary>
+    internal const string NothingToBackUp = "nothing-to-back-up";
+
     private static (StepState, string, string?) Backup(string runId, SetupContext context, List<InstallOutcome> installs,
         Action<StepKind, string>? onProgress, CancellationToken cancellationToken)
     {
@@ -327,8 +332,14 @@ public static class SetupWorkflowRunner
 
         if (!inspector.CanMerge)
         {
-            return (StepState.Failed, $"NVIDIA Profile Inspector {inspector.Version} is older than {ProfileInspector.MergeImport} and couldn't put a backup back "
-                + "without replacing profiles. Update it (winget upgrade --id Orbmu2k.nvidiaProfileInspector), then run the setup again.", null);
+            // An old copy is brought up to date by the setup itself (winget upgrade), as a missing one is installed; only when that doesn't work does the user hear about it.
+            inspector = UpgradeInspector(context, inspector, onProgress, cancellationToken);
+        }
+
+        if (!inspector.CanMerge)
+        {
+            return (StepState.Failed, $"NVIDIA Profile Inspector {inspector.Version} is too old to put a backup back without replacing profiles, and Mesura couldn't update it. "
+                + "Update it (winget upgrade --id Orbmu2k.nvidiaProfileInspector), then run the setup again.", null);
         }
 
         onProgress?.Invoke(StepKind.NvidiaBackup, "Exporting your NVIDIA profiles");
@@ -350,11 +361,29 @@ public static class SetupWorkflowRunner
 
         if (NipFile.SettingCount(profiles) == 0)
         {
-            return (StepState.Skipped, "No customised NVIDIA profiles: nothing to back up.", null);
+            // A real, read result: the export parsed and holds no customised setting. The value says so, so the install gate can tell it from a step that was merely not run.
+            return (StepState.Skipped, "No customised NVIDIA profiles: nothing to back up.", NothingToBackUp);
         }
 
-        context.Store.KeepRunFile(runId, BackupFile, export.Content);
-        return (StepState.Done, $"Backed up {NipFile.SettingCount(profiles)} setting(s) in {profiles.Count} profile(s).", BackupFile);
+        // "Backed up" is said only about a file that is there and reads back as the export: written, read again, compared byte for byte, and parsed to the same settings.
+        var kept = context.Store.KeepRunFile(runId, BackupFile, export.Content);
+        byte[] written;
+        try
+        {
+            written = File.ReadAllBytes(kept);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return (StepState.Failed, $"The backup was written to {kept} but couldn't be read back: {e.Message}", null);
+        }
+
+        if (!written.AsSpan().SequenceEqual(export.Content))
+        {
+            return (StepState.Failed, $"The backup file {kept} doesn't hold what NVIDIA Profile Inspector exported (it is {written.Length} bytes, the export {export.Content.Length}), so it is not used.", null);
+        }
+
+        return (StepState.Done, $"Backed up {NipFile.SettingCount(profiles)} setting(s) in {profiles.Count} profile(s)"
+            + (export.Route is null ? "." : $" (NVIDIA Profile Inspector ran {export.Route})."), BackupFile);
     }
 
     private static (StepState, string, string?) Driver(PendingSetup setup, SetupContext context, List<InstallOutcome> installs,
@@ -381,9 +410,61 @@ public static class SetupWorkflowRunner
             return (StepState.Failed, "NVCleanstall couldn't be installed or found.", null);
         }
 
+        // The automated route first (the owner's choice): Mesura sets NVCleanstall up through its window and presses Install. Whatever stops it leaves NVCleanstall open and the
+        // step waiting, exactly as the guided route does, with the reason in the detail; and when it cannot be attempted at all, the guided route starts as before.
+        var automated = setup.Nvidia is { } target
+            ? context.Nvidia.AutomateDriver(target, path, Preflight(setup, context), context.ConfirmDriverInstall ?? (_ => false), message => onProgress?.Invoke(StepKind.NvidiaDriver, message), cancellationToken)
+            : new NvAutomationOutcome(false, false, "");
+        if (automated.Attempted)
+        {
+            var was = Describe(setup.Nvidia?.DriverAtStart ?? "");
+            return automated.InstallStarted
+                ? (StepState.Waiting, $"{automated.Detail} The driver was {was}; the setup continues when it changes.", null)
+                : (StepState.Waiting, $"NVCleanstall is open but the automatic setup stopped: {automated.Detail} Finish it in NVCleanstall; the driver was {was}.", null);
+        }
+
         return context.Nvidia.LaunchNvCleanstall(path) is { } error
             ? (StepState.Failed, error, null)
-            : (StepState.Waiting, $"NVCleanstall started; the driver was {Describe(setup.Nvidia?.DriverAtStart ?? "")}.", null);
+            : (StepState.Waiting, $"NVCleanstall started{(automated.Detail.Length > 0 ? $" for you to set up ({automated.Detail})" : "")}; the driver was {Describe(setup.Nvidia?.DriverAtStart ?? "")}.", null);
+    }
+
+    /// <summary>
+    /// What must be true before the automated route may press Install, first part (the owner's order): a restore point, made now (Windows makes one automatic point per 24 hours and skips another:
+    /// then a point from the last 24 hours counts, and is named), and the NVIDIA profile backup this setup made.
+    /// </summary>
+    private static NvPreflight Preflight(PendingSetup setup, SetupContext context)
+    {
+        string point;
+        var pointOk = false;
+        if (context.RestorePoints is not { } restore)
+        {
+            point = "none was asked for (this setup has no restore point support)";
+        }
+        else
+        {
+            var made = restore.TryCreate("Mesura: before the NVIDIA driver install");
+            var recent = restore.List().FirstOrDefault(p => context.Clock() - p.Created < TimeSpan.FromHours(24));
+            if (made.Made)
+            {
+                point = "made just now";
+                pointOk = true;
+            }
+            else if (made.Failure == RestoreFailure.Skipped && recent is not null)
+            {
+                point = $"Windows made none now (one per 24 hours); the one from {recent.Created.LocalDateTime:g} ('{recent.Description}') stands";
+                pointOk = true;
+            }
+            else
+            {
+                point = made.Sentence ?? "Windows made none";
+            }
+        }
+
+        // In place means a backup that was made and read back, or an export that was read and holds nothing customised (nothing to lose). A step that failed or never ran is not.
+        var backup = setup.Step(StepKind.NvidiaBackup);
+        var backupOk = backup is { State: StepState.Done } or { State: StepState.Skipped, Value: NothingToBackUp };
+        var backupText = backup is null ? "this setup has no backup step" : backupOk ? $"{(backup.State == StepState.Done ? "done" : "nothing to back up")} ({backup.Detail})" : $"{backup.State}: {backup.Detail}";
+        return new NvPreflight(point, pointOk, backupText, backupOk);
     }
 
     private static (StepState, string, string?) Restore(PendingSetup setup, SetupContext context, CancellationToken cancellationToken)
@@ -489,6 +570,17 @@ public static class SetupWorkflowRunner
         return (StepState.Failed, $"{missing.Count} setting(s) aren't in place after the import: {string.Join(", ", missing.Take(8))}"
             + (missing.Count > 8 ? ", …" : "") + ". The installed driver may not know a setting, and NVIDIA Profile Inspector then skips it without saying so."
             + $" File: {file}", profile.Id);
+    }
+
+    private static ProfileInspector UpgradeInspector(SetupContext context, ProfileInspector old, Action<StepKind, string>? onProgress, CancellationToken cancellationToken)
+    {
+        if (context.Apps.ById("nvpi") is not { } package)
+        {
+            return old;
+        }
+
+        context.Installer.Upgrade([package], (p, line) => onProgress?.Invoke(StepKind.NvidiaBackup, $"{p.Name}: {line.Trim()}"), cancellationToken);
+        return context.Nvidia.FindProfileInspector() ?? old;
     }
 
     private static ProfileInspector? Inspector(SetupContext context, List<InstallOutcome> installs, Action<StepKind, string>? onProgress, CancellationToken cancellationToken)

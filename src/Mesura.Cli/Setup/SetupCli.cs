@@ -23,10 +23,37 @@ public static class SetupCli
             What a setup would work with on this PC, read-only: Visual C++ runtimes, the NVIDIA GPU and driver (with the
             newest driver from NVIDIA's lookup service unless --offline), NVCleanstall and NVIDIA Profile Inspector, the
             Windows and Office licences, and an unfinished setup. The setup runs from the app (Setup).
+          mesura setup nvpi-check
+              Read-only: where NVIDIA Profile Inspector is, whether Mesura may run it with administrator rights from there, and one export of the customised profiles.
+          mesura setup nvcleanstall-ui --package <driver .exe or folder> --yes-drive-the-window
+            Drives the OPEN NVCleanstall window through UI Automation by AutomationId: driver files on disk, the owner's components, Next; stops at the first page it has no automation for. Mesura must run
+            elevated like NVCleanstall. It presses buttons in another program: refused without the flag; not for the PC you use.
+          mesura setup nvidia-official plan --folder <unpacked package> [--no-clean]
+            The official NVIDIA installer route, read-only: which packages of an unpacked driver package the configuration would install, which it leaves out,
+            and the exact command line. Nothing is started.
+          mesura setup nvidia-official unpack --exe <driver.exe> --to <new folder>
+            Verifies the package's signature (NVIDIA Corporation) and unpacks it with Windows' tar; installs nothing.
+          mesura setup nvidia-official install --folder <unpacked package> --log <file> --yes-replace-the-display-driver [--no-clean]
+            RUNS NVIDIA'S INSTALLER with the plan above: it replaces the display driver. Refused unless the flag is given; not for the PC you use.
         """;
 
     public static int Run(string[] args)
     {
+        if (args is ["nvidia-official", .. var official])
+        {
+            return NvidiaOfficial(official);
+        }
+
+        if (args is ["nvpi-check"])
+        {
+            return NvpiCheck();
+        }
+
+        if (args is ["nvcleanstall-ui", .. var drive])
+        {
+            return NvCleanstallUi(drive);
+        }
+
         if (args is not ["status", .. var rest] || rest.Any(a => a != "--offline"))
         {
             Console.Error.WriteLine(Usage);
@@ -57,6 +84,186 @@ public static class SetupCli
             var state = found is null ? "not installed" : $"installed {found.Version}".TrimEnd();
             var support = runtime.Supported ? "supported" : "unsupported, for older games";
             Console.WriteLine($"  {runtime.Package.Name,-28} {state,-24} ({support}{(runtime.Default ? "" : "; not ticked by default")})");
+        }
+    }
+
+    /// <summary>
+    /// A read-only look at how this PC's NVIDIA Profile Inspector would be run, and one export to show it works: where it is, which build, whether it may run with administrator rights from there,
+    /// and which way the export was made. It imports nothing and changes no setting.
+    /// </summary>
+    private static int NvpiCheck()
+    {
+        var tools = new Mesura.Setup.Windows.Nvidia.NvidiaTools();
+        if (tools.FindProfileInspector() is not { } inspector)
+        {
+            Console.WriteLine("NVIDIA Profile Inspector was not found (winget package Orbmu2k.nvidiaProfileInspector).");
+            return 1;
+        }
+
+        var folder = Path.GetDirectoryName(inspector.Path)!;
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var elevated = new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        string sha;
+        using (var stream = File.OpenRead(inspector.Path))
+        {
+            sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream));
+        }
+
+        Console.WriteLine($"Path:         {inspector.Path}");
+        Console.WriteLine($"Version:      {inspector.Version} (can merge-import: {inspector.CanMerge})");
+        Console.WriteLine($"SHA-256:      {sha}");
+        string verified;
+        if (Mesura.Setup.Windows.Nvidia.ProfileInspectorStager.KnownReleases.TryGetValue(sha, out var release))
+        {
+            verified = "yes, release " + release + " (on Mesura's list)";
+        }
+        else
+        {
+            verified = new Mesura.Setup.Windows.Nvidia.GitHubReleaseVerifier().Verify(inspector.Version, sha, CancellationToken.None, out var unconfirmed)
+                ? $"yes, it is the file published in release {inspector.Version} on GitHub"
+                : "no: " + unconfirmed;
+        }
+
+        Console.WriteLine($"Verified:     {verified}");
+        Console.WriteLine($"Folder:       {(Mesura.Core.Support.ProgramFolderTrust.Why(folder) is { } why ? "programs running as you can change it (" + why + ")" : "only administrators can change it")}");
+        Console.WriteLine($"This process: {(elevated ? "administrator" : "your own rights")}");
+        var export = tools.Export(inspector, CancellationToken.None);
+        if (export.Content is null)
+        {
+            Console.WriteLine($"Export:       failed: {export.Error}");
+            return 1;
+        }
+
+        var profiles = Mesura.Core.Nvidia.NipFile.Parse(Mesura.Core.Nvidia.NipFile.Decode(export.Content));
+        Console.WriteLine($"Export:       read {Mesura.Core.Nvidia.NipFile.SettingCount(profiles)} customised setting(s) in {profiles.Count} profile(s), run {export.Route}. Nothing was imported or changed.");
+        return 0;
+    }
+
+    private static int NvCleanstallUi(string[] args)
+    {
+        var package = args.SkipWhile(a => a != "--package").Skip(1).FirstOrDefault();
+        if (package is null || !args.Contains("--yes-drive-the-window"))
+        {
+            Console.Error.WriteLine("Nothing was done: this presses buttons in NVCleanstall's window. Give --package <driver file> and --yes-drive-the-window (not on the PC you use).");
+            return 2;
+        }
+
+        var window = new Mesura.Setup.Windows.Nvidia.UiaNvCleanstallWindow();
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        while (!window.IsOpen && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(1000);
+        }
+
+        if (!window.IsOpen)
+        {
+            Console.Error.WriteLine("NVCleanstall's window was not found (is it open, and is this program elevated like it?).");
+            return 1;
+        }
+
+        var result = Mesura.Core.Nvidia.NvCleanstallPages.Run(window, Mesura.Core.Nvidia.NvidiaDriverConfig.Default, package,
+            span => { Thread.Sleep(span); return true; });
+        foreach (var step in result.Steps)
+        {
+            Console.WriteLine($"  {step}");
+        }
+
+        if (result.TweaksTicked is not null)
+        {
+            Console.WriteLine($"  read back at the end of the tweaks page: {result.TweaksTicked.Count} tweaks ticked; Rebuild digital signature: {(result.SignatureRebuild is null ? "not found" : result.SignatureRebuild.Value ? "ticked" : "not ticked")}");
+        }
+
+        Console.WriteLine($"{result.Status}: {result.Detail}{(result.StoppedAt.Length > 0 ? $" (page: {result.StoppedAt})" : "")}");
+        return result.Status == Mesura.Core.Nvidia.NvRunStatus.Failed ? 1 : 0;
+    }
+
+    private static int NvidiaOfficial(string[] args)
+    {
+        var o = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 1; i < args.Length; i++)
+        {
+            if (!args[i].StartsWith("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var key = args[i][2..];
+            o[key] = i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : "1";
+        }
+
+        var verb = args.Length > 0 ? args[0] : "";
+        var config = Mesura.Core.Nvidia.NvidiaDriverConfig.Default;
+        if (o.ContainsKey("no-clean"))
+        {
+            config = config with { Tweaks = [.. config.Tweaks.Where(t => t != Mesura.Core.Nvidia.NvidiaTweaks.CleanInstall)] };
+        }
+
+        var setup = new Mesura.Setup.Windows.Nvidia.NvidiaOfficialSetup();
+        switch (verb)
+        {
+            case "plan" when o.TryGetValue("folder", out var folder):
+            {
+                var plan = Mesura.Core.Nvidia.OfficialInstall.Plan(config, Mesura.Setup.Windows.Nvidia.NvidiaOfficialSetup.PackageNames(folder), "<log file>");
+                Console.WriteLine($"Packages in the driver package: {string.Join(", ", Mesura.Setup.Windows.Nvidia.NvidiaOfficialSetup.PackageNames(folder))}");
+                Console.WriteLine($"Would install: {string.Join(", ", plan.Install)}");
+                Console.WriteLine($"Left out: {string.Join(", ", plan.LeftOut)}");
+                Console.WriteLine($"Selected components with no package in this driver: {(plan.ComponentsNotInThisPackage.Count == 0 ? "none" : string.Join(", ", plan.ComponentsNotInThisPackage))}");
+                Console.WriteLine($"Command line: setup.exe {string.Join(' ', plan.Arguments)}");
+                return plan.HasDisplayDriver ? 0 : 1;
+            }
+
+            case "unpack" when o.TryGetValue("exe", out var exe) && o.TryGetValue("to", out var to):
+            {
+                try
+                {
+                    using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                    var elevated = new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                    var prepared = setup.Prepare(exe, to, elevated, CancellationToken.None);
+                    Console.WriteLine($"Signed by {prepared.SignerSubject}; SHA-256 {prepared.Sha256}; {prepared.Packages.Count} packages in {prepared.Folder}.");
+                    return 0;
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.Error.WriteLine(e.Message);
+                    return 1;
+                }
+            }
+
+            case "install" when o.TryGetValue("folder", out var installFolder) && o.TryGetValue("log", out var log):
+            {
+                if (!o.ContainsKey("yes-replace-the-display-driver"))
+                {
+                    Console.Error.WriteLine("Nothing was started: this replaces the display driver. Add --yes-replace-the-display-driver if that is what you mean (not on the PC you use).");
+                    return 2;
+                }
+
+                try
+                {
+                    var setupExe = Path.Combine(installFolder, "setup.exe");
+                    if (Mesura.Setup.Windows.Nvidia.NvidiaOfficialSetup.CheckSignature(setupExe, out var signature) is { } refused)
+                    {
+                        Console.Error.WriteLine(refused);
+                        return 1;
+                    }
+
+                    var packages = Mesura.Setup.Windows.Nvidia.NvidiaOfficialSetup.PackageNames(installFolder);
+                    var plan = Mesura.Core.Nvidia.OfficialInstall.Plan(config, packages, log);
+                    var prepared = new Mesura.Setup.Windows.Nvidia.PreparedDriverPackage(installFolder, setupExe, "", signature.Subject, packages);
+                    Console.WriteLine($"Running: setup.exe {string.Join(' ', plan.Arguments)}");
+                    var result = setup.Run(prepared, plan, TimeSpan.FromMinutes(30), CancellationToken.None);
+                    Console.WriteLine($"{result.Outcome}: {result.Detail} ({result.Elapsed.TotalSeconds:F0} s, log {result.LogFile})");
+                    return result.Outcome == Mesura.Core.Nvidia.OfficialInstallOutcome.Failed ? 1 : 0;
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.Error.WriteLine(e.Message);
+                    return 1;
+                }
+            }
+
+            default:
+                Console.Error.WriteLine(Usage);
+                return 2;
         }
     }
 
@@ -109,6 +316,11 @@ public static class SetupCli
         if (gpus.Count == 0)
         {
             Console.WriteLine("  no NVIDIA graphics card: the NVIDIA steps don't apply here.");
+            foreach (var amd in (SystemSummaryReader.ReadAdapters() ?? []).Where(a => a.VendorId == Mesura.Core.Windows.SystemSummary.AmdVendorId))
+            {
+                Console.WriteLine($"  AMD graphics: {amd.Name} (device {amd.DeviceId:X4}), driver {(string.IsNullOrWhiteSpace(amd.DriverVersion) ? "unread" : amd.DriverVersion)}. Mesura detects it and changes none of its settings: use AMD Software: Adrenalin Edition.");
+            }
+
             return;
         }
 
@@ -120,7 +332,7 @@ public static class SetupCli
             {
                 var lookup = NvidiaDriverLookup.LatestAsync(gpu, build).GetAwaiter().GetResult();
                 Console.WriteLine(lookup.Release is { } release
-                    ? $"  newest WHQL Game Ready driver: {release.Version} ({release.ReleaseDate}){(NvidiaDriver.IsNewer(release.Version, gpu.Release) ? ", newer than installed" : ", installed")}"
+                    ? $"  newest WHQL driver NVIDIA lists for this card: {release.Version} ({release.ReleaseDate}), {release.Name}{(release.SecurityUpdateOnly ? " (no more Game Ready drivers for this card)" : "")}{(NvidiaDriver.IsNewer(release.Version, gpu.Release) ? ", newer than installed" : ", installed")}"
                     : $"  newest driver: {lookup.Error}");
             }
         }
