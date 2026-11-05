@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace Mesura.Core.Windows;
 
@@ -92,6 +92,9 @@ public interface ISystemReader
     /// <summary>The network adapters with their drivers' advanced properties, bindings and power switch; <c>null</c> when they can't be read.</summary>
     IReadOnlyList<AdapterReading>? ReadAdapters() => null;
 
+    /// <summary>What the GPU driver says about one switch (<see cref="GpuSetting"/>); <c>null</c> when this reader can't ask any driver.</summary>
+    GpuFeatureReading? ReadGpuFeature(string vendor, string feature) => null;
+
     /// <summary>
     /// What Windows itself reports for an operation's <see cref="EffectCheck"/>: <c>enabled</c>, <c>disabled</c>, <c>unsupported</c>
     /// (this PC can't use the setting at all), or <c>null</c> when it couldn't be read.
@@ -129,6 +132,12 @@ public interface ISystemSettingSource
 
     /// <summary>What Windows reports for an <see cref="EffectCheck"/> kind it reads through a tool; <c>null</c> when it can't be read here.</summary>
     string? ReadEffect(string kind) => null;
+
+    /// <summary>
+    /// What the GPU driver says about one switch (<see cref="GpuSetting"/>), asked the way only the setup layer may: through Mesura's own command line, so a crash inside the driver's library ends that
+    /// child process and not the window. <c>null</c> when this source can't ask (the command line itself reads the driver directly).
+    /// </summary>
+    GpuFeatureReading? ReadGpuFeature(string vendor, string feature) => null;
 
     /// <summary>Forgets what was read before.</summary>
     void Refresh();
@@ -287,10 +296,19 @@ public static class WindowsEvaluator
         {
             var adapters = reader.ReadAdapters();
             unknown |= adapters is null;
+            var itemsBefore = items.Count;
+            var adaptersOfTheKind = 0;
             foreach (var adapter in adapters ?? [])
             {
+                var counted = false;
                 foreach (var setting in op.AdapterSettings.Where(s => s.Matches(adapter)))
                 {
+                    if (!counted)
+                    {
+                        adaptersOfTheKind++;
+                        counted = true;
+                    }
+
                     if (setting.Wanted(adapter) is not { } wanted)
                     {
                         continue; // this adapter's driver doesn't offer it (or doesn't list the value): not for this adapter
@@ -300,6 +318,67 @@ public static class WindowsEvaluator
                     items.Add(new ItemState($"{adapter.Label}: {setting.Key}", current, wanted, string.Equals(current, wanted, StringComparison.OrdinalIgnoreCase), true));
                 }
             }
+
+            if (!unknown && items.Count == itemsBefore)
+            {
+                // Nothing to set on any adapter: say which of the two reasons it is, so the plan shows why instead of "already removed".
+                var makers = string.Join("/", op.AdapterSettings.SelectMany(s => s.Vendors).Distinct(StringComparer.OrdinalIgnoreCase));
+                var kinds = string.Join("/", op.AdapterSettings.SelectMany(s => s.Kinds).Distinct().Select(k => k.ToString().ToLowerInvariant()));
+                return new(op, OperationState.Inapplicable, adaptersOfTheKind == 0
+                    ? $"This PC has no physical {kinds} network adapter{(makers.Length > 0 ? $" of {makers}" : "")}."
+                    : $"The driver of the {kinds} adapter{(makers.Length > 0 ? $" ({makers})" : "")} offers none of these settings with the wanted values, so nothing is written to it.", items);
+            }
+        }
+
+        foreach (var gpu in op.GpuSettings)
+        {
+            var wantedWord = gpu.Enabled ? "on" : "off";
+            var reading = reader.ReadGpuFeature(gpu.Vendor, gpu.Feature);
+            if (reading is null || reading.Availability == GpuAvailability.Unreadable)
+            {
+                unknown = true;
+                items.Add(new ItemState($"{gpu.Vendor.ToUpperInvariant()} {gpu.Label}", "unknown", wantedWord, false, true));
+                continue;
+            }
+
+            switch (reading.Availability)
+            {
+                case GpuAvailability.NoAdapter:
+                    return new(op, OperationState.Inapplicable, $"This PC has no {gpu.Vendor.ToUpperInvariant()} graphics adapter.", items);
+                case GpuAvailability.NoDriver:
+                    return new(op, OperationState.Inapplicable, $"The {gpu.Vendor.ToUpperInvariant()} graphics driver here has no ADLX interface, so {gpu.Label} can't be read or set.", items);
+            }
+
+            var label = $"{reading.GpuName ?? gpu.Vendor.ToUpperInvariant()}: {gpu.Label}";
+            if (reading.Supported is false)
+            {
+                return new(op, OperationState.Inapplicable, $"The driver says {reading.GpuName ?? "this GPU"} doesn't offer {gpu.Label}.", items);
+            }
+
+            if (reading.Supported is null || reading.Enabled is null)
+            {
+                unknown = true;
+                items.Add(new ItemState(label, "unknown", wantedWord, false, true));
+                continue;
+            }
+
+            if (gpu.Enabled && gpu.Feature == GpuSetting.AntiLag && reading.Level is not 0)
+            {
+                // Only the original Anti-Lag (level 0) is ever on. Anti-Lag Next (level 1) is a different feature and is never selected or changed; a level that can't be read is not guessed.
+                if (reading.Level is null)
+                {
+                    unknown = true;
+                    items.Add(new ItemState(label, "unknown", wantedWord, false, true));
+                    continue;
+                }
+
+                return new(op, OperationState.Blocked, reading.Level is 1
+                    ? "Anti-Lag Next is the selected level; Mesura never enables or changes it."
+                    : $"Anti-Lag reports an unknown level ({reading.Level}); only the original (level 0) is ever enabled.", items);
+            }
+
+            var current = reading.Enabled.Value ? "on" : "off";
+            items.Add(new ItemState(label, current, wantedWord, reading.Enabled.Value == gpu.Enabled, true));
         }
 
         if (op.PowerSettings.Count > 0)

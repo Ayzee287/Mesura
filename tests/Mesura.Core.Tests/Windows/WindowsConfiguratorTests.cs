@@ -1,4 +1,4 @@
-using Mesura.Core.Setup;
+﻿using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 
 namespace Mesura.Core.Tests.Windows;
@@ -26,6 +26,9 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     /// <summary>A processor with one kind of core by default.</summary>
     public bool? HybridCpu { get; set; } = false;
     public bool? PolicyEdition { get; set; } = true;
+
+    /// <summary>Installed memory; unread by default, as before the profile tests needed it.</summary>
+    public ulong? PhysicalMemoryBytes { get; set; }
 
     private static string Key(string hive, string path, string name) => $@"{hive}\{path}\{name}";
 
@@ -144,6 +147,42 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     public string? FailAdapterKey { get; set; }
 
     public IReadOnlyList<AdapterReading>? ReadAdapters() => Adapters?.ToList();
+
+    /// <summary>What the GPU driver says about Anti-Lag (the only GPU switch there is); <c>null</c>: no driver can be asked.</summary>
+    public GpuFeatureReading? Gpu { get; set; }
+
+    /// <summary>True: the GPU writer answers success and the driver keeps the old state.</summary>
+    public bool GpuIgnoresWrites { get; set; }
+
+    /// <summary>True: the GPU writer throws, as it does when its own independent reading does not confirm the change.</summary>
+    public bool GpuWriterRefuses { get; set; }
+
+    private bool? _gpuBefore;
+
+    public GpuFeatureReading? ReadGpuFeature(string vendor, string feature) => GpuSetting.IsAllowed(vendor, feature) ? Gpu : null;
+
+    public GpuWriteResult SetGpuFeature(string vendor, string feature, int gpuIndex, bool enabled)
+    {
+        Writes.Add($"gpu {vendor} {feature} #{gpuIndex}={enabled}");
+        if (GpuWriterRefuses)
+        {
+            throw new InvalidOperationException("The driver refused the change (NotSupported).");
+        }
+
+        _gpuBefore = Gpu!.Enabled;
+        if (!GpuIgnoresWrites)
+        {
+            Gpu = Gpu with { Enabled = enabled };
+        }
+
+        return new GpuWriteResult("20261104T000000000Z-gpu-antilag", "ok");
+    }
+
+    public void UndoGpuChange(string changeId)
+    {
+        Writes.Add($"gpu undo {changeId}");
+        Gpu = Gpu! with { Enabled = _gpuBefore };
+    }
 
     private void ChangeAdapter(string guid, Func<AdapterReading, AdapterReading> change)
     {
@@ -962,8 +1001,10 @@ public sealed class WindowsConfiguratorTests
         // stays selectable one by one and in the opt-in collections.
         foreach (var id in new[] { "recommended-gaming", "maximum-performance" })
         {
+            // 2026-11-02: also a value Windows itself confirms in effect after it is written (an effect check), which is how Maximum performance holds hardware-accelerated
+            // GPU scheduling and the pointer-precision switch by default.
             Assert.All(Catalog.Resolve(Catalog.PresetById(id)!), o =>
-                Assert.True(o.Basis is ValueBasis.Documented or ValueBasis.Verified, $"{o.Id} in {id} is {o.Basis?.ToString() ?? "not assessed"}"));
+                Assert.True(o.Basis is ValueBasis.Documented or ValueBasis.Verified or ValueBasis.MakerDocumented || o.Effect is not null, $"{o.Id} in {id} is {o.Basis?.ToString() ?? "not assessed"}"));
         }
 
         Assert.DoesNotContain(Catalog.Presets.Where(p => p.Tier == PresetTier.Primary), p => p.OperationIds.Contains("gaming.background-recording-off"));

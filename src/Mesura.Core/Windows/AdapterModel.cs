@@ -240,3 +240,15 @@ public sealed record AdapterSetting(
         _ => adapter.Properties.TryGetValue(Key, out var p) ? p.RegistryValue : null,
     };
 }
+
+/// <summary>
+/// Driver properties that hold an identifier of the person's hardware or network, never read: a locally administered MAC address (<c>NetworkAddress</c>) would otherwise travel in snapshots kept on disk and in the
+/// inventories the owner sends (<c>mesura network --json</c>). No preset or operation sets one.
+/// </summary>
+public static class AdapterPrivacy
+{
+    private static readonly HashSet<string> Private = new(StringComparer.OrdinalIgnoreCase) { "NetworkAddress", "*NetworkAddress", "MacAddress", "MACAddress", "LocallyAdministeredAddress", "SerialNumber", "*SerialNumber" };
+
+    /// <summary>Whether a driver keyword names an address or a serial number: it is left out of every reading.</summary>
+    public static bool IsPrivate(string keyword) => Private.Contains(keyword);
+}

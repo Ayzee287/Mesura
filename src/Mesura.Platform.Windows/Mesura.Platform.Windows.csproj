@@ -15,6 +15,9 @@
   <!-- The mapping and path rules are internal; their tests live in Platform.Tests. -->
   <ItemGroup>
     <InternalsVisibleTo Include="Mesura.Platform.Tests" />
+    <!-- The ADLX objects are read here and written in Setup (the change component), which is where every other setter of Mesura lives: Platform itself has no write call. -->
+    <InternalsVisibleTo Include="Mesura.Setup.Windows" />
+    <InternalsVisibleTo Include="Mesura.Setup.Tests" />
   </ItemGroup>
 
   <ItemGroup>

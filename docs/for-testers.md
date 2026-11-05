@@ -1,9 +1,9 @@
 # For testers / Для тестировщиков
 
-Mesura 0.2.0-rc1. Two things are asked of testers: (1) if an **earlier version did not start** on your PC, collect a diagnostic file;
+Mesura 0.6.0. Two things are asked of testers: (1) if an **earlier version did not start** on your PC, collect a diagnostic file;
 (2) if you have a **spare PC or a virtual machine**, run the operations test. English first, Russian below each part.
 
-Mesura 0.2.0-rc1. От тестировщиков нужны две вещи: (1) если **прежняя версия не запускалась**, собрать диагностический файл;
+Mesura 0.6.0. От тестировщиков нужны две вещи: (1) если **прежняя версия не запускалась**, собрать диагностический файл;
 (2) если есть **запасной ПК или виртуальная машина**, прогнать тест операций. Русский текст идёт после английского в каждой части.
 
 ---
@@ -17,7 +17,7 @@ diagnostic file is for.
 
 **What to do (nothing is changed or sent; you send the file yourself):**
 
-1. Download the 0.2.0 zip and unzip the **whole** archive to a folder such as `C:\Mesura` (not "Open" inside the zip).
+1. Download the zip of the current version and unzip the **whole** archive to a folder such as `C:\Mesura` (not "Open" inside the zip).
 2. Open the folder and double-click **`Diagnose Mesura.cmd`**. It writes `Mesura-diagnostics-<time>.txt` on your Desktop. It reads only: Windows
    version, Smart App Control state, whether Software Restriction Policy or AppLocker exist, TEMP and LOCALAPPDATA checks, the Windows event log
    entries about Mesura, and Mesura's start log. Your user name is replaced by `%USERNAME%`.
@@ -39,7 +39,7 @@ starts there, the problem is *addressed*, not *resolved*. Smart App Control and 
 
 **Что сделать (ничего не меняется и не отправляется; файл вы присылаете сами):**
 
-1. Скачайте zip версии 0.2.0 и распакуйте **весь** архив в папку, например `C:\Mesura` (не открывайте программу прямо из архива).
+1. Скачайте zip текущей версии и распакуйте **весь** архив в папку, например `C:\Mesura` (не открывайте программу прямо из архива).
 2. Откройте папку и дважды щёлкните **`Diagnose Mesura.cmd`**. На рабочем столе появится `Mesura-diagnostics-<время>.txt`. Скрипт только читает: версию Windows,
    состояние Smart App Control, наличие политик SRP и AppLocker, проверки TEMP и LOCALAPPDATA, записи журнала событий Windows о Mesura и журнал запуска Mesura.
    Имя пользователя в путях заменено на `%USERNAME%`.

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Mesura.Core.Apps;
+using Mesura.Core.Profiles;
 using Mesura.Core.Windows;
 
 namespace Mesura.Setup.Tests;
@@ -126,6 +127,55 @@ public sealed partial class LocalizationTests
         {
             Assert.All(port.Settings, s => Assert.True(settings.TryGetProperty(s.Id, out _), $"catalog-ru.json lacks the app setting '{s.Id}'"));
             Assert.All(port.Exclusions, x => Assert.True(exclusions.TryGetProperty(x.Name, out _), $"catalog-ru.json lacks the exclusion '{x.Name}'"));
+        }
+    }
+
+    /// <summary>
+    /// The profile definitions (0.6): every group has its Russian name and summary, every operation of a profile its Russian reason (and none is left over),
+    /// and the words the plan uses for why an entry isn't applied (reason codes, the hardware an entry is for, the kinds of PC) exist in both languages.
+    /// </summary>
+    [Fact]
+    public void Profile_groups_reasons_and_plan_words_have_both_languages()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Folder, "catalog-ru.json")),
+            new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+        var texts = doc.RootElement.GetProperty("profiles");
+        var groups = texts.GetProperty("groups");
+        var reasons = texts.GetProperty("reasons");
+        var profiles = OptimizationProfiles.Default;
+
+        foreach (var group in profiles.Groups)
+        {
+            Assert.True(groups.TryGetProperty(group.Id, out var text) && text.TryGetProperty("name", out _) && text.TryGetProperty("summary", out _), $"no Russian text for the group '{group.Id}'");
+        }
+
+        var used = profiles.Profiles.SelectMany(p => p.Entries).Select(e => e.OperationId).ToHashSet();
+        foreach (var id in used)
+        {
+            Assert.True(reasons.TryGetProperty(id, out var reason) && reason.GetString()!.Length > 0, $"no Russian reason for '{id}'");
+        }
+
+        Assert.All(reasons.EnumerateObject().Select(p => p.Name), name => Assert.Contains(name, used)); // no reason left over for an entry no profile has
+
+        string[] words =
+        [
+            "Reason.Build", "Reason.Battery", "Reason.ModernStandby", "Reason.Edition", "Reason.Memory", "Reason.Hybrid", "Reason.Unsupported", "Reason.Absent", "Reason.Blocked",
+            "Plan.Reason.not-in-catalog", "Plan.Reason.unread", "Plan.Reason.not-applicable", "Plan.Reason.covered", "Plan.Reason.hardware", "Plan.Reason.hardware-unread",
+            "Plan.Reason.form", "Plan.Reason.form-unread", "Plan.Form.Desktop", "Plan.Form.Compact", "Plan.Form.Portable", "Plan.Group.Applied", "Plan.Group.Off", "Plan.Group.Optional",
+            "Plan.Group.Switch", "Plan.Cost", "Plan.CoveredLine",
+            .. HardwareCondition.CpuValues.Select(v => "Plan.Hw.cpu." + v), .. HardwareCondition.GpuValues.Select(v => "Plan.Hw.gpu." + v),
+            .. HardwareCondition.DiskValues.Select(v => "Plan.Hw.disk." + v), .. HardwareCondition.NetworkValues.Select(v => "Plan.Hw.network." + v),
+        ];
+        foreach (var language in new[] { "en", "ru" })
+        {
+            var strings = Strings(language);
+            Assert.All(words, key => Assert.True(strings.ContainsKey(key), $"{language}.json lacks '{key}'"));
+        }
+
+        // Every kind of unsupported or can't-tell reason the planner can give has words.
+        foreach (var field in new[] { "disk.nvme", "gpu.nvidia", "cpu.hybrid", "network.wifi" })
+        {
+            Assert.True(Strings("en").ContainsKey("Plan.Hw." + field), field);
         }
     }
 

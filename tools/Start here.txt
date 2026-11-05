@@ -8,8 +8,10 @@ Mesura: set up Windows and restore your environment
    decline, or turn the question off in Settings). Nothing changes until you confirm an Apply, Install, Undo or
    profile run; each is recorded in Activity, where Windows changes and app settings can be undone.
 
-3. Setup is the start page: choose Recommended or Maximum performance, look at the plan, then Review and apply.
-   All settings (top right on Setup) lists every setting by category, with its risk and what is known about it.
+3. Optimization is the start page: choose Mesura Reference or Maximum performance, look at the plan for this PC, then Review and apply.
+   Entries that do not apply to this PC (no Radeon, no matching network adapter, no battery, Windows Home...) are listed under "not on this PC" with the reason and are never written.
+   Both levels change the settings of a network adapter that matches a preset (Realtek, Intel or Killer); the adapter restarts for a few seconds when a value is written.
+   All settings lists every setting by category, with its risk and what is known about it.
 
 4. In Settings, choose the language (English or Russian), and switch on "Show in the Start menu" and, if you like,
    "Start in the tray when I sign in".
@@ -31,7 +33,7 @@ Mesura-diagnostics-<time>.txt to the Desktop; send that file to whoever gave you
 start in %LOCALAPPDATA%\Mesura\logs\mesura-startup.log. Keep the whole folder together: Mesura.exe needs the .dll files
 beside it. Windows 10 1607 or later, 64-bit, is required.
 
-Before you rely on it: nothing has been applied to a clean PC by its author, only previewed (README.md, "Limits you
-should know about"). Read the plan Setup shows before you apply it, and use Activity to undo.
+Before you rely on it: little of this has run on real PCs (README.md, "Limits you should know about"): of the network
+presets only the Intel Wi-Fi one has been written on a real adapter, and no profile was applied as a whole on a real PC. Read the plan Optimization shows before you apply it, and use Activity to undo.
 
 Licence: MIT (LICENSE). Third-party notices: THIRD-PARTY-NOTICES.md. What changed: CHANGELOG.md.

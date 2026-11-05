@@ -93,6 +93,9 @@ public sealed class AppSettings
     /// <summary>The setup plan's cards the user switched off (<c>windows</c>, <c>apps</c>, <c>runtimes</c>, <c>nvidia</c>).</summary>
     public List<string>? PlanSectionsOff { get; set; }
 
+    /// <summary>The profile groups (<c>telemetry</c>, <c>cpu</c>...) the user switched off on Optimize, by id; <c>null</c> when none. A group not listed is on.</summary>
+    public List<string>? ProfileGroupsOff { get; set; }
+
     /// <summary>Profiles saved or opened here, newest first (at most <see cref="RecentLimit"/>): what Profiles lists.</summary>
     public List<RecentProfile>? RecentProfiles { get; set; }
 

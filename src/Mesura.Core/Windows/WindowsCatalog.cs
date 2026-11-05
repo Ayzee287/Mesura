@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -45,8 +45,10 @@ public sealed partial class WindowsCatalog
     private static readonly Lazy<WindowsCatalog> BuiltInFull = new(() => Parse(BuiltInJson(), includeWithheld: true));
 
     /// <summary>
-    /// What 0.5.5 holds back for the next update: the network adapter tuning collection and the operations that write a physical adapter's driver settings (their writes have run only against a stand-in,
-    /// never on a real adapter). They stay in the built-in file and in the code and tests; the product's catalog does not list them (see <see cref="Experimental"/>).
+    /// What the product still holds back: the generic network adapter tuning collection and the operations that write a physical adapter's driver settings by standard keyword (their writes have run only
+    /// against a stand-in, never on a real adapter). They stay in the built-in file and in the code and tests; the product's catalog does not list them (see <see cref="Experimental"/>).
+    /// The five per-maker adapter presets (<c>network.preset-*</c>) were held back too until the owner decided on 2026-11-04 to put them in both profiles; they are in the catalog now, and their writes
+    /// are still unrun on a real adapter (the stand-in and the read-only runs are all there is; see docs/network-adapter-presets.md).
     /// </summary>
     private static readonly HashSet<string> WithheldOperations = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -294,7 +296,7 @@ public sealed partial class WindowsCatalog
             : null;
 
         var applyParts = (registry.Count > 0 || registryEach.Count > 0 ? 1 : 0) + (system.Count > 0 ? 1 : 0) + (appx.Count > 0 ? 1 : 0) + (services.Count > 0 ? 1 : 0) + (features.Count > 0 ? 1 : 0) + (power is null ? 0 : 1)
-            + (powerSettings.Count > 0 ? 1 : 0) + (tasks.Count > 0 ? 1 : 0) + (tcp.Count > 0 ? 1 : 0) + ((e.Adapter ?? []).Count > 0 ? 1 : 0);
+            + (powerSettings.Count > 0 ? 1 : 0) + (tasks.Count > 0 ? 1 : 0) + (tcp.Count > 0 ? 1 : 0) + ((e.Adapter ?? []).Count > 0 ? 1 : 0) + ((e.Gpu ?? []).Count > 0 ? 1 : 0);
         var kinds = (applyParts > 0 ? 1 : 0) + (manual is null ? 0 : 1) + (observe is null ? 0 : 1);
         if (kinds != 1)
         {
@@ -352,7 +354,8 @@ public sealed partial class WindowsCatalog
             "documented" => ValueBasis.Documented,
             "verified" => ValueBasis.Verified,
             "community" => ValueBasis.Community,
-            _ => throw new FormatException(Where($"unknown valueBasis '{e.ValueBasis}' (documented, verified or community).")),
+            "makerdocumented" => ValueBasis.MakerDocumented,
+            _ => throw new FormatException(Where($"unknown valueBasis '{e.ValueBasis}' (documented, verified, makerDocumented or community).")),
         };
 
         OperationLevel? level = e.Level?.ToLowerInvariant() switch
@@ -388,9 +391,25 @@ public sealed partial class WindowsCatalog
             throw new FormatException(Where("an adapter operation holds only adapter settings; make the rest a second operation."));
         }
 
+        var gpu = new List<GpuSetting>();
+        foreach (var g in e.Gpu ?? [])
+        {
+            if (g.Vendor is null || g.Feature is null || g.Enabled is null || !GpuSetting.IsAllowed(g.Vendor, g.Feature))
+            {
+                throw new FormatException(Where($"gpu switch '{g.Vendor} {g.Feature}' isn't one Mesura writes (amd antilag: the original Anti-Lag, level 0)."));
+            }
+
+            gpu.Add(new GpuSetting(g.Vendor.ToLowerInvariant(), g.Feature.ToLowerInvariant(), g.Enabled.Value));
+        }
+
+        if (gpu.Count > 0 && (adapter.Count > 0 || applyParts0(registry, registryEach, system, appx, services, features, power, powerSettings, tasks, tcp) > 0))
+        {
+            throw new FormatException(Where("a GPU operation holds only GPU switches; make the rest a second operation."));
+        }
+
         return new WindowsOperation(e.Id, e.Name, e.Category ?? "Other", e.Description, risk, activation, e.MinBuild, e.MaxBuild,
             e.Limitations ?? "", e.Source ?? "", registry, services, features, power, powerSettings, tasks, manual, observe, requires,
-            impact, e.Summary ?? "", tcp, benefit, basis, level, registryEach, system, sources, appx, effect, adapter);
+            impact, e.Summary ?? "", tcp, benefit, basis, level, registryEach, system, sources, appx, effect, adapter, gpu);
     }
 
     private static int applyParts0(List<RegistrySetting> registry, List<RegistryEachSetting> registryEach, List<SystemSetting> system, List<AppxSetting> appx, List<ServiceSetting> services,
@@ -653,7 +672,9 @@ public sealed partial class WindowsCatalog
         PowerPlanEntry? PowerPlan, List<PowerSettingEntry>? PowerSettings, List<TaskEntry>? Tasks, ManualEntry? Manual, ObserveEntry? Observe,
         List<string?>? Requires = null, string? Impact = null, string? Summary = null, List<TcpEntry>? Tcp = null, string? Benefit = null, string? ValueBasis = null,
         string? Level = null, List<RegistryEachEntry>? RegistryEach = null, List<SystemEntry>? System = null, List<string>? Sources = null,
-        List<AppxEntry>? Appx = null, EffectEntry? Effect = null, List<AdapterEntry>? Adapter = null);
+        List<AppxEntry>? Appx = null, EffectEntry? Effect = null, List<AdapterEntry>? Adapter = null, List<GpuEntry>? Gpu = null);
+
+    internal sealed record GpuEntry(string? Vendor, string? Feature, bool? Enabled);
 
     internal sealed record AdapterEntry(string? Property, string? Binding, string? PowerManagement, string? RegistryValue, string? DisplayValue, bool? Maximize, bool? Enabled,
         List<string>? Kinds, List<string>? Vendors);

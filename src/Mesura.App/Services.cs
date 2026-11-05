@@ -23,6 +23,7 @@ public sealed class Services
 {
     private readonly StringBuilder _log = new();
     private Task<SystemSummary>? _summary;
+    private Task<Mesura.Core.Hardware.HardwareProfile?>? _hardware;
 
     private Services(
         AppInstallService installer, LoadedCatalog<AppCatalog> apps,
@@ -99,6 +100,23 @@ public sealed class Services
 
     /// <summary>What Optimize shows about this PC, read once in the background (adapters take a moment).</summary>
     public Task<SystemSummary> Summary() => _summary ??= Task.Run(() => Preview(SystemSummaryReader.Read(Reader)));
+
+    /// <summary>
+    /// What Mesura knows about this PC's hardware (0.6), read once in the background and never throwing: <c>null</c> when it couldn't be read, which leaves
+    /// the entries that depend on hardware alone.
+    /// </summary>
+    public Task<Mesura.Core.Hardware.HardwareProfile?> Hardware() => _hardware ??= Task.Run(() =>
+    {
+        try
+        {
+            return (Mesura.Core.Hardware.HardwareProfile?)HardwareProfileReader.Read(Reader, "app");
+        }
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or System.Runtime.InteropServices.COMException or System.Management.ManagementException)
+        {
+            Log($"The hardware profile couldn't be read: {e.Message}");
+            return null;
+        }
+    });
 
 #if DEBUG
     /// <summary>

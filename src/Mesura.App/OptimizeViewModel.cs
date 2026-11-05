@@ -1,10 +1,12 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Mesura.Core.Apps;
+using Mesura.Core.Hardware;
 using Mesura.Core.Nvidia;
+using Mesura.Core.Profiles;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows.Windows;
@@ -48,13 +50,29 @@ public sealed class OutcomeChoice(WindowsPreset preset) : Observable
     public void Relocalize() => Raise(string.Empty);
 }
 
-/// <summary>An entry of the plan: a setting that would change, ticked or not.</summary>
+/// <summary>An entry of the plan: a setting that would change, ticked or not, with why the profile has it and what it costs.</summary>
 public sealed class PlanItem(SettingRow row, bool included) : Observable
 {
     private bool _included = included;
     private bool _expanded;
 
     public SettingRow Row { get; } = row;
+
+    /// <summary>Why the profile has it, in a sentence (the setting's own summary when the profile gives none).</summary>
+    public string Why { get; init; } = "";
+
+    public string WhyText => Why.Length > 0 ? Why : Row.Summary;
+
+    /// <summary>What it costs, when the profile marks it as having a cost: the entry's own limitations.</summary>
+    public string Cost { get; init; } = "";
+
+    public bool HasCost => Cost.Length > 0;
+
+    /// <summary>Offered beside the profile, not part of it.</summary>
+    public bool IsOptional { get; init; }
+
+    /// <summary>False while the entry's group is switched off: it can't be ticked then.</summary>
+    public bool GroupEnabled { get; init; } = true;
 
     public bool Included
     {
@@ -67,6 +85,88 @@ public sealed class PlanItem(SettingRow row, bool included) : Observable
         get => _expanded;
         set => Set(ref _expanded, value);
     }
+}
+
+/// <summary>A line of a group: a setting's name with where it stands (set, waiting for a restart) or why it isn't for this PC.</summary>
+public sealed record PlanLine(string Name, string Text, string Tone)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>
+/// One group of the plan (Telemetry, Processor, Storage...): the entries that can be applied, ticked or not; the ones already in place; what the power plan
+/// covers; and a switch for the whole group. A group with nothing that applies to this PC is not shown (its entries are counted under "not on this PC").
+/// </summary>
+public sealed class PlanGroupView : Observable
+{
+    private readonly Action<PlanGroupView> _switched;
+    private bool _enabled;
+    private bool _expanded;
+
+    public PlanGroupView(PlanGroup group, bool expanded, Action<PlanGroupView> switched)
+    {
+        Group = group;
+        _enabled = group.Enabled;
+        _expanded = expanded;
+        _switched = switched;
+    }
+
+    public PlanGroup Group { get; }
+
+    public string Id => Group.Id;
+
+    public string Name => Loc.Name(Group.Group);
+
+    public override string ToString() => Name;
+
+    public string Summary => Loc.Summary(Group.Group);
+
+    public ObservableCollection<PlanItem> Items { get; } = [];
+
+    public IReadOnlyList<PlanLine> Settled { get; init; } = [];
+
+    public bool HasSettled => Settled.Count > 0;
+
+    /// <summary>The entries the profile's own power plan also writes, named in one line.</summary>
+    public string CoveredLine { get; init; } = "";
+
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (_enabled == value)
+            {
+                return;
+            }
+
+            Set(ref _enabled, value);
+            _switched(this);
+        }
+    }
+
+    public bool Expanded
+    {
+        get => _expanded;
+        set => Set(ref _expanded, value);
+    }
+
+    /// <summary>Where the group stands, in a few words: what would be applied, what waits for a restart, or that it is all in place.</summary>
+    public string Status =>
+        !Group.Enabled ? Loc.Get("Plan.Group.Off")
+        : Group.Included > 0 ? Loc.Plural("Plan.Group.ToApply", Group.Included)
+        : Group.Waiting > 0 ? Loc.Plural("Plan.Group.Waiting", Group.Waiting)
+        : Group.Available > 0 && Group.Applied == 0 ? Loc.Get("Plan.Group.Optional")
+        : Loc.Get("Plan.Group.Applied");
+
+    public string StatusTone =>
+        !Group.Enabled ? Tone.Muted
+        : Group.Included > 0 ? Tone.Accent
+        : Group.Waiting > 0 ? Tone.Warn
+        : Group.Available > 0 && Group.Applied == 0 ? Tone.Neutral
+        : Tone.Ok;
+
+    public void Relocalize() => Raise(string.Empty);
 }
 
 /// <summary>A fact about this PC in the summary strip.</summary>
@@ -117,7 +217,11 @@ public sealed class OptimizeViewModel : Observable, IPageState
     private readonly Dictionary<string, bool> _choices = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _startedHere = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _watch = new() { Interval = TimeSpan.FromSeconds(4) };
+    private readonly HashSet<string> _expandedGroups = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _expandedItems = new(StringComparer.OrdinalIgnoreCase);
     private OutcomeChoice? _selected;
+    private ProfilePlan? _plan;
+    private HardwareProfile? _hardware;
     private SystemSummary? _summary;
     private IReadOnlyList<InstalledRuntime>? _installedRuntimes;
     private DriverLookupResult? _lookup;
@@ -255,14 +359,11 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     public PlanSection Nvidia { get; }
 
-    public ObservableCollection<PlanItem> Changes { get; } = [];
+    /// <summary>The profile's groups as planned for this PC, in the profile's order; a group with nothing for this PC is left out.</summary>
+    public ObservableCollection<PlanGroupView> Groups { get; } = [];
 
-    public ObservableCollection<PlanItem> Extras { get; } = [];
-
-
-    public ObservableCollection<SettingRow> Done { get; } = [];
-
-    public ObservableCollection<SettingRow> NotHere { get; } = [];
+    /// <summary>Every entry that isn't for this PC or couldn't be read, with the reason, in one list.</summary>
+    public ObservableCollection<PlanLine> NotHere { get; } = [];
 
     public ObservableCollection<GuideItem> NvidiaGuides { get; } = [];
 
@@ -389,22 +490,39 @@ public sealed class OptimizeViewModel : Observable, IPageState
                 SystemFact.With("IconWindows", $"{s.WindowsName} {s.Version}".Replace("  ", " ", StringComparison.Ordinal).Trim(), Tone.Neutral),
             };
 
+            // What the profiles decide from (0.6): the kind of PC with its processor, the graphics, the system drive. Only what Windows said.
+            if (_hardware is { } hardware)
+            {
+                var form = hardware.Form == DeviceForm.Unknown ? null : Loc.Get($"Plan.Form.{hardware.Form}");
+                var cpu = hardware.Cpu?.Name is { } name ? HardwareNames.Short(name) : null;
+                if (form is not null || cpu is not null)
+                {
+                    facts.Add(SystemFact.With(hardware.Form == DeviceForm.Portable ? "IconLaptop" : "IconDesktop", string.Join(" · ", new[] { form, cpu }.OfType<string>()), Tone.Neutral));
+                }
+
+                if (hardware.Gpus.Count > 0)
+                {
+                    facts.Add(SystemFact.With("IconGpu", string.Join(" + ", hardware.Gpus.Select(g => HardwareNames.Short(g.Name)).Where(n => n.Length > 0).Distinct()), Tone.Neutral));
+                }
+
+                if (hardware.SystemDisk is { } disk)
+                {
+                    var kind = disk.Class is StorageClass.Unknown or StorageClass.Other ? "" : disk.Class == StorageClass.Nvme ? "NVMe " : disk.Class.ToString().ToUpperInvariant() + " ";
+                    var size = disk.SizeBytes is { } bytes ? $"{kind}{Math.Round(bytes / 1e9):0} GB" : kind.Trim();
+                    facts.Add(SystemFact.With("IconStorage", size, Tone.Neutral));
+                }
+            }
+
             return facts;
         }
     }
 
-    public bool HasExtras => Extras.Count > 0;
-
-
-    public bool HasDone => Done.Count > 0;
-
     public bool HasNotHere => NotHere.Count > 0;
 
-    public string DoneHeader => Loc.Plural("Optimize.DoneHeader", Done.Count);
+    public string NotHereHeader => Loc.Plural("Plan.NotHere.Header", NotHere.Count);
 
-    public string NotHereHeader => Loc.Plural("Optimize.NotHereHeader", NotHere.Count);
-
-    public bool PlanEmpty => _state.Loaded && Selected is not null && Changes.Count == 0 && Extras.Count == 0;
+    /// <summary>Nothing in the chosen profile would change and nothing is offered: everything that applies to this PC is in place.</summary>
+    public bool PlanEmpty => _state.Loaded && Selected is not null && _plan is not null && !_plan.Entries.Any(e => e.Selectable);
 
     public bool HasPlanApps => PlanApps.Count > 0;
 
@@ -676,6 +794,9 @@ public sealed class OptimizeViewModel : Observable, IPageState
         Raise(nameof(Facts));
             Raise(nameof(ShowRuntimes));
         Rebuild();
+        _hardware = await _services.Hardware();
+        Raise(nameof(Facts));
+        Rebuild();
         await Task.WhenAll(ReadRuntimesAsync(), ReadNvidiaToolsAsync(), LookUpDriverAsync());
         if (WaitingForDriver)
         {
@@ -805,43 +926,24 @@ public sealed class OptimizeViewModel : Observable, IPageState
     /// <summary>Rebuilds the plan from the current reading, keeping what the user ticked or unticked.</summary>
     private void Rebuild()
     {
-        foreach (var item in Changes.Concat(Extras))
+        foreach (var item in Groups.SelectMany(g => g.Items))
         {
             item.PropertyChanged -= OnItemChanged;
         }
 
-        Changes.Clear();
-        Extras.Clear();
-        Done.Clear();
+        Groups.Clear();
         NotHere.Clear();
         NvidiaGuides.Clear();
+        _plan = null;
 
-        if (Selected is { } outcome && _state.Loaded)
+        if (Selected is { } outcome && _state.Loaded && _state.Catalog is not null)
         {
-            foreach (var row in _state.RowsOf(outcome.Preset.OperationIds))
-            {
-                if (row.CanSelect)
-                {
-                    Changes.Add(Item(row, true));
-                }
-                else if (row.State == OperationState.Applied)
-                {
-                    Done.Add(row);
-                }
-                else
-                {
-                    NotHere.Add(row);
-                }
-            }
-
-            foreach (var row in _state.RowsOf(outcome.Preset.OptionalIds).Where(r => r.CanSelect))
-            {
-                Extras.Add(Item(row, false));
-            }
-
+            _plan = PlanFor(outcome.Preset, CurrentChoices());
+            BuildGroups(_plan);
+            var groupsOnly = new ProfileChoices(GroupsOff(), new Dictionary<string, bool>());
             foreach (var other in Outcomes)
             {
-                other.Update(_state.RowsOf(other.Preset.OperationIds).Count(r => r.CanSelect));
+                other.Update(PlanFor(other.Preset, groupsOnly).OperationIds.Count);
             }
         }
 
@@ -998,24 +1100,151 @@ public sealed class OptimizeViewModel : Observable, IPageState
         Apply?.RaiseCanExecuteChanged();
     }
 
-    private PlanItem Item(SettingRow row, bool included)
+    // ---- The profile as planned for this PC ----------------------------------------------------------------------------------------
+
+    private ProfilePlan PlanFor(WindowsPreset preset, ProfileChoices choices)
     {
-        var item = new PlanItem(row, _choices.TryGetValue(row.Id, out var chosen) ? chosen : included);
-        item.PropertyChanged += OnItemChanged;
-        return item;
+        var profiles = OptimizationProfiles.Default;
+        var profile = profiles.ById(preset.Id) ?? profiles.FromPreset(preset);
+        var waiting = new Dictionary<string, Activation>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in _state.Rows)
+        {
+            if (_services.PendingActivation(row.Id) is { } activation)
+            {
+                waiting[row.Id] = activation;
+            }
+        }
+
+        return ProfilePlanner.Plan(profile, _state.Catalog!, _hardware, _services.Reader, id => _state.Row(id)?.Evaluation, waiting, choices);
     }
+
+    private HashSet<string> GroupsOff() => new(_services.Settings.ProfileGroupsOff ?? [], StringComparer.OrdinalIgnoreCase);
+
+    private ProfileChoices CurrentChoices() => new(GroupsOff(), new Dictionary<string, bool>(_choices, StringComparer.OrdinalIgnoreCase));
+
+    private void BuildGroups(ProfilePlan plan)
+    {
+        foreach (var group in plan.Groups)
+        {
+            foreach (var entry in group.Entries.Where(e => e.State is EntryState.Unsupported or EntryState.CantTell))
+            {
+                NotHere.Add(new PlanLine(entry.Operation is { } op ? Loc.Name(op) : entry.OperationId, Loc.Reason(entry), Tone.Muted));
+            }
+
+            if (!group.Visible)
+            {
+                continue;
+            }
+
+            var settled = new List<PlanLine>();
+            var covered = new List<string>();
+            foreach (var entry in group.Entries)
+            {
+                var row = _state.Row(entry.OperationId);
+                if (row is null)
+                {
+                    continue;
+                }
+
+                if (entry.State is EntryState.Applied or EntryState.Waiting)
+                {
+                    settled.Add(new PlanLine(row.Name, row.StateText, row.StateTone));
+                }
+                else if (entry.State == EntryState.Covered)
+                {
+                    covered.Add(row.Name);
+                }
+            }
+
+            var view = new PlanGroupView(group, _expandedGroups.Contains(group.Id), OnGroupSwitched)
+            {
+                Settled = settled,
+                CoveredLine = covered.Count > 0 ? Loc.Format("Plan.CoveredLine", string.Join(", ", covered)) : "",
+            };
+            view.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(PlanGroupView.Expanded))
+                {
+                    if (view.Expanded)
+                    {
+                        _expandedGroups.Add(view.Id);
+                    }
+                    else
+                    {
+                        _expandedGroups.Remove(view.Id);
+                    }
+                }
+            };
+            foreach (var entry in group.Entries.Where(e => e.Selectable).OrderBy(e => e.Entry.Role))
+            {
+                if (_state.Row(entry.OperationId) is not { } row)
+                {
+                    continue;
+                }
+
+                var item = new PlanItem(row, entry.Included)
+                {
+                    Why = Loc.Why(entry.Entry),
+                    Cost = entry.Entry.SideEffects ? Loc.Limitations(entry.Operation!) : "",
+                    IsOptional = entry.Entry.Role == EntryRole.Optional,
+                    GroupEnabled = group.Enabled,
+                    Expanded = _expandedItems.Contains(row.Id),
+                };
+                item.PropertyChanged += OnItemChanged;
+                view.Items.Add(item);
+            }
+
+            Groups.Add(view);
+        }
+    }
+
+    private void OnGroupSwitched(PlanGroupView view)
+    {
+        var off = GroupsOff();
+        if (view.Enabled)
+        {
+            off.Remove(view.Id);
+        }
+        else
+        {
+            off.Add(view.Id);
+        }
+
+        _services.Settings.ProfileGroupsOff = off.Count > 0 ? [.. off.Order(StringComparer.Ordinal)] : null;
+        _services.SaveSettings();
+        ReplanSoon();
+    }
+
+    /// <summary>Plans again after the current click has finished: the lists the click came from are replaced, which must not happen inside its own binding update.</summary>
+    private void ReplanSoon() => Application.Current?.Dispatcher.BeginInvoke(Rebuild);
 
     private void OnItemChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(PlanItem.Included) && sender is PlanItem item)
+        if (sender is not PlanItem item)
+        {
+            return;
+        }
+
+        if (e.PropertyName == nameof(PlanItem.Included))
         {
             _choices[item.Row.Id] = item.Included;
-            UpdateWindows();
+            ReplanSoon(); // what the profile's own plan covers depends on whether the plan itself is ticked
+        }
+        else if (e.PropertyName == nameof(PlanItem.Expanded))
+        {
+            if (item.Expanded)
+            {
+                _expandedItems.Add(item.Row.Id);
+            }
+            else
+            {
+                _expandedItems.Remove(item.Row.Id);
+            }
         }
     }
 
     private List<SettingRow> IncludedRows() =>
-        [.. Changes.Concat(Extras).Where(i => i.Included).Select(i => i.Row).DistinctBy(r => r.Id)];
+        [.. (_plan?.Entries ?? []).Where(e => e.Included).Select(e => _state.Row(e.OperationId)).OfType<SettingRow>().DistinctBy(r => r.Id)];
 
     /// <summary>The steps Review and apply would run, from the cards that are switched on and have something to do.</summary>
     private List<SetupStep> PlannedSteps()

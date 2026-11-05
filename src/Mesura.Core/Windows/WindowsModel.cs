@@ -1,4 +1,4 @@
-namespace Mesura.Core.Windows;
+﻿namespace Mesura.Core.Windows;
 
 /// <summary>
 /// How much an operation can affect the system, after the reassessment's risk model (research, 2026-09-29, §8). The
@@ -120,7 +120,7 @@ public enum OperationBenefit
 /// <summary>
 /// How the stored value an operation writes is known to be right (not whether the change helps: that is
 /// <see cref="OperationBenefit"/>). The settings Mesura applies in its two main profiles must be
-/// <see cref="Documented"/> or <see cref="Verified"/>.
+/// <see cref="Documented"/>, <see cref="Verified"/> or <see cref="MakerDocumented"/> (or confirmed in effect by an effect check).
 /// </summary>
 public enum ValueBasis
 {
@@ -136,6 +136,13 @@ public enum ValueBasis
 
     /// <summary>Known from community sources only; never part of a profile's automatic selection.</summary>
     Community,
+
+    /// <summary>
+    /// A network adapter setting whose keyword and values the driver's own maker documents (its INF as shipped with Windows, its readme or support page), which Microsoft does not document,
+    /// and which the engine checks against the live driver's own list on this PC before every write (a keyword or value the driver does not declare is never written). Writing it was not
+    /// exercised on a real adapter. Added 2026-11-04 for the per-maker adapter presets the owner put in both profiles.
+    /// </summary>
+    MakerDocumented,
 }
 
 /// <summary>
@@ -469,8 +476,12 @@ public sealed record WindowsOperation(
     IReadOnlyList<string>? Sources = null,
     IReadOnlyList<AppxSetting>? Appx = null,
     EffectCheck? Effect = null,
-    IReadOnlyList<AdapterSetting>? Adapter = null)
+    IReadOnlyList<AdapterSetting>? Adapter = null,
+    IReadOnlyList<GpuSetting>? Gpu = null)
 {
+    /// <summary>The GPU driver switches it sets (0.6: AMD Anti-Lag, the original).</summary>
+    public IReadOnlyList<GpuSetting> GpuSettings => Gpu ?? [];
+
     /// <summary>What it sets on network adapters (properties, bindings, the power switch), adapter by adapter.</summary>
     public IReadOnlyList<AdapterSetting> AdapterSettings => Adapter ?? [];
 
@@ -544,14 +555,14 @@ public sealed record WindowsOperation(
     /// <summary>Whether applying it needs an elevated process (machine registry, services, features).</summary>
     public bool NeedsElevation =>
         Registry.Any(r => r.NeedsElevation) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0
-        || PowerPlan is { CreateIfMissing: true } || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0 || AdapterSettings.Count > 0;
+        || PowerPlan is { CreateIfMissing: true } || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0 || AdapterSettings.Count > 0 || GpuSettings.Count > 0;
 
     /// <summary>Whether it changes per-user settings, which go to the signed-in user (<see cref="UserContext"/>).</summary>
     public bool PerUser => Registry.Any(r => r.Hive == "HKCU") || RegistryEachSettings.Any(r => r.Hive == "HKCU") || AppxSettings.Count > 0
         || (Observation?.Reads.Any(r => r.Hive == "HKCU") ?? false);
 
     /// <summary>Whether it changes machine-wide state (HKLM, services, features, power).</summary>
-    public bool MachineWide => Registry.Any(r => r.Machine) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0 || AdapterSettings.Count > 0
+    public bool MachineWide => Registry.Any(r => r.Machine) || RegistryEachSettings.Any(r => r.Machine) || Services.Count > 0 || Features.Count > 0 || AdapterSettings.Count > 0 || GpuSettings.Count > 0
         || PowerPlan is not null || PowerSettings.Count > 0 || Tasks.Count > 0 || TcpSettings.Count > 0 || SystemSettings.Count > 0;
 
     /// <summary>Whether the product can apply it at all (not manual, not an observation).</summary>

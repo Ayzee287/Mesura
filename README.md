@@ -11,12 +11,14 @@ it installs, and makes no promise that your games run faster: see [What it does 
 
 ## What it does
 
-- **Optimization** is the start page. Choose **Recommended** or **Maximum performance**, look at the plan, then apply it.
-  - *Recommended*: everyday Windows with less promotion, ad profiling and nagging, and nothing you would miss
-    (18 settings, none that removes a feature or touches power, services, security or drivers).
-  - *Maximum performance*: Recommended plus fewer optional background functions and the desktop power settings, with the
-    price of each named (27 settings, the desktop-only power ones skipped on a laptop, and 8 you tick yourself).
-  - The lists are on the Optimization page, each setting with what it changes and what it costs. Neither promises a frame-rate change.
+- **Optimization** is the start page. Choose **Mesura Reference** or **Maximum performance**, look at the plan for *this* PC, then apply it.
+  - *Mesura Reference*: everyday Windows with telemetry off, less promotion, ad profiling and nagging, Game Mode, the Balanced Mesura power plan and, for each network adapter it finds, the preset
+    for that adapter's maker and kind (27 settings, one you tick yourself). It removes no feature and touches no service or security setting; the network presets change the adapter's own driver
+    settings, and the adapter restarts for a few seconds when a value is written.
+  - *Maximum performance*: Reference plus fewer optional background functions, the Maximum Performance Mesura power plan and the processor, memory, storage and desktop power settings, and the original
+    Radeon Anti-Lag on a Radeon that offers it, with the price of each named (49 settings, five you tick yourself, among them hardware-accelerated GPU scheduling, which has no confirmed gain). Settings that
+    do not apply to the PC (no battery, no NVMe, no Radeon, no matching network adapter, Windows Home) are listed under "not on this PC" with the reason and are never written.
+  - The lists are on the Optimization page, each setting with what it changes and what it costs; the exact composition is in [docs/profile-composition-0.6.0.md](docs/profile-composition-0.6.0.md). Neither promises a frame-rate or latency change.
 - **Tweaks** lists about 100 Windows settings in eight groups (real performance, gaming, power, privacy, maintenance, convenience, experimental and the removable components) as cards: a risk label, what each writes, its status, and what is known
   about it (documented by Microsoft, verified, or community-only). Pick any of them one by one, or a collection (Edge
   policies, less data sharing, fewer network discovery protocols, desktop performance and more).
@@ -68,10 +70,11 @@ Requirements: Windows 10 1607 or later (64-bit) or Windows 11. No .NET or Visual
 
 ## Limits you should know about
 
-- **Not yet used on a real PC.** The author has previewed the plans, read-only, on one Windows 11 25H2 Pro machine, and
-  the roughly thousand tests exercise applying and undoing against mocks and temporary files. Nothing has been applied to
-  a clean PC, nothing has run on Windows Home or Windows 10, and the NVIDIA step has never run on a GeForce card. The
-  preview shows what would be written before anything is: treat the first run as one.
+- **Little real-PC use.** The plans were read-only previewed on Windows 11 machines; applying and undoing every operation runs against
+  stand-ins and in Windows Sandbox (real Windows, no GPU, virtual network adapter). On real PCs only these have run: undoing and re-applying one Windows operation (two PCs), a full Radeon Anti-Lag write,
+  read-back and undo (one RX 9070 XT), the Intel Wi-Fi network preset applied, read back and undone on one real adapter (an Intel AX201 laptop), and read-only GPU and hardware reports (a Radeon and a GeForce PC). **No other network preset (Realtek, Killer, Intel Ethernet, Realtek Wi-Fi) has been written on a real adapter**, no profile was applied as a whole on a real PC,
+  nothing has run on Windows Home or Windows 10, and the NVIDIA step has never run on a GeForce card. The preview shows what would be written before anything is: treat the first run as one.
+- **The AMD driver is used through the command line.** The window asks `cli\mesura.exe` for everything that calls AMD's library, so a crash inside it cannot take the window down.
 - **Windows Home** ignores machine policies. Mesura marks those entries "not applicable" there instead of writing them.
 - **Telemetry:** Mesura reduces what Windows lets you reduce. Windows always sends its *Required* diagnostic data on Home
   and Pro; Edge, Microsoft 365, Store apps, OneDrive and third-party software have their own settings. See the
@@ -86,8 +89,8 @@ Requirements: Windows 10 1607 or later (64-bit) or Windows 11. No .NET or Visual
 
 No setting in Mesura is claimed to raise your frame rate or lower your latency. Where Microsoft or NVIDIA documents what
 a setting does, Mesura says that; where the effect is unmeasured, it says so. Several settings (high-performance power
-plan, disabling background functions, the GPU's maximum-performance power mode) are standard advice with an unmeasured gain on
-current hardware, and each costs something (power, heat, a feature). The point of Mesura is that you see exactly what
+plan, disabling background functions, Radeon Anti-Lag, the network adapter presets, the GPU's maximum-performance power mode) are standard advice with an unmeasured gain on
+current hardware, and each costs something (power, heat, a feature). Hardware-accelerated GPU scheduling is offered but not applied, because no independent test shows a gain. The point of Mesura is that you see exactly what
 changes and can put it back, not that any number goes up.
 
 ## Build
@@ -111,13 +114,17 @@ Mesura настраивает Windows 10 и 11 и показывает, что �
 новой системе и ставит драйвер NVIDIA с собственным профилем. Интерфейс на русском и английском. Лицензия — MIT, файл не
 подписан, прироста кадров программа **не обещает**.
 
-- **Рекомендуемая** настройка — повседневная Windows с меньшей рекламой, профилированием и навязчивыми подсказками, без
-  потери функций (14 параметров). **Максимальная производительность** — она же плюс сокращение необязательных фоновых
-  функций и питание настольного ПК, цена каждого пункта названа (24 параметра и 7 «по желанию»).
+- **Эталон Mesura** — повседневная Windows: телеметрия выключена, меньше рекламы и навязчивых подсказок, игровой режим, план
+  питания Balanced Mesura и для каждого найденного сетевого адаптера пресет по его производителю и типу (27 параметров и 1 «по
+  желанию»); функции не удаляются, службы и безопасность не затрагиваются, а пресеты меняют собственные настройки драйвера
+  адаптера (при записи адаптер перезапускается на несколько секунд). **Максимальная производительность** — эталон плюс план
+  Maximum Performance Mesura, процессор, память, накопители, питание настольного ПК и оригинальный Radeon Anti-Lag на Radeon, который
+  его предлагает; цена каждого пункта названа (49 параметров и 5 «по желанию», среди них аппаратное планирование GPU: подтверждённого
+  прироста нет). Неприменимое к этому ПК не записывается и показывается с причиной.
 - Установка: скачайте архив, сверьте SHA-256 с `SHA256SUMS.txt`, распакуйте папку целиком и запустите `Mesura.exe`.
   SmartScreen может предупредить, что программа не распознана (файл не подписан): «Подробнее» → «Выполнить в любом случае».
   Ничего не меняется, пока вы не подтвердите применение.
-- Ограничения: на реальном ПК ничего ещё не применялось (планы просмотрены без записи на одном ПК с Windows 11 25H2 Pro,
-  применение и отмена проверены тестами на заглушках); на Windows Home политики помечаются «неприменимо»; шаг NVIDIA ни
+- Ограничения: на реальных ПК проверены только отмена и повторное применение одной операции Windows (два ПК), полный цикл
+  записи, чтения и отмены Radeon Anti-Lag (одна RX 9070 XT) и чтения без записи; сетевой пресет Intel Wi-Fi применён, прочитан и откачен на одном реальном адаптере (Intel AX201); **остальные пресеты (Realtek, Killer, Intel Ethernet, Realtek Wi-Fi) на реальном адаптере не записывались**, профиль целиком на реальном ПК не применялся, остальное проверено на заглушках и в Windows Sandbox; на Windows Home политики помечаются «неприменимо»; шаг NVIDIA ни
   разу не запускался на видеокарте GeForce; обязательные диагностические данные Windows отключить нельзя — программа
   сокращает только то, что Windows позволяет сократить.

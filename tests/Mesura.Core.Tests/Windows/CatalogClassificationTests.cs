@@ -39,7 +39,7 @@ public sealed class CatalogClassificationTests
     }
 
     [Fact]
-    public void Maximum_performance_is_recommended_plus_documented_background_reduction_and_desktop_power_settings()
+    public void Maximum_performance_is_recommended_plus_every_applicable_performance_setting_documented_or_confirmed_in_effect()
     {
         var recommended = Catalog.PresetById("recommended-gaming")!;
         var maximum = Catalog.PresetById("maximum-performance")!;
@@ -49,11 +49,11 @@ public sealed class CatalogClassificationTests
         Assert.NotEmpty(added);
         Assert.All(added, o =>
         {
-            // What Maximum adds is documented by Microsoft (not merely verified), a power setting or a privacy/background
-            // reduction (0.2.0 adds documented Edge, telemetry and sync policies and a few AC processor settings), never a service,
-            // task, feature removal or an undocumented knob.
-            Assert.Equal(ValueBasis.Documented, o.Basis);
-            Assert.True(o.Impact is OperationImpact.Power or OperationImpact.Privacy or OperationImpact.Performance or OperationImpact.Gaming or OperationImpact.Convenience or OperationImpact.Maintenance, o.Id);
+            // What Maximum adds is documented by Microsoft (not merely verified) or confirmed in effect by Windows after it is written, a power,
+            // performance, gaming, memory or storage setting or a background reduction, never a service, task, feature removal or an undocumented knob.
+            Assert.True(o.Basis == ValueBasis.Documented || o.Effect is not null, o.Id);
+            Assert.True(o.Impact is OperationImpact.Power or OperationImpact.Privacy or OperationImpact.Performance or OperationImpact.Gaming or OperationImpact.Convenience
+                or OperationImpact.Maintenance or OperationImpact.Experimental, o.Id);
             Assert.True(o.Risk is RiskClass.SystemConfiguration or RiskClass.UserPreference, o.Id);
             Assert.True(o.Services.Count == 0 && o.Tasks.Count == 0 && o.Features.Count == 0, o.Id);
         });
@@ -61,7 +61,7 @@ public sealed class CatalogClassificationTests
         // Its power side is its own plan (0.5), which carries the USB, PCI Express and drive settings itself; Windows' High performance is not used.
         Assert.Contains("power.mesura-maximum-plan", maximum.OperationIds);
         Assert.DoesNotContain("power.high-performance", maximum.OperationIds);
-        Assert.DoesNotContain("power.pcie-aspm-off", maximum.OperationIds);
+        Assert.Contains("power.pcie-aspm-off", maximum.OperationIds); // the plan writes the same value; the profile planner shows it as covered rather than applying it twice
         Assert.Empty(WindowsConfigurator.Conflicts(Catalog.Resolve(maximum)));
     }
 
@@ -83,14 +83,27 @@ public sealed class CatalogClassificationTests
     }
 
     [Fact]
-    public void Desktop_power_entries_in_maximum_performance_are_refused_on_laptops()
+    public void Maximum_performance_entries_apply_on_laptops_and_the_one_that_costs_battery_says_so()
     {
+        // 2026-11-02 (0.6, owner's decisions): Maximum performance is not limited on a laptop. Windows' own High performance plan switch changes the battery side
+        // too, so it stays desktop-only; an entry that writes only the AC value of the active plan leaves the battery alone and applies; and the power-throttling
+        // switch, which acts on battery as well, is applied on a laptop on purpose, with its cost stated.
         var plan = Catalog.ById("power.high-performance")!;
-        var pcie = Catalog.ById("power.pcie-aspm-off")!;
-
         Assert.Contains(DeviceRequirement.NoBattery, plan.Requirements);
         Assert.Contains(DeviceRequirement.NoModernStandby, plan.Requirements);
-        Assert.Contains(DeviceRequirement.NoBattery, pcie.Requirements);
+        var throttling = Catalog.ById("power.power-throttling-off")!;
+        Assert.DoesNotContain(DeviceRequirement.NoBattery, throttling.Requirements);
+        Assert.Contains(DeviceRequirement.ProEdition, throttling.Requirements);
+        Assert.Equal(OperationLevel.Moderate, throttling.Level);
+        Assert.Contains("battery", throttling.Limitations, StringComparison.OrdinalIgnoreCase);
+
+        foreach (var id in new[] { "power.pcie-aspm-off", "power.nvme-stay-active-ac", "power.cpu-epp-performance-ac", "power.cpu-ramp-up-fast-ac", "cpu.core-parking-off" })
+        {
+            var op = Catalog.ById(id)!;
+            Assert.DoesNotContain(DeviceRequirement.NoBattery, op.Requirements);
+            Assert.NotEmpty(op.PowerSettings); // a PowerSetting has an AC value only: there is no battery side to write
+            Assert.True(op.Registry.Count == 0 && op.PowerPlan is null, id);
+        }
     }
 
     private static string CatalogWith(string operation, string preset) => $$"""

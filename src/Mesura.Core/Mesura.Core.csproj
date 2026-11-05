@@ -16,6 +16,7 @@
     <EmbeddedResource Include="Apps\apps.catalog.json" LogicalName="apps.catalog.json" />
     <EmbeddedResource Include="Windows\windows.catalog.json" LogicalName="windows.catalog.json" />
     <EmbeddedResource Include="Windows\windows.retired.json" LogicalName="windows.retired.json" />
+    <EmbeddedResource Include="Profiles\profiles.json" LogicalName="profiles.json" />
     <EmbeddedResource Include="Firmware\firmware.knowledge.json" LogicalName="firmware.knowledge.json" />
   </ItemGroup>
 

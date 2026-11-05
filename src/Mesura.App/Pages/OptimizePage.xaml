@@ -25,6 +25,51 @@
 
         </DataTemplate>
         <!-- The head of a plan card: icon, title, one line, a count, the run state, a switch and the chevron. -->
+        <!-- One group of the profile: its name and where it stands, a switch for the whole group, and on demand its entries with their reasons and costs. -->
+        <DataTemplate x:Key="PlanGroupTemplate" DataType="{x:Type l:PlanGroupView}">
+            <StackPanel Margin="0,0,0,6">
+                <Border Style="{StaticResource Row}" Padding="12,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" />
+                            <TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                       ToolTip="{Binding Summary}" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Style="{StaticResource Pill}" Margin="12,0,10,0" Background="{Binding StatusTone, Converter={StaticResource StateBackground}}">
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource PillText}" Foreground="{Binding StatusTone, Converter={StaticResource StateBrush}}" />
+                        </Border>
+                        <CheckBox Grid.Column="2" Style="{StaticResource Switch}" IsChecked="{Binding Enabled}" Margin="0,0,10,0"
+                                  AutomationProperties.Name="{Binding Name}" ToolTip="{l:T Plan.Group.Switch}" />
+                        <ToggleButton Grid.Column="3" Style="{StaticResource ChevronToggle}" IsChecked="{Binding Expanded}"
+                                      ToolTip="{l:T Common.Details}" AutomationProperties.Name="{l:T Common.Details}" />
+                    </Grid>
+                </Border>
+                <StackPanel Style="{StaticResource Reveal}" Margin="14,4,0,6" Visibility="{Binding Expanded, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource PlanItemTemplate}" Focusable="False" />
+                    <ItemsControl ItemsSource="{Binding Settled}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="12,3">
+                                    <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconCheck}" FontSize="11" Foreground="{Binding Tone, Converter={StaticResource StateBrush}}" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource Caption}">
+                                        <Run Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" · " /><Run Text="{Binding Text, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding CoveredLine}" Style="{StaticResource Caption}" Margin="12,4,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding CoveredLine, Converter={StaticResource Presence}}" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
         <DataTemplate x:Key="SectionHead" DataType="{x:Type l:PlanSection}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -249,31 +294,14 @@
                                     <TextBlock Text="{l:T Optimize.NothingToChange}" Style="{StaticResource Body}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
-                            <ItemsControl ItemsSource="{Binding Changes}" ItemTemplate="{StaticResource PlanItemTemplate}" Focusable="False" />
-                            <StackPanel Visibility="{Binding HasExtras, Converter={StaticResource BoolToVisibility}}" Margin="0,8,0,0">
-                                <TextBlock Text="{l:T Optimize.Extras}" Style="{StaticResource GroupLabel}" Margin="0,8,0,2" />
-                                <TextBlock Text="{l:T Optimize.ExtrasHint}" Style="{StaticResource Caption}" Margin="0,0,0,6" />
-                                <ItemsControl ItemsSource="{Binding Extras}" ItemTemplate="{StaticResource PlanItemTemplate}" Focusable="False" />
-                            </StackPanel>
-                            <Border Style="{StaticResource Divider}" Margin="0,12,0,6" Visibility="{Binding HasDone, Converter={StaticResource BoolToVisibility}}" />
-                            <Expander Style="{StaticResource Disclosure}" Header="{Binding DoneHeader}" Visibility="{Binding HasDone, Converter={StaticResource BoolToVisibility}}">
-                                <ItemsControl ItemsSource="{Binding Done}" Focusable="False">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,3">
-                                                <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconCheck}" FontSize="11" Foreground="{StaticResource Success}" Margin="0,0,10,0" />
-                                                <TextBlock Text="{Binding Name}" Style="{StaticResource Caption}" Foreground="{StaticResource Text}" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Expander>
+                            <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource PlanGroupTemplate}" Focusable="False" />
+                            <Border Style="{StaticResource Divider}" Margin="0,12,0,6" Visibility="{Binding HasNotHere, Converter={StaticResource BoolToVisibility}}" />
                             <Expander Style="{StaticResource Disclosure}" Header="{Binding NotHereHeader}" Visibility="{Binding HasNotHere, Converter={StaticResource BoolToVisibility}}">
                                 <ItemsControl ItemsSource="{Binding NotHere}" Focusable="False">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Style="{StaticResource Caption}" Margin="0,3">
-                                                <Run Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" · " /><Run Text="{Binding ShortReason, Mode=OneWay}" />
+                                                <Run Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" · " /><Run Text="{Binding Text, Mode=OneWay}" />
                                             </TextBlock>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

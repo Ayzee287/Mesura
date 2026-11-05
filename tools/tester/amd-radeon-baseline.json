@@ -1,0 +1,19 @@
+{
+  "taken": "2026-11-03",
+  "pc": "Radeon PC (Ryzen 9 5900X, 32 GB, Windows 11 Pro build 26200, RX 9070 XT, driver 32.0.31007.5012, ADLX 1.5.0.124)",
+  "note": "What the PC looked like on 2026-11-03, from the owner's read-only collections (ADLX probe, mesura gpu amd, windows-graphics-state), before any Mesura profile or GPU change. Used by Verify-MesuraApplied.ps1 only to print a before/after line and to say which AMD switches differ from then; nothing is judged against it.",
+  "driver": "32.0.31007.5012",
+  "adlx": "1.5.0.124",
+  "hwSchMode": 2,
+  "gameMode": "off (AutoGameModeEnabled = 0)",
+  "powerPlan": "not recorded",
+  "features": { "antiLag": false, "antiLagLevel": 0, "chill": false, "boost": false, "enhancedSync": false, "frameRateTarget": false, "imageSharpening": false, "smartAccessMemory": false, "tuningAtFactory": true },
+  "vsyncMode": "off unless the application asks",
+  "displays": [
+    { "name": "MAG 274QRFW", "hz": 180, "freeSync": "not supported" },
+    { "name": "P275MR+", "hz": 200, "freeSync": "not supported" }
+  ],
+  "idle": { "coreMhz": "149 to 310", "memoryMhz": 2505, "boardPowerW": "40 to 43", "tempC": "49 to 58", "fanRpm": 0 },
+  "tuningLimits": { "voltageOffsetMv": "-200 to 0", "powerLimitPercent": "-30 to +10", "gfxFrequencyOffsetMhz": "-500 to +1000", "vramMhz": "2518 to 3000" },
+  "summary": "HAGS on (HwSchMode 2); Game Mode off; every AMD 3D feature off (Anti-Lag level 0, Chill, Boost, Enhanced Sync, frame rate target, Image Sharpening); SmartAccess Memory supported but off; tuning at factory; V-Sync 'off unless the application asks'; FreeSync not supported on both displays (180 and 200 Hz); idle core 149-310 MHz, memory 2505 MHz, board power 40-43 W, 49-58 C, fan stopped"
+}

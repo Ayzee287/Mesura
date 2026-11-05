@@ -165,6 +165,7 @@ public static class FirmwareReader
             }
 
             var largest = adapters.ToDictionary(a => a.Pnp, _ => 0UL, StringComparer.OrdinalIgnoreCase);
+            var starts = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
             using (var searcher = new ManagementObjectSearcher(@"root\cimv2", "SELECT Antecedent, Dependent FROM Win32_PnPAllocatedResource"))
             using (var rows = searcher.Get())
             {
@@ -185,14 +186,18 @@ public static class FirmwareReader
                             if (dependent.Contains(adapter.Pnp.Replace(@"\", @"\\", StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase)
                                 && StartOf(antecedent) is { } start && ends.TryGetValue(start, out var end) && end >= start)
                             {
-                                largest[adapter.Pnp] = Math.Max(largest[adapter.Pnp], end - start + 1);
+                                if (end - start + 1 > largest[adapter.Pnp])
+                                {
+                                    largest[adapter.Pnp] = end - start + 1;
+                                    starts[adapter.Pnp] = start;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            return adapters.Where(a => largest[a.Pnp] > 0).Select(a => new GpuWindow(a.Name, largest[a.Pnp])).ToList();
+            return adapters.Where(a => largest[a.Pnp] > 0).Select(a => new GpuWindow(a.Name, largest[a.Pnp], starts.TryGetValue(a.Pnp, out var at) ? at : null)).ToList();
         }
         catch (Exception e) when (e is ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException or OverflowException or FormatException)
         {

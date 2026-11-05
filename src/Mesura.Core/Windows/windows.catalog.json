@@ -632,8 +632,7 @@
       "impact": "power", "summary": "GPU and NVMe links stay at full power on AC.",
       "description": "Turns off PCI Express link state power management on AC power, so the GPU and NVMe links stay in their full-power state. High performance already does this on AC.",
       "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
-      "requires": [ "noBattery" ],
-      "limitations": "Desktops only. Active plan only, AC only. No measurement shows a frame-time benefit; it is hardware-dependent and idle power rises. Firmware may override it.",
+      "limitations": "Active plan only, AC only; battery behaviour isn't touched. No measurement shows a frame-time benefit; it is hardware-dependent, idle power rises, and a laptop runs warmer while plugged in. Firmware may override it.",
       "source": "powercfg setting ee12f906 (Link State Power Management) in subgroup 501a4d13 (PCI Express); Microsoft Learn 'PCI Express settings: Link State Power Management' (0 = off).",
       "powerSettings": [ { "subgroup": "501a4d13-42af-4429-9fd1-a8218c268e20", "setting": "ee12f906-d277-404b-b6da-e5fa1a576df5", "name": "PCI Express link state power management", "ac": 0 } ]
     },
@@ -666,6 +665,15 @@
       "effect": { "kind": "gpuScheduling", "expect": "enabled" }
     },
     {
+      "id": "gpu.amd-anti-lag-on", "name": "Turn on AMD Radeon Anti-Lag (the original)", "category": "Graphics",
+      "impact": "gaming", "summary": "Radeon Anti-Lag, the original driver feature (level 0), on a Radeon card that offers it.",
+      "description": "Radeon Anti-Lag in its original form (level 0): the driver paces the processor so it does not queue frames far ahead of the graphics card, which AMD says cuts the input lag of games limited by the graphics card; the original works in DirectX 11 and 9 games. Mesura sets it only on a Radeon whose driver says it offers the feature and whose selected level is the original: Anti-Lag Next and Anti-Lag+ are different features that Mesura never selects, enables or changes. While Anti-Lag is on the driver turns Radeon Chill off (and Radeon Boost, which depends on it, may change too); Mesura records what they were and puts them back when this is undone. It is written through AMD's ADLX interface, recorded first, read again by a separate session, and undone from the record. Not an FPS setting: no measurement of its effect on this PC or in your games exists, so none is claimed.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "benefit": "unverified", "activation": "immediate", "level": "moderate",
+      "limitations": "Radeon only: on a PC without an AMD graphics adapter or without the AMD driver's ADLX interface the entry reads 'not for this PC' and nothing is written. Works in DirectX 11 and 9 games on Navi and later; other games are unaffected. Radeon Chill goes off while it is on (Boost may change); both are recorded and put back on undo, and a Chill you turn on yourself later switches it off again. A per-game profile in Adrenalin can override the global switch. If the driver reports Anti-Lag Next as the selected level, or the level can't be read, nothing is written. Needs administrator rights like the rest of the profile.",
+      "source": "AMD ADLX SDK 1.5 and 2.0 (IADLX3DAntiLag SetEnabled, IADLX3DAntiLag1 level), whose function order tools\\check-adlx-abi.ps1 checks; TechSpot 'AMD Radeon Anti-Lag explained'; docs/gpu-settings-catalog-0.6.md 2.4 and 5.1. Written and read back on a real RX 9070 XT (ADLX 1.5.0.124) on 2026-11-04 (docs/hardware-test-plan-amd-radeon.md).",
+      "sources": [ "https://www.techspot.com/article/1879-amd-radeon-anti-lag/", "https://github.com/GPUOpen-LibrariesAndSDKs/ADLX" ],
+      "gpu": [ { "vendor": "amd", "feature": "antilag", "enabled": true } ]
+    },    {
       "id": "display.graphics-defaults", "name": "Windowed-game optimizations and variable refresh rate", "category": "Graphics",
       "impact": "gaming", "summary": "Windowed-game optimisations and variable refresh rate.",
       "description": "Windows 11's 'Optimizations for windowed games' moves DirectX 10 and 11 games in windowed and borderless mode to the flip presentation model, with lower latency and Auto HDR and variable refresh rate there; 'Variable refresh rate' lets DirectX 11 games without their own support use a G-SYNC or FreeSync display. Guided: Mesura shows the stored value and opens Graphics settings, where you turn them on.",
@@ -2243,9 +2251,6 @@
       "level": "safe",
       "benefit": "unverified",
       "valueBasis": "documented",
-      "requires": [
-        "noBattery"
-      ],
       "activation": "immediate",
       "limitations": "Active plan only, AC only; battery behaviour isn't touched. Idle power and drive temperature rise a little. No measurement shows faster game loading or lower latency: the only documented change is that the drive no longer enters an idle state it must wake from. Applies to NVMe drives on Windows' in-box driver; Microsoft's page (written for Windows 10) doesn't cover vendor NVMe drivers and doesn't say whether a drive's own autonomous power-state transitions are affected. The Modern Standby row of Microsoft's table is separate and isn't changed. Defaults can differ by build and OEM; the recorded before-image is what gets restored.",
       "source": "Microsoft Learn 'NVMe' (power management for storage devices): GUIDs fc95af4d-... and dbc9e238-... are the primary/secondary latency tolerance in ms, 'the higher this value, the more likely that a deeper power state will be chosen', and the default table gives the Performance scheme 0 ms on AC for both. Values read from powercfg /qh and the DefaultPowerSchemeValues registry keys on a Windows 11 26200 PC (Balanced AC 15/100, High performance AC 0/0).",
@@ -2278,9 +2283,6 @@
       "level": "safe",
       "benefit": "unverified",
       "valueBasis": "documented",
-      "requires": [
-        "noBattery"
-      ],
       "activation": "immediate",
       "limitations": "Microsoft documents the register being programmed on CPUs that implement CPPC version 2 with autonomous mode on. Windows ignores the autonomous-mode plan setting on platforms that support only one mode, so whether the value changes anything depends on the CPU, firmware and driver. The Power mode slider (Best performance/Better battery overlays) overrides the plan's processor settings; in the default mode the plan value applies. More heat, fan noise and idle power; battery behaviour isn't touched. No frame-rate or latency gain is documented or measured. Active plan only, AC only. The class 1 setting may not exist on every PC.",
       "source": "Microsoft Learn 'PerfEnergyPreference': alias PERFEPP/PERFEPP1, 0-100 %, 0 programs the EPP register to 0 'to favor performance', 100 to 255, only on CPPC v2 systems with autonomous mode enabled; 'PerfAutonomousMode'; 'Customize the Windows performance power slider' (overlays, and the advice to copy High performance settings into Balanced). GUIDs and per-plan defaults (Balanced 33, High performance 0, Power saver 60 on AC) read from powercfg /qh and DefaultPowerSchemeValues on a Windows 11 26200 PC.",
@@ -2312,16 +2314,15 @@
       "summary": "Windows stops limiting CPU speed for background apps.",
       "description": "Turns on the 'Turn off Power Throttling' machine policy value. Power throttling puts apps that run in the background on the CPU's most efficient operating modes; Microsoft says it saves up to 11% CPU power and is always engaged unless the Power mode slider is set to Best performance. With the value set, Windows no longer throttles background apps.",
       "risk": "systemConfiguration",
-      "level": "safe",
+      "level": "moderate",
       "benefit": "unverified",
       "valueBasis": "documented",
       "activation": "reboot",
       "minBuild": 19041,
       "requires": [
-        "noBattery",
         "proEdition"
       ],
-      "limitations": "Meant for desktops: throttling exists to save battery, and this switch applies on battery too, so it isn't offered on PCs with a battery. Background work then runs at normal speed, which uses more power and can compete with a game for CPU time; Microsoft documents what the switch does but no measurement here shows it makes anything faster. Microsoft lists the policy for Pro, Enterprise, Education and IoT Enterprise (Windows 10 2004 with KB5005101 and later, Windows 11), so Home is excluded. On Windows 11 the Power mode slider on Best performance already opts every app out. Absence of the value means users control the setting (Windows default).",
+      "limitations": "Throttling exists to save power, and this switch applies on battery too: on a laptop it shortens the time on battery (the owner's decision for Maximum performance, 2026-11-02, which accepts that cost). Background work then runs at normal speed, which uses more power and can compete with a game for CPU time; Microsoft documents what the switch does but no measurement here shows it makes anything faster. Microsoft lists the policy for Pro, Enterprise, Education and IoT Enterprise (Windows 10 2004 with KB5005101 and later, Windows 11), so Home is excluded. On Windows 11 the Power mode slider on Best performance already opts every app out. Absence of the value means users control the setting (Windows default).",
       "source": "Microsoft Learn Policy CSP ADMX_Power 'PowerThrottlingTurnOff' (Turn off Power Throttling, Power.admx): key System\\CurrentControlSet\\Control\\Power\\PowerThrottling, value PowerThrottlingOff, enabled = throttling off, not configured = users control; editions and builds as stated. Data value 1 (32-bit DWORD) and 'delete to re-enable' from two community guides (Winaero, Maketecheasier). Microsoft Learn 'Customize the Windows performance power slider' says throttling saves up to 11% CPU power and is bypassed on Best performance.",
       "sources": [
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-power",
@@ -3020,10 +3021,7 @@
       "benefit": "unverified",
       "valueBasis": "documented",
       "activation": "immediate",
-      "requires": [
-        "noBattery"
-      ],
-      "limitations": "For desktops: skipped on a PC with a battery, and only the AC value of the active plan changes. Only the main core class is affected: on processors with performance and efficiency cores, the efficiency cores have a separate setting (CPMINCORES1) that this entry leaves alone, so they can still be parked. Windows' value depends on the plan and the processor: on the Windows 11 test PC the Balanced and High performance plans already read 100 on AC, so nothing changes there; on other PCs Balanced may park cores. Idle power use and heat rise slightly on PCs that did park cores. Microsoft says silicon vendors tune these settings and recommends consulting them first. The 'Ultimate Performance' or 'High performance' entries may already cover this.",
+      "limitations": "Only the AC value of the active plan changes; battery behaviour isn't touched, so a laptop is affected only while plugged in. Only the main core class is affected: on processors with performance and efficiency cores, the efficiency cores have a separate setting (CPMINCORES1) that this entry leaves alone, so they can still be parked. Windows' value depends on the plan and the processor: on the Windows 11 test PC the Balanced and High performance plans already read 100 on AC, so nothing changes there; on other PCs Balanced may park cores. Idle power use and heat rise slightly on PCs that did park cores. Microsoft says silicon vendors tune these settings and recommends consulting them first. The 'Ultimate Performance' or 'High performance' entries may already cover this.",
       "source": "Microsoft Learn 'CPMinCores': 'the minimum percentage of logical processors... that can be placed in the un-parked state at any given time... The Core Parking algorithm is disabled if the value of this setting is 100%'; range 0-100, powercfg alias CPMINCORES, hidden setting. Microsoft Learn 'Processor power management options' (note: silicon vendors tune PPM; contact them before modifying). GUIDs read from powercfg /qh on Windows 11 build 26200: subgroup 54533251-82be-4824-96c1-47b60b740d00 (SUB_PROCESSOR), setting 0cc5b647-c1df-4637-891a-dec35c318583 (Processor performance core parking min cores). https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
       "sources": [
         "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-core-parking-cpmincores",
@@ -3049,9 +3047,6 @@
       "level": "safe",
       "benefit": "unverified",
       "valueBasis": "documented",
-      "requires": [
-        "noBattery"
-      ],
       "activation": "immediate",
       "minBuild": 22000,
       "limitations": "Microsoft states it doesn't apply to CPUs running in autonomous performance mode, and its page lists Windows 11 only. On the test PC the plan setting for autonomous mode reads Enabled in all three built-in plans, so the value probably does nothing there; it matters only on CPUs whose performance state is chosen by Windows. Higher short-term power draw, heat and fan activity where it does act. No measured responsiveness or frame-time gain is available here. The efficiency-class-1 copy (PERFINCPOL1) is left alone: Windows keeps it at 3 in every built-in plan. Active plan only, AC only.",
@@ -3409,6 +3404,299 @@
       ]
     },
     {
+      "id": "network.preset-realtek-ethernet",
+      "name": "Realtek Ethernet: low-latency preset",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Interrupt moderation, EEE, Green Ethernet off, big buffers; Realtek Ethernet only.",
+      "description": "For Realtek PCIe and USB Ethernet controllers (the RTL8111/8168 and RTL8125 families and similar). On a Realtek adapter whose driver lists each one it sets: interrupt moderation Disabled (the card interrupts for every packet: a little lower latency, more processor work at high throughput), Energy-Efficient Ethernet Disabled, Green Ethernet Disabled (no cable-length voltage scaling), receive buffers at the largest size the driver allows, and the Windows checkbox \"Allow the computer to turn off this device\" off. Costs a little power and, with moderation off, processor time under heavy transfers. Left alone on purpose: flow control, checksum and large-send offloads, receive-segment coalescing, RSS queues, jumbo frames and speed/duplex. No source found shows a latency gain from changing them, and a wrong value can lower throughput. The adapter restarts when a value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads each value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "makerDocumented",
+      "limitations": "Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\\tester\\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.",
+      "source": "Realtek driver INF rtcx21x64.inf shipped with Windows 11 build 26100 (keywords EnableGreenEthernet, *EEE, *InterruptModeration, *ReceiveBuffers); Realtek FE/GbE readme 'Advanced Properties' (definitions of Green Ethernet, EEE, Interrupt Moderation, Auto Disable Gigabit); Microsoft Learn 'Standardized INF keywords for network devices'; Intel 'Interrupt Moderation Rate' in the Intel Ethernet Adapters and Devices User Guide (lower moderation reduces latency at the price of processor load). Not run on a Realtek adapter.",
+      "adapter": [
+        {
+          "property": "*InterruptModeration",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        },
+        {
+          "property": "*EEE",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        },
+        {
+          "property": "EnableGreenEthernet",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        },
+        {
+          "property": "*ReceiveBuffers",
+          "maximize": true,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        },
+        {
+          "powerManagement": "allowTurnOff",
+          "enabled": false,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.preset-intel-ethernet",
+      "name": "Intel Ethernet: low-latency preset",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Interrupt moderation, EEE, Ultra Low Power off, big buffers; Intel Ethernet only.",
+      "description": "For Intel Ethernet controllers (I210, I217/I218/I219, I225/I226 and similar). On an Intel adapter whose driver lists each one it sets: interrupt moderation Disabled (Intel documents that low-latency environments can benefit from it, at the price of processor load), Energy-Efficient Ethernet Disabled, Ultra Low Power and \"Reduce Speed On Power Down\" Disabled, receive buffers at the largest size the driver allows, and the Windows checkbox \"Allow the computer to turn off this device\" off. Costs a little power and some processor time under heavy transfers. Left alone on purpose: flow control, checksum and large-send offloads, receive-segment coalescing, RSS queues, jumbo frames and speed/duplex. No source found shows a latency gain from changing them, and a wrong value can lower throughput. The adapter restarts when a value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads each value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "makerDocumented",
+      "limitations": "Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\\tester\\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.",
+      "source": "Intel Ethernet drivers: INFs nete1e3e.inf, nete1g3e.inf, net1ic64.inf shipped with Windows 11 build 26100 (keywords *InterruptModeration, ITR, *ReceiveBuffers range 80..2048, ReduceSpeedOnPowerDown, ULPMode as an enumeration of 0 Disabled and 1 Enabled; *EEE is Microsoft's standardized keyword and is not in these INFs, so it is written only where a driver declares it); Intel Ethernet Adapters and Devices User Guide 'Interrupt Moderation Rate' (https://edc.intel.com/content/www/us/en/design/products/ethernet/adapters-and-devices-user-guide/interrupt-moderation-rate); Intel Ethernet 700/800 Series Windows tuning guide 'Interrupt Moderation' (low latency environments may benefit from it disabled). Not run on an Intel Ethernet adapter.",
+      "adapter": [
+        {
+          "property": "*InterruptModeration",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "*EEE",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "ULPMode",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "ReduceSpeedOnPowerDown",
+          "displayValue": "Disabled",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "property": "*ReceiveBuffers",
+          "maximize": true,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        },
+        {
+          "powerManagement": "allowTurnOff",
+          "enabled": false,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Intel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.preset-killer-ethernet",
+      "name": "Killer Ethernet: low-latency preset",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Interrupt moderation and EEE off, big buffers; Killer Ethernet only.",
+      "description": "For Killer E2xxx and E3xxx Ethernet controllers (the Killer E2xxx families and the E3100, which Intel support says is built on the Intel I225). On a Killer adapter whose driver lists each one it sets: interrupt moderation Disabled, Energy-Efficient Ethernet Disabled, receive buffers at the largest size the driver allows (the E2xxx driver allows 2048; the default is 512), and the Windows checkbox \"Allow the computer to turn off this device\" off. Killer's own traffic-prioritising software (Killer Control Center, Intel Killer Performance Suite) is not changed. Costs a little power and some processor time under heavy transfers. Left alone on purpose: flow control, checksum and large-send offloads, receive-segment coalescing, RSS queues, jumbo frames and speed/duplex. No source found shows a latency gain from changing them, and a wrong value can lower throughput. The adapter restarts when a value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads each value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "makerDocumented",
+      "limitations": "Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\\tester\\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.",
+      "source": "Killer driver INF e2xw10x64.inf shipped with Windows 11 build 26100 (keywords *InterruptModeration, MaxInterrupt, *EEE, *ReceiveBuffers range 16..2048 default 512, *FlowControl, APSmode); Microsoft Learn 'Standardized INF keywords for network devices'; Intel Ethernet Adapters and Devices User Guide 'Interrupt Moderation Rate'. Matched by the adapter's name containing 'Killer'. Not run on a Killer adapter.",
+      "adapter": [
+        {
+          "property": "*InterruptModeration",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Killer"
+          ]
+        },
+        {
+          "property": "*EEE",
+          "registryValue": "0",
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Killer"
+          ]
+        },
+        {
+          "property": "*ReceiveBuffers",
+          "maximize": true,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Killer"
+          ]
+        },
+        {
+          "powerManagement": "allowTurnOff",
+          "enabled": false,
+          "kinds": [
+            "ethernet"
+          ],
+          "vendors": [
+            "Killer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.preset-intel-wifi",
+      "name": "Intel and Killer Wi-Fi: low-latency preset",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "No MIMO power save, rare roaming, 5 GHz preferred; Intel and Killer Wi-Fi only.",
+      "description": "For Intel Wi-Fi 5, 6, 6E and 7 adapters (AC 9260/9560, AX200/201/210/211, BE200 and similar) and Killer Wi-Fi adapters, which run Intel's driver. On an adapter whose driver lists each one it sets: MIMO power save \"No SMPS\" (all antenna chains stay active; it can add latency to the first packets of a burst when it is automatic, and a user report links it to ping spikes on battery), roaming aggressiveness \"1. Lowest\" (scans for another access point only when the signal is poor; a scan interrupts traffic for a moment), and preferred band \"3. Prefer 5GHz band\" (the card favours 5 GHz when the router offers one network name for both bands; Dell's guidance for Intel adapters). Costs: more power use on battery; a PC that moves around may hold on to a distant access point; where 5 GHz is weak at your desk the 2.4 GHz band may still be better. Transmit power, channel width and wireless mode are already at the driver's recommended values by default; Throughput Booster is left off, because Dell notes it takes airtime from other devices. The adapter restarts when a value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads each value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "moderate",
+      "benefit": "unverified",
+      "valueBasis": "makerDocumented",
+      "limitations": "Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\\tester\\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.",
+      "source": "Intel Wi-Fi driver INFs netwtw04/06/08/10/6e shipped with Windows 11 build 26100 and the installed driver 24.70.0.3 on an Intel Wi-Fi 6 AX201 (keywords MIMOPowerSaveMode, RoamAggressiveness, RoamingPreferredBandType with the entry '3. Prefer 5GHz band', ThroughputBoosterEnabled, uAPSDSupport); Dell KB 000132395 'Change Intel Advanced Wi-Fi Adapter Settings to Improve Slow Performance' (Preferred Band, Roaming Aggressiveness, Throughput Booster); Intel community 'What is the dBm values for each configuration of roaming aggressiveness' (lowest: roams only on significant link degradation); Intel community thread on a Killer BE1750 whose ping spikes on battery went away with 'No SMPS' (one user report). Matched by maker Intel, or by 'Killer' or 'Rivet' in the name. Read on one Intel AX201 only; no write run.",
+      "adapter": [
+        {
+          "property": "MIMOPowerSaveMode",
+          "displayValue": "No SMPS",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel",
+            "Killer",
+            "Rivet"
+          ]
+        },
+        {
+          "property": "RoamAggressiveness",
+          "displayValue": "1. Lowest",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel",
+            "Killer",
+            "Rivet"
+          ]
+        },
+        {
+          "property": "RoamingPreferredBandType",
+          "displayValue": "3. Prefer 5GHz band",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel",
+            "Killer",
+            "Rivet"
+          ]
+        },
+        {
+          "powerManagement": "allowTurnOff",
+          "enabled": false,
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Intel",
+            "Killer",
+            "Rivet"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network.preset-realtek-wifi",
+      "name": "Realtek Wi-Fi: leisure power save off",
+      "category": "Network",
+      "impact": "experimental",
+      "summary": "Leisure Power Save off on Realtek 802.11n Wi-Fi adapters that offer it.",
+      "description": "For the older Realtek 802.11n/ac Wi-Fi adapters (RTL81xx/RTL87xx families) whose driver has a \"Leisure Power Save\" setting: it is set to its DISABLE entry, so the radio is not put to sleep between beacons, which can delay incoming packets. Costs power on battery. Newer Realtek Wi-Fi 6 drivers were not available to read, so nothing else is set for them. The adapter restarts when a value is written, so the network drops for a few seconds; Mesura waits for it to come back and reads each value back from the driver.",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "level": "safe",
+      "benefit": "unverified",
+      "valueBasis": "makerDocumented",
+      "limitations": "Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\\tester\\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.",
+      "source": "Realtek Wi-Fi driver INF netrtwlane_13.inf shipped with Windows 11 build 26100 (keyword bLeisurePs 'Leisure Power Save': AUTO default, DISABLE, ENABLE). Not run on a Realtek Wi-Fi adapter; newer Realtek Wi-Fi drivers were not read.",
+      "adapter": [
+        {
+          "property": "bLeisurePs",
+          "displayValue": "DISABLE",
+          "kinds": [
+            "wifi"
+          ],
+          "vendors": [
+            "Realtek"
+          ]
+        }
+      ]
+    },
+    {
       "id": "network.adapter-lldp-off",
       "name": "Unbind Microsoft LLDP Protocol Driver",
       "category": "Network",
@@ -3591,26 +3879,31 @@
   "presets": [
     {
       "id": "recommended-gaming", "name": "Mesura Reference", "tier": "primary",
-      "summary": "The safe basics in three parts: performance, privacy, fewer promotions.",
-      "description": "Mesura's own baseline: nineteen settings that apply to almost every PC, in three parts you can also apply one by one. Performance: Game Mode on, the accessibility shortcuts that interrupt a game off, two Windows defaults that tweak packs often change (the connectivity check, threaded DPCs) put back, and the Balanced Mesura power plan (Balanced without its brakes on mains power; battery behaviour is Windows' own). Privacy: no advertising ID, tailored experiences or language list for websites, required diagnostic data only, no improvement programs or app telemetry. Fewer promotions: no tips, suggestions, setup prompts or lock-screen and Start ads. Nothing here touches services, security or drivers, and none of it claims a frame-rate gain. Machine policies need Windows Pro.",
-      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
-                      "privacy.no-language-list", "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
-                      "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
-                      "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
-                      "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan" ]
+      "summary": "Telemetry off, fewer promotions, Game Mode and the Balanced Mesura power plan.",
+      "description": "Mesura's everyday baseline, in groups you can switch off one by one. Telemetry (in every profile): Windows sends the required diagnostic data only and the Customer Experience Improvement, application-telemetry and inventory programs are off. Privacy and promotions: no advertising ID, tailored experiences or language list for websites, and no tips, suggestions, setup prompts or lock-screen and Start ads. Windows: the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them. Gaming: Game Mode on and the accessibility shortcuts that interrupt a game off. Power: the Balanced Mesura plan (Balanced without its brakes on mains power; battery behaviour is Windows' own). Network: for each network adapter found, the per-maker adapter preset that matches its maker and kind (Realtek, Intel or Killer Ethernet; Intel, Killer or Realtek Wi-Fi), which turns off interrupt moderation, Energy-Efficient Ethernet and the maker's own power saving only where that adapter's driver lists each setting; an adapter no preset is for is left alone and the app says why, and the adapter restarts for a few seconds when a value is written. Nothing here touches services or security or installs a driver, and none of it claims a frame-rate or latency gain. Machine policies need Windows Pro; on Home they are skipped and the app says so.",
+      "optional": [ "telemetry.onesettings-downloads-off" ],
+      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
+                        "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts",
+                        "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications",
+                        "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan",
+                        "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
+                        "gaming.game-mode-on", "input.accessibility-shortcuts-off" ]
     },
     {
       "id": "maximum-performance", "name": "Maximum performance", "tier": "primary",
-      "summary": "Mesura Reference, plus the Maximum Performance Mesura power plan and the background work a performance-minded PC can do without; the trade-offs are named.",
-      "description": "Everything in Mesura Reference, plus the Maximum Performance Mesura power plan and changes that stop background components nobody asked for. The plan is a copy of Balanced that, on mains power only, keeps the processor at full speed and every power-saving state off (battery values stay Balanced's): more heat, fan noise and idle power. Everywhere: Windows stops running Game Bar recording and broadcasting in the background, the Widgets process, Microsoft Edge's startup boost and its background mode, and stops sharing downloaded updates with other PCs. You give up Game Bar clips and widgets. Not ticked, offered beside it because they depend on the hardware or on taste: hardware-accelerated GPU scheduling (restart; only where the graphics card supports it), background recording off, the pointer-precision switch, window animations and transparency off, NTFS last-access updates off and memory compression off (16 GB or more). No reliable measurement of a frame-rate gain from any of these on current hardware exists, and none is claimed. Every value is documented by Microsoft or was checked on a real Windows build, and Undo in Activity puts it back.",
-      "optional": [ "gpu.hardware-scheduling-on", "gaming.background-recording-off", "input.pointer-precision-off", "dwm.window-animations-off",
-                      "visual.transparency-off", "system.ntfs-last-access-off", "memory.compression-off" ],
-      "operations": [ "gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences",
-                      "privacy.no-language-list", "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off",
-                      "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
-                      "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
-                      "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-maximum-plan",
-                      "taskbar.widgets-policy-off", "edge.no-startup-boost", "edge.no-background-mode", "gaming.game-recording-policy-off", "updates.no-p2p-delivery" ]
+      "summary": "Everything that applies to this PC and is meant to make it faster, with heat, noise and idle power accepted; the costs are named.",
+      "description": "Everything in Mesura Reference, plus every performance setting that applies to this PC, chosen by its hardware, with more heat, fan noise and idle power accepted as the price. The Maximum Performance Mesura plan keeps the processor asking for full speed on mains power with every power-saving state off (battery values stay Balanced's). Processor: cores kept unparked, the energy hint set to speed, the fastest ramp-up, performance cores preferred on a hybrid processor, power throttling off. Memory: compression off and the kernel kept in RAM (16 GB or more). Graphics: the original Radeon Anti-Lag (level 0) on a Radeon that offers it, the driver turning Radeon Chill off while it is on; hardware-accelerated GPU scheduling is offered unticked because independent tests show no gain on average. Storage: NTFS last-access and 8.3 names off, NVMe and SATA drives kept out of low-power idle where they exist. Power: USB, drives and PCI Express links kept awake on mains power. Windows and gaming: Widgets, Edge's startup boost and background mode, update sharing, window animations, Game Bar recording and mouse acceleration off. A setting that cannot apply here is skipped and says why; one with a cost shows it beside the entry. Offered unticked: transparency off, hardware-accelerated GPU scheduling, background recording off and the controller's Game Bar button, whose stored values are known from community sources only, and the OneSettings download policy. No reliable measurement of a frame-rate gain from these settings on current hardware exists, and none is claimed. Each value is documented by Microsoft, checked on a real Windows build, or confirmed in effect by Windows itself after it is written; Undo in Activity puts every one back.",
+      "optional": [ "telemetry.onesettings-downloads-off", "visual.transparency-off", "gpu.hardware-scheduling-on", "gaming.background-recording-off", "gaming.controller-game-bar-off" ],
+      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
+                        "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts",
+                        "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications",
+                        "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "taskbar.widgets-policy-off",
+                        "edge.no-startup-boost", "edge.no-background-mode", "dwm.window-animations-off", "power.mesura-maximum-plan", "power.usb-keep-awake", "power.disk-never-off",
+                        "power.pcie-aspm-off", "cpu.core-parking-off", "power.cpu-epp-performance-ac", "power.cpu-ramp-up-fast-ac", "cpu.hybrid-prefer-performance-cores", "power.power-throttling-off",
+                        "memory.compression-off", "memory.keep-kernel-in-ram", "gpu.amd-anti-lag-on", "system.ntfs-last-access-off", "system.ntfs-8dot3-off", "power.nvme-stay-active-ac",
+                        "power.sata-link-power-off-ac", "updates.no-p2p-delivery", "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
+                        "gaming.game-mode-on", "input.accessibility-shortcuts-off", "gaming.game-recording-policy-off",
+                        "input.pointer-precision-off" ]
     },
     {
       "id": "gaming", "name": "Gaming preferences", "tier": "collection",
@@ -3652,9 +3945,10 @@
     {
       "id": "reference-privacy", "name": "Privacy basics", "tier": "collection",
       "summary": "No advertising profile, required diagnostic data only.",
-      "description": "The privacy part of Mesura Reference: no advertising ID, tailored experiences or language list sent to websites, required diagnostic data only, and no Customer Experience or application telemetry programs. A privacy choice, not a speed-up. Windows keeps sending the diagnostic data it requires.",
+      "description": "The privacy part of Mesura Reference: no advertising ID, tailored experiences or language list sent to websites, required diagnostic data only, and no Customer Experience, application-telemetry or inventory programs, extra diagnostic logs or large error dumps. A privacy choice, not a speed-up. Windows keeps sending the diagnostic data it requires.",
       "operations": [ "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.diagnostic-data-required",
-                      "telemetry.ceip-policy-off", "telemetry.application-telemetry-off" ]
+                      "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
+                      "telemetry.limit-dump-collection" ]
     },
     {
       "id": "reference-convenience", "name": "Fewer promotions", "tier": "collection",
@@ -3676,6 +3970,12 @@
       "summary": "Per-adapter driver settings the driver itself lists: interrupt moderation, buffers, EEE, power saving, Wi-Fi roaming and MIMO.",
       "description": "Settings of the network adapters themselves, each applied to a physical Ethernet or Wi-Fi adapter only where its driver declares the setting and lists the wanted value: interrupt moderation off, receive buffers at their maximum, Energy-Efficient Ethernet and selective suspend off, the Intel and Realtek power-saving switches, Windows' own power-management checkbox, and for Intel Wi-Fi no MIMO power save and the lowest roaming aggressiveness. Each adapter restarts for a few seconds when a value is written. Effects depend on the adapter and the network and can raise processor use or power; for people who measure; no gain is claimed. Protocol bindings (LLDP, LLTD, IPv6, file sharing) are separate entries in All settings.",
       "operations": [ "network.adapter-interrupt-moderation-off", "network.adapter-receive-buffers-max", "network.adapter-eee-off", "network.adapter-selective-suspend-off", "network.adapter-vendor-power-saving-off", "network.adapter-power-management-off", "network.adapter-wifi-mimo-power-save-off", "network.adapter-wifi-roaming-lowest", "network.wifi-power-saving-max-performance" ]
+    },
+    {
+      "id": "network-adapter-makers", "name": "Network adapter presets by maker (advanced)", "tier": "collection",
+      "summary": "One preset per popular maker: Realtek, Intel and Killer Ethernet, Intel/Killer and Realtek Wi-Fi.",
+      "description": "A preset for each family of network adapter, so the settings that belong to a maker are taken together and never written to another maker's card: Realtek Ethernet, Intel Ethernet, Killer Ethernet, Intel and Killer Wi-Fi, Realtek Wi-Fi. Each sets only what that maker's driver lists (interrupt moderation, Energy-Efficient Ethernet and the maker's own power-saving switches, receive buffers, MIMO power save, roaming, preferred band) and leaves a card whose driver does not list a setting alone. Each adapter restarts for a few seconds when a value is written. Effects depend on the adapter and the network and can raise processor use or power; no gain is claimed until it is measured on your PC.",
+      "operations": [ "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi" ]
     },
     {
       "id": "quiet-network", "name": "Less network exposure", "tier": "collection",

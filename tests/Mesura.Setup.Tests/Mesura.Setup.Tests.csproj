@@ -6,7 +6,13 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <!-- The fake ADLX (native objects with the real ABI) is shared with the Platform tests: the writer is tested against it. -->
+  <ItemGroup>
+    <Compile Include="..\Mesura.Platform.Tests\Gpu\FakeAdlx.cs" Link="Gpu\FakeAdlx.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.1" />

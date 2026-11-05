@@ -265,8 +265,8 @@ public sealed class QualityPassTests
             // 0.4.1: the two service defaults that stripped images change (the old brand-named follow-up collection is gone)
             "services.sens-on", "services.print-on"], Catalog.PresetById("system-defaults")!.OperationIds);
 
-        // Mesura Reference is exactly its three parts: performance, privacy and fewer promotions, no overlap and nothing left over.
-        var parts = new[] { "reference-performance", "reference-privacy", "reference-convenience" }.SelectMany(id => Catalog.PresetById(id)!.OperationIds).ToList();
+        // Mesura Reference is exactly its parts: performance, privacy, fewer promotions and (since 2026-11-04) the per-maker network adapter presets; no overlap and nothing left over.
+        var parts = new[] { "reference-performance", "reference-privacy", "reference-convenience", "network-adapter-makers" }.SelectMany(id => Catalog.PresetById(id)!.OperationIds).ToList();
         Assert.Equal(parts.Count, parts.Distinct().Count());
         Assert.Equal(Catalog.PresetById("recommended-gaming")!.OperationIds.Order(), parts.Order());
         Assert.Equal(["privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking",
@@ -299,11 +299,14 @@ public sealed class QualityPassTests
             Assert.DoesNotContain(id, maximum.OperationIds);
             Assert.Contains(id, Catalog.PresetById("less-data-sharing")!.OperationIds);
         });
-        Assert.All(new[] { "system.ntfs-last-access-off", "gpu.hardware-scheduling-on" }, id =>
-        {
-            Assert.Contains(id, maximum.OptionalIds);
-            Assert.DoesNotContain(id, maximum.OperationIds);
-        });
+        // 2026-11-02 (owner's decision): Maximum performance applies every performance setting that applies to the PC; what is left unticked is held back for the
+        // evidence of its stored value (community sources only), not for being aggressive.
+        Assert.Contains("system.ntfs-last-access-off", maximum.OperationIds);
+        Assert.DoesNotContain("system.ntfs-last-access-off", maximum.OptionalIds);
+        // 2026-11-04 (owner): hardware-accelerated GPU scheduling is not applied by default (no confirmed gain: docs/gpu-hags-research.md); it is offered unticked.
+        Assert.DoesNotContain("gpu.hardware-scheduling-on", maximum.OperationIds);
+        Assert.Contains("gpu.hardware-scheduling-on", maximum.OptionalIds);
+        Assert.All(new[] { "visual.transparency-off", "gaming.background-recording-off" }, id => Assert.Contains(id, maximum.OptionalIds));
     }
 
     [Fact]
@@ -321,10 +324,16 @@ public sealed class QualityPassTests
         // The network repairs stay opt-in (the one in Recommended is the connectivity check, shared with this collection).
         // Recommended is the list of the 2026-10-25 profile review (docs/profile-review-2026-10.md): pinned exactly, so a
         // change to it is a decision, not a side effect.
-        Assert.Equal(["gaming.game-mode-on", "input.accessibility-shortcuts-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
-                      "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "notifications.no-feedback-prompts",
-                      "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations",
-                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan"],
+        // 2026-11-02 (0.6, owner's decision): telemetry is off by default in every profile, as its own group (the inventory collector and the two log and
+        // dump limits join the three that were there); the list is the profile definition's default entries (profiles.json), in its order.
+        Assert.Equal(["privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off",
+                      "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
+                      "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations",
+                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                      "power.mesura-balanced-plan",
+                      // 2026-11-04 (owner's decision): the per-maker network adapter presets are in both profiles; each acts only on an adapter of its own maker and kind.
+                      "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
+                      "gaming.game-mode-on", "input.accessibility-shortcuts-off"],
             Catalog.PresetById("recommended-gaming")!.OperationIds);
     }
 

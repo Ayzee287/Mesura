@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using Mesura.Core.Windows;
 using Microsoft.Win32;
@@ -15,6 +15,10 @@ namespace Mesura.Setup.Windows.Windows;
 /// </summary>
 public sealed class SystemTools : ISystemSettingSource
 {
+    /// <summary>What the AMD driver says about Anti-Lag, asked of Mesura's own command line (<see cref="Mesura.Setup.Windows.Gpu.AmdCommandLineRunner"/>) so a crash inside the driver's library never ends the window.</summary>
+    public GpuFeatureReading? ReadGpuFeature(string vendor, string feature) =>
+        GpuSetting.IsAllowed(vendor, feature) ? Mesura.Setup.Windows.Gpu.AmdCommandLineRunner.ReadAntiLag() : null;
+
     private static readonly TimeSpan ToolTimeout = TimeSpan.FromSeconds(60);
 
     private static readonly Dictionary<string, string> MemoryAgentParameters = new(StringComparer.OrdinalIgnoreCase)

@@ -1,4 +1,4 @@
-# Mesura 0.5.5 pre-release check: collects what the developer cannot see from outside, in one zip on your Desktop. READ ONLY: it changes no setting, installs nothing, imports no profile, and
+# Mesura 0.6 pre-release check: collects what the developer cannot see from outside, in one zip on your Desktop. READ ONLY: it changes no setting, installs nothing, imports no profile, and
 # sends nothing anywhere (you send the zip yourself). Run it from an ELEVATED PowerShell (right-click > Run as administrator): one of the checks is how Mesura behaves when it is elevated.
 #
 #   powershell -ExecutionPolicy Bypass -File Collect-MesuraStableCheck.ps1 [-Cli <path to mesura.exe>]
@@ -9,7 +9,8 @@
 #   3. NVIDIA: the driver version (nvidia-smi, read only) and `mesura setup nvpi-check`: where NVIDIA Profile Inspector is, which build, whether Mesura may run it elevated, and ONE export of your customised
 #      profiles (a read) saying which way it ran. This is the check no Sandbox can do: whether NVIDIA Profile Inspector can read the profiles with your normal (unelevated) rights.
 #   4. Power plans as Windows lists them (powercfg /list, never edited here) and the restore points.
-#   5. Mesura's own records of what it did on this PC: the last setup runs (what each step reported, including the Maximum Performance run), the logs, and the history list.
+#   5. 0.6: what Mesura believes about this PC (`mesura hardware`) and how it plans both levels for it (`mesura windows plan`, Mesura Reference and Maximum performance). Read only: nothing is applied.
+#   6. Mesura's own records of what it did on this PC: the last setup runs (what each step reported, including the Maximum Performance run), the logs, and the history list.
 #      These files are copied into the zip (your Windows user name and the computer name are replaced by %USERNAME% and %COMPUTERNAME%); read them first if you like.
 param([string]$Cli = '')
 $ErrorActionPreference = 'Continue'
@@ -23,7 +24,7 @@ function Hide([string]$text) { if ($null -eq $text) { return '' }; $text.Replace
 function Try-Run([scriptblock]$block) { try { (& $block 2>&1 | ForEach-Object { "$_" }) -join "`r`n" } catch { "failed: $($_.Exception.Message)" } }
 
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-Say "Mesura stable check, collected $(Get-Date -Format s)"
+Say "Mesura 0.6 check, collected $(Get-Date -Format s)"
 
 Section '1. Windows'
 $os = Get-CimInstance Win32_OperatingSystem
@@ -39,7 +40,7 @@ foreach ($hive in 'HKCU', 'HKLM') {
   $k = Get-ItemProperty "${hive}:\Software\Mesura" -ErrorAction SilentlyContinue
   if ($k.InstallDir) { Say "$hive InstallDir: $(Hide $k.InstallDir)"; $copies += $k.InstallDir }
 }
-# The command line of the build this script came with (the 0.5.5 folder) comes first: an older installed copy does not have the checks below.
+# The command line of the build this script came with (the 0.6 folder) comes first: an older installed copy does not have the checks below.
 if (-not $Cli -and (Test-Path (Join-Path $PSScriptRoot 'cli\mesura.exe'))) { $Cli = Join-Path $PSScriptRoot 'cli\mesura.exe' }
 if (-not $Cli) {
   foreach ($c in $copies) { $try = Join-Path $c 'cli\mesura.exe'; if (-not $Cli -and (Test-Path $try)) { $Cli = $try } }
@@ -68,7 +69,23 @@ Say (Hide (Try-Run { powercfg /list }))
 Say (Hide (Try-Run { powercfg /getactivescheme }))
 if ($Cli) { Say (Hide (Try-Run { & $Cli windows restore-points })) }
 
-Section '5. Mesura records on this PC'
+Section '5. Hardware and the profiles planned for it (read only, nothing is applied)'
+if ($Cli) {
+  Say '-- mesura hardware'
+  Say (Hide (Try-Run { & $Cli hardware }))
+  $hw = Try-Run { & $Cli hardware --json }
+  Set-Content -Path (Join-Path $work 'hardware.json') -Value (Hide $hw) -Encoding utf8
+  foreach ($profile in 'recommended-gaming', 'maximum-performance') {
+    Say ''
+    Say "-- mesura windows plan --profile $profile"
+    $plan = Hide (Try-Run { & $Cli windows plan --profile $profile })
+    Say $plan
+    Set-Content -Path (Join-Path $work "plan-$profile.txt") -Value $plan -Encoding utf8
+  }
+  if (-not $elevated) { Say 'NOTE: not elevated, so a few states (for example memory compression) read as "can''t tell"; run it elevated for the full picture.' }
+} else { Say 'No command line: skipped.' }
+
+Section '6. Mesura records on this PC'
 $data = Join-Path $env:LOCALAPPDATA 'Mesura'
 if (-not (Test-Path $data)) { Say "No $(Hide $data) folder." }
 else {

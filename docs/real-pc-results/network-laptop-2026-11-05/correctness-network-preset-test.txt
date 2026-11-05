@@ -1,0 +1,51 @@
+INFO  Network preset test, 2026-11-05T00:11:10, mode: REAL APPLY AND UNDO
+INFO      Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi)
+INFO        WiFi, Intel, driver 24.70.0.3 (2026-07-29), up, GUID {1C07017E-7860-40F2-895F-CED45DC577CE}
+INFO        Power: allow the computer to turn it off = driver does not say
+INFO      Not tuned (virtual, VPN or other; Mesura never reads or writes their settings): vEthernet (Default Switch) [Virtual]
+INFO  preview network.preset-realtek-ethernet : nothing to change here (This PC has no physical ethernet network adapter of Realtek.)
+INFO  preview network.preset-intel-ethernet : nothing to change here (This PC has no physical ethernet network adapter of Intel.)
+INFO  preview network.preset-killer-ethernet : nothing to change here (This PC has no physical ethernet network adapter of Killer.)
+INFO  preview network.preset-intel-wifi : 3 change(s)
+INFO      Wi-Fi: MIMOPowerSaveMode: 0 -> 3
+INFO      Wi-Fi: RoamAggressiveness: 2 -> 0
+INFO      Wi-Fi: RoamingPreferredBandType: 0 -> 2
+INFO  preview network.preset-realtek-wifi : nothing to change here (This PC has no physical wifi network adapter of Realtek.)
+INFO  Test: network.preset-intel-wifi on adapter(s): Wi-Fi
+PASS  before: Wi-Fi MIMOPowerSaveMode reads 0 in Windows (the preview said 0)
+PASS  before: Wi-Fi RoamAggressiveness reads 2 in Windows (the preview said 2)
+PASS  before: Wi-Fi RoamingPreferredBandType reads 0 in Windows (the preview said 0)
+INFO  Snapshot of every adapter setting before the test: 20261104T231114Z-before-preset-test  (second way back: mesura network restore 20261104T231114Z-before-preset-test --apply)
+INFO    apply: Windows catalog: built-in (154 operations, 12 presets).
+INFO    apply: Scope: [user] settings go to <signed-in user>, the user signed in to this session; [this PC] settings affect every user.
+INFO    apply: This terminal is elevated: [this PC] operations can run.
+INFO    apply: Applying:
+INFO    apply:   change          Intel and Killer Wi-Fi: low-latency preset (network.preset-intel-wifi) [this PC]
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): MIMOPowerSaveMode: 0 -> 3
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamAggressiveness: 2 -> 0
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamingPreferredBandType: 0 -> 2
+INFO    apply:                     Note: Per adapter, never blind: a setting is written only on a physical adapter of the named maker whose driver declares the keyword and lists the wanted value, so a card without it is left alone and shown as not available. Effect not measured (tools\tester\Measure-NetworkLatency.ps1 compares before and after on your PC); the cost is stated in the description.
+INFO    apply: No restore point was made: Windows skipped the restore point (it makes one automatic point per 24 hours); Undo in Activity still covers this run.
+INFO    apply: Result:
+INFO    apply: Recorded as history run 20261104T231115Z-windows-apply; undo with 'mesura windows revert --run 20261104T231115Z-windows-apply --apply'.
+INFO    apply:   applied         Intel and Killer Wi-Fi: low-latency preset (network.preset-intel-wifi): Applied.
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): MIMOPowerSaveMode: 0 -> 3
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamAggressiveness: 2 -> 0
+INFO    apply:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamingPreferredBandType: 0 -> 2
+INFO  Run: 20261104T231115Z-windows-apply, exit code 0
+PASS  after: adapter Wi-Fi is up again
+PASS  independent read: Wi-Fi MIMOPowerSaveMode is 3 in Windows (Get-NetAdapterAdvancedProperty)
+PASS  independent read: Wi-Fi RoamAggressiveness is 0 in Windows (Get-NetAdapterAdvancedProperty)
+PASS  independent read: Wi-Fi RoamingPreferredBandType is 2 in Windows (Get-NetAdapterAdvancedProperty)
+INFO    undo: Windows catalog: built-in (154 operations, 12 presets).
+INFO    undo: Result:
+INFO    undo:   reverted        Intel and Killer Wi-Fi: low-latency preset (network.preset-intel-wifi): 3 setting(s) restored.
+INFO    undo:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamingPreferredBandType: 2 -> 0
+INFO    undo:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): RoamAggressiveness: 0 -> 2
+INFO    undo:                     Intel(R) Wi-Fi 6 AX201 160MHz (Wi-Fi): MIMOPowerSaveMode: 3 -> 0
+INFO    undo: Recorded as history run 20261104T231130Z-windows-revert.
+PASS  after the undo: adapter Wi-Fi is up
+PASS  after the undo: Wi-Fi MIMOPowerSaveMode reads 0 again in Windows (the value from before)
+PASS  after the undo: Wi-Fi RoamAggressiveness reads 2 again in Windows (the value from before)
+PASS  after the undo: Wi-Fi RoamingPreferredBandType reads 0 again in Windows (the value from before)
+PASS  Mesura compares the adapters with the snapshot taken before the test: no difference

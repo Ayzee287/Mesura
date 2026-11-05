@@ -95,9 +95,10 @@ public sealed record FirmwareExtras
     public IReadOnlyList<GpuWindow> GpuWindows { get; init; } = [];
 }
 
-public sealed record GpuWindow(string? Name, ulong LargestBarBytes);
+/// <param name="LargestBarStart">Where Windows put that window in the address space: at or above 4 GiB means the firmware's Above 4G Decoding is working.</param>
+public sealed record GpuWindow(string? Name, ulong LargestBarBytes, ulong? LargestBarStart = null);
 
-public sealed record FirmwareGpu(string? Name, string? Vendor, bool? Integrated, ulong? VideoMemoryBytes, ulong? LargestBarBytes)
+public sealed record FirmwareGpu(string? Name, string? Vendor, bool? Integrated, ulong? VideoMemoryBytes, ulong? LargestBarBytes, ulong? LargestBarStart = null)
 {
     /// <summary>A card with its own memory: Resizable BAR is about these (an integrated GPU shares system memory).</summary>
     public bool IsDiscrete => Integrated == false && VideoMemoryBytes is >= 1UL << 30;
@@ -148,7 +149,7 @@ public sealed record FirmwareFacts(
         var gpus = report.Gpus.Select(gpu =>
         {
             var window = windows.FirstOrDefault(w => SameAdapter(w.Name, gpu.Name));
-            return new FirmwareGpu(gpu.Name, gpu.Vendor, gpu.Integrated, gpu.MemoryBytes, window?.LargestBarBytes);
+            return new FirmwareGpu(gpu.Name, gpu.Vendor, gpu.Integrated, gpu.MemoryBytes, window?.LargestBarBytes, window?.LargestBarStart);
         }).ToList();
         return new FirmwareFacts(
             report.GeneratedAt, report.Os.Build ?? 0, report.Machine.Kind, report.Machine.Manufacturer, report.Machine.Model, report.Machine.BoardManufacturer, report.Machine.Board,

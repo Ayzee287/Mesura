@@ -16,8 +16,9 @@ internal static class WindowsCli
     public const string Usage = """
           mesura windows list [--category <name>]
           mesura windows presets
+          mesura windows plan [--profile <id>] [--group-off a,b] [--entry-off x,y] [--entry-on x,y] [--json]
           mesura windows show --id <operation>
-          mesura windows apply (--id <a,b> | --preset <p>)... [--apply]
+          mesura windows apply (--id <a,b> | --preset <p> | --profile <level> [--group-off a,b] [--entry-off x,y] [--entry-on x,y])... [--apply]
           mesura windows revert --run <run id> [--apply]
           mesura windows restore-points
           mesura windows restore-point [--apply]
@@ -28,9 +29,12 @@ internal static class WindowsCli
                          applied, not applied, partly applied, not applicable (e.g. the component was
                          removed), manual or for information. Read-only.
         windows presets  Lists the operation presets. Read-only.
+        windows plan     Plans a profile (maximum-performance by default) for this PC: per group, what would be applied, what is
+                         already set, what the profile's power plan covers, and what is not for this PC, with the reason. Read-only.
         windows show     Shows one operation: what it changes and why, its limitations, its current and
                          target values, and for a manual one the steps. Read-only.
-        windows apply    Previews the chosen operations and presets: what would change, what is already
+        windows apply    Previews the chosen operations, presets and --profile levels (a level planned for this PC, as 'windows plan' shows it; a --preset applies the
+                         preset's whole list whatever the hardware, each operation still checked on this PC and skipped where it doesn't apply): what would change, what is already
                          done or not applicable, and what needs an elevated terminal. With --apply it
                          changes only the settings that differ, reads each back, and records the run
                          with every previous value. A failed operation puts back what it changed.
@@ -72,6 +76,7 @@ internal static class WindowsCli
         {
             "list" => List(catalog, reader, Single(options, "--category")),
             "presets" => Presets(catalog),
+            "plan" => ProfilePlanCli.Run(catalog, reader, options),
             "show" when Single(options, "--id") is { } id => Show(catalog, reader, id),
             "apply" => Apply(catalog, reader, options, apply),
             "revert" when Single(options, "--run") is { } run => Revert(reader, run, apply),
@@ -243,9 +248,21 @@ internal static class WindowsCli
     private static int Apply(WindowsCatalog catalog, SystemStateReader reader, Dictionary<string, List<string>> options, bool apply)
     {
         var operations = Resolve(catalog, options.GetValueOrDefault("--id") ?? [], options.GetValueOrDefault("--preset") ?? [], out var error);
+        if (operations is not null && options.ContainsKey("--profile"))
+        {
+            // A level planned for this PC, as the app plans it (hardware, what is already set, what the level's power plan covers, group and entry choices): exactly the operations
+            // 'windows plan' lists. --preset applies a preset's whole list whatever the hardware.
+            if (ProfilePlanCli.Build("windows apply", catalog, reader, options, out _, out error) is not { } plan)
+            {
+                return Bad(error!);
+            }
+
+            operations = [.. plan.OperationIds.Select(catalog.ById).OfType<WindowsOperation>().Concat(operations).DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)];
+        }
+
         if (operations is null || operations.Count == 0)
         {
-            return Bad(error ?? "windows apply needs --id <operation> or --preset <preset> (see 'windows list', 'windows presets').");
+            return Bad(error ?? "windows apply needs --id <operation>, --preset <preset> or --profile <level> (see 'windows list', 'windows presets', 'windows plan').");
         }
 
         if (WindowsConfigurator.Conflicts(operations, reader) is { Count: > 0 } conflicts)
@@ -398,11 +415,11 @@ internal static class WindowsCli
             {
                 apply = true;
             }
-            else if (args[i] == "--no-restore-point")
+            else if (args[i] is "--no-restore-point" or "--json")
             {
-                options["--no-restore-point"] = [];
+                options[args[i]] = [];
             }
-            else if (args[i] is "--id" or "--preset" or "--category" or "--run" && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
+            else if (args[i] is "--id" or "--preset" or "--category" or "--run" or "--profile" or "--group-off" or "--entry-off" or "--entry-on" && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal))
             {
                 var key = args[i];
                 if (!options.TryGetValue(key, out var list))

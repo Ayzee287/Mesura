@@ -1,0 +1,61 @@
+INFO  Network preset effect test, 2026-11-05T00:11:51, 4 cycle(s) of 500 probes
+INFO  Preset network.preset-intel-wifi on adapter(s) Wi-Fi:
+INFO      MIMOPowerSaveMode: 0 -> 3
+INFO      RoamAggressiveness: 2 -> 0
+INFO      RoamingPreferredBandType: 0 -> 2
+PASS  start: Wi-Fi MIMOPowerSaveMode reads 0 in Windows (Mesura's preview said 0)
+PASS  start: Wi-Fi RoamAggressiveness reads 2 in Windows (Mesura's preview said 2)
+PASS  start: Wi-Fi RoamingPreferredBandType reads 0 in Windows (Mesura's preview said 0)
+INFO  Snapshot before the test: 20261104T231153Z-before-effect-test  (second way back: mesura network restore 20261104T231153Z-before-effect-test --apply)
+INFO  == cycle 1 of 4
+PASS  cycle 1: A (preset off): the values are the starting ones
+PASS  cycle 1: apply ended with an answer (exit 0) and the run is 20261104T231218Z-windows-apply
+PASS  cycle 1: independent read: Wi-Fi MIMOPowerSaveMode is 3
+PASS  cycle 1: independent read: Wi-Fi RoamAggressiveness is 0
+PASS  cycle 1: independent read: Wi-Fi RoamingPreferredBandType is 2
+PASS  cycle 1: the undo ran (exit 0)
+PASS  cycle 1: after the undo Wi-Fi MIMOPowerSaveMode is 0 again
+PASS  cycle 1: after the undo Wi-Fi RoamAggressiveness is 2 again
+PASS  cycle 1: after the undo Wi-Fi RoamingPreferredBandType is 0 again
+INFO  == cycle 2 of 4
+PASS  cycle 2: A (preset off): the values are the starting ones
+PASS  cycle 2: apply ended with an answer (exit 0) and the run is 20261104T231344Z-windows-apply
+PASS  cycle 2: independent read: Wi-Fi MIMOPowerSaveMode is 3
+PASS  cycle 2: independent read: Wi-Fi RoamAggressiveness is 0
+PASS  cycle 2: independent read: Wi-Fi RoamingPreferredBandType is 2
+PASS  cycle 2: the undo ran (exit 0)
+PASS  cycle 2: after the undo Wi-Fi MIMOPowerSaveMode is 0 again
+PASS  cycle 2: after the undo Wi-Fi RoamAggressiveness is 2 again
+PASS  cycle 2: after the undo Wi-Fi RoamingPreferredBandType is 0 again
+INFO  == cycle 3 of 4
+PASS  cycle 3: A (preset off): the values are the starting ones
+PASS  cycle 3: apply ended with an answer (exit 0) and the run is 20261104T231507Z-windows-apply
+PASS  cycle 3: independent read: Wi-Fi MIMOPowerSaveMode is 3
+PASS  cycle 3: independent read: Wi-Fi RoamAggressiveness is 0
+PASS  cycle 3: independent read: Wi-Fi RoamingPreferredBandType is 2
+PASS  cycle 3: the undo ran (exit 0)
+PASS  cycle 3: after the undo Wi-Fi MIMOPowerSaveMode is 0 again
+PASS  cycle 3: after the undo Wi-Fi RoamAggressiveness is 2 again
+PASS  cycle 3: after the undo Wi-Fi RoamingPreferredBandType is 0 again
+INFO  == cycle 4 of 4
+PASS  cycle 4: A (preset off): the values are the starting ones
+PASS  cycle 4: apply ended with an answer (exit 0) and the run is 20261104T231632Z-windows-apply
+PASS  cycle 4: independent read: Wi-Fi MIMOPowerSaveMode is 3
+PASS  cycle 4: independent read: Wi-Fi RoamAggressiveness is 0
+PASS  cycle 4: independent read: Wi-Fi RoamingPreferredBandType is 2
+PASS  cycle 4: the undo ran (exit 0)
+PASS  cycle 4: after the undo Wi-Fi MIMOPowerSaveMode is 0 again
+PASS  cycle 4: after the undo Wi-Fi RoamAggressiveness is 2 again
+PASS  cycle 4: after the undo Wi-Fi RoamingPreferredBandType is 0 again
+PASS  end: adapter Wi-Fi is up
+PASS  end: Wi-Fi MIMOPowerSaveMode reads the starting value 0
+PASS  end: Wi-Fi RoamAggressiveness reads the starting value 2
+PASS  end: Wi-Fi RoamingPreferredBandType reads the starting value 0
+PASS  end: Mesura compares the adapters with the snapshot taken before the test: no difference
+INFO  Comparison (cycle 1 is the warm-up and is left out):
+INFO    Label preset-off : 3 run(s); label preset-on : 3 run(s). The first run of each label is a warm-up and should be left out by deleting its file.
+INFO    median round trip (ms)                       A    4,666 [4,659..4,682]   B     4,85 [4,671..4,979]   no measurable difference (diff 0,184 is inside the noise band 0,308)
+INFO    99th percentile (ms)                         A     9,86 [7,439..12,865]   B    9,309 [7,816..9,905]   no measurable difference (diff -0,551 is inside the noise band 5,426)
+INFO    jitter: mean change between probes (ms)      A    1,039 [0,824..1,184]   B    0,992 [0,802..0,998]   no measurable difference (diff -0,047 is inside the noise band 0,36)
+INFO    loss (%)                                     A        0 [0..0]   B        0 [0..0]   no measurable difference (diff 0 is inside the noise band 0)
+INFO    The values in brackets are the lowest and highest run of that label; their width is the noise band. A result that stays inside it is "no measurable difference on this PC".

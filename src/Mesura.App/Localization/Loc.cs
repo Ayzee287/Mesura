@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Windows.Data;
 using System.Windows.Markup;
 using Mesura.Core.Config;
+using Mesura.Core.Profiles;
 using Mesura.Core.Windows;
 
 namespace Mesura.App;
@@ -151,6 +152,47 @@ public sealed class Loc : INotifyPropertyChanged
 
     public static string Description(WindowsPreset preset) => Instance._catalog.Preset(preset.Id)?.Description ?? preset.Description;
 
+    /// <summary>A profile group's name and summary, and an entry's reason (0.6): translated when the table has them, otherwise the profile file's English.</summary>
+    public static string Name(ProfileGroup group) => Instance._catalog.Profiles?.Groups?.GetValueOrDefault(group.Id)?.Name ?? group.Name;
+
+    public static string Summary(ProfileGroup group) => Instance._catalog.Profiles?.Groups?.GetValueOrDefault(group.Id)?.Summary ?? group.Summary;
+
+    public static string Why(ProfileEntry entry) => Instance._catalog.Profiles?.Reasons?.GetValueOrDefault(entry.OperationId) ?? entry.Why;
+
+    /// <summary>
+    /// Why an entry isn't applied on this PC, in a few words: the same sentences the lists use for a setting that doesn't apply, and for hardware it is for,
+    /// the hardware named.
+    /// </summary>
+    public static string Reason(PlanEntry entry)
+    {
+        var code = entry.Reason ?? "";
+        if (code.StartsWith(PlanReason.HardwarePrefix, StringComparison.Ordinal))
+        {
+            var field = code[PlanReason.HardwarePrefix.Length..];
+            var unread = entry.State == EntryState.CantTell;
+            if (field.StartsWith("form.", StringComparison.Ordinal))
+            {
+                return Get(unread ? "Plan.Reason.form-unread" : "Plan.Reason.form");
+            }
+
+            return Format(unread ? "Plan.Reason.hardware-unread" : "Plan.Reason.hardware", Get($"Plan.Hw.{field}"));
+        }
+
+        return Get(code switch
+        {
+            PlanReason.Build => "Reason.Build",
+            PlanReason.Battery => "Reason.Battery",
+            PlanReason.ModernStandby => "Reason.ModernStandby",
+            PlanReason.Edition => "Reason.Edition",
+            PlanReason.Memory => "Reason.Memory",
+            PlanReason.Hybrid => "Reason.Hybrid",
+            PlanReason.EffectUnsupported => "Reason.Unsupported",
+            PlanReason.Absent => "Reason.Absent",
+            PlanReason.Blocked => "Reason.Blocked",
+            _ => $"Plan.Reason.{code}",
+        });
+    }
+
     /// <summary>A catalog category or app category, translated when the table has it.</summary>
     public static string Category(string category) =>
         Instance._catalog.Categories?.TryGetValue(category, out var text) == true ? text : category;
@@ -207,6 +249,8 @@ public sealed class Loc : INotifyPropertyChanged
 
         public Dictionary<string, PresetText>? Presets { get; set; }
 
+        public ProfileTexts? Profiles { get; set; }
+
         public Dictionary<string, string>? Categories { get; set; }
 
 
@@ -234,6 +278,21 @@ public sealed class Loc : INotifyPropertyChanged
         public string? Consequence { get; set; }
 
         public string? Restore { get; set; }
+    }
+
+    /// <summary>The texts of the profile definitions: group names and summaries by group id, and each operation's reason by operation id.</summary>
+    public sealed class ProfileTexts
+    {
+        public Dictionary<string, GroupText>? Groups { get; set; }
+
+        public Dictionary<string, string>? Reasons { get; set; }
+    }
+
+    public sealed class GroupText
+    {
+        public string? Name { get; set; }
+
+        public string? Summary { get; set; }
     }
 
     public sealed class PresetText

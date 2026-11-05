@@ -1,4 +1,4 @@
-# Real, elevated checks of the machine-wide operations with the heaviest consequences, one after the other: for each, the state is read with Windows' own tools,
+﻿# Real, elevated checks of the machine-wide operations with the heaviest consequences, one after the other: for each, the state is read with Windows' own tools,
 # Mesura applies the operation, the new state is read again INDEPENDENTLY (sc.exe, the registry, powercfg, dism: never Mesura's own reading), the run is reverted,
 # and the state is read a third time and must equal the first. Run from an ELEVATED terminal on a PC where it is acceptable to change these settings for a minute:
 #
@@ -161,6 +161,12 @@ function Test-Bcd {
   Say "== ${op}: disabledynamictick is '$orig' now; BCD exported to $backup"
   try {
     bcdedit /set disabledynamictick yes | Out-Null
+    if ((Bcd 'disabledynamictick') -ne 'Yes') {
+      # This PC cannot host the check: the boot configuration store takes no such element (Windows Sandbox has none). Mesura must then say "unknown", never guess; nothing else can be shown here.
+      Say "SKIP  [$op] this PC's boot configuration store does not take the element (bcdedit: '$(Bcd 'disabledynamictick')' after setting it): apply and revert cannot be shown here; run it on a PC with a boot store"
+      Check "[$op] Mesura says unknown instead of guessing" ((State $op) -like 'unknown*') (State $op)
+      return
+    }
     Check "[$op] bcdedit says the element is 'yes' before" ((Bcd 'disabledynamictick') -eq 'Yes') (Bcd 'disabledynamictick')
     Check "[$op] Mesura reads it as not applied" ((State $op) -like '-*' -or (State $op) -like 'not applied*') (State $op)
     ApplyRevert $op { @(((Bcd 'disabledynamictick') -eq 'absent'), (Bcd 'disabledynamictick')) } 'bcdedit says the element is gone' { @(((Bcd 'disabledynamictick') -eq 'Yes'), (Bcd 'disabledynamictick')) } 'the previous value (yes) is back'
@@ -174,6 +180,13 @@ function Test-Memory {
   $op = 'memory.compression-off'; $orig = (Get-MMAgent).MemoryCompression
   Say "== ${op}: memory compression is $orig now"
   try {
+    $ramGb = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+    if ($ramGb -lt 15) {
+      # The operation is for 16 GB or more (docs/catalog): below that Mesura must say "not applicable" and write nothing, which is what is checked here instead.
+      Say "SKIP  [$op] this PC has $ramGb GB (the operation needs 16 GB): apply and revert cannot be shown here; run it on a PC with 16 GB or more"
+      Check "[$op] Mesura says not applicable below 16 GB" ((State $op) -like 'n/a*') (State $op)
+      return
+    }
     if (-not $orig) { Enable-MMAgent -MemoryCompression }
     Check "[$op] Mesura reads it as not applied" ((State $op) -like '-*' -or (State $op) -like 'not applied*') (State $op)
     ApplyRevert $op { @((-not (Get-MMAgent).MemoryCompression), "MemoryCompression=$((Get-MMAgent).MemoryCompression)") } 'Get-MMAgent says compression is off' { @(((Get-MMAgent).MemoryCompression), "MemoryCompression=$((Get-MMAgent).MemoryCompression)") } 'compression is on again'

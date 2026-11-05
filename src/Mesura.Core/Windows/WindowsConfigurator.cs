@@ -1,4 +1,4 @@
-namespace Mesura.Core.Windows;
+﻿namespace Mesura.Core.Windows;
 
 /// <summary>
 /// Makes the changes an operation needs. The one implementation (<c>WindowsWriter</c> in the setup component) owns
@@ -62,6 +62,17 @@ public interface IWindowsWriter
     /// <summary>Changes one <see cref="SystemSetting"/> through its Windows tool (an allowed kind, name and value only).</summary>
     void SetSystemSetting(string kind, string name, string value) =>
         throw new NotSupportedException($"This writer can't change {kind} {name}.");
+
+    /// <summary>
+    /// Turns one GPU driver switch on or off through the maker's own interface. The writer records the state from before first, writes, has the result read by an independent session and
+    /// throws unless the requested state is confirmed (leaving nothing changed); on success it returns the id of its record, which <see cref="UndoGpuChange"/> needs.
+    /// </summary>
+    GpuWriteResult SetGpuFeature(string vendor, string feature, int gpuIndex, bool enabled) =>
+        throw new NotSupportedException("This writer can't change a GPU switch.");
+
+    /// <summary>Puts back a GPU change from its record: the switch and what the driver changed beside it; throws unless a new reading shows the state from before.</summary>
+    void UndoGpuChange(string changeId) =>
+        throw new NotSupportedException("This writer can't undo a GPU change.");
 
     /// <summary>Removes one packaged app for the signed-in user, by its full package name.</summary>
     void RemoveAppx(string packageFullName) =>
@@ -388,6 +399,11 @@ public sealed class WindowsConfigurator
                 ApplyAdapters(op, done);
             }
 
+            if (op.GpuSettings.Count > 0)
+            {
+                ApplyGpu(op, done);
+            }
+
             if (op.PowerSettings.Count > 0)
             {
                 var active = _reader.ReadPower().ActiveScheme
@@ -439,7 +455,7 @@ public sealed class WindowsConfigurator
             // A write that failed without taking effect leaves nothing to put back: its record is dropped, so the user isn't
             // told a change "couldn't be put back" that never happened. A feature is read from a cache and dism may still be
             // working, so its record is kept.
-            if (done.Count > 0 && done[^1].Kind != ChangeKind.Feature && AtBefore(done[^1]))
+            if (done.Count > 0 && done[^1].Kind is not (ChangeKind.Feature or ChangeKind.GpuFeature) && AtBefore(done[^1]))
             {
                 done.RemoveAt(done.Count - 1);
             }
@@ -572,6 +588,49 @@ public sealed class WindowsConfigurator
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Sets an operation's GPU switches: a fresh reading first (nothing is written on a guess: an unreadable, unsupported or Anti-Lag Next state changes nothing), then the maker's writer, which
+    /// records its own before-image, writes and has the result read by an independent session; then this engine reads the switch itself and fails the operation, putting the change back, unless
+    /// the requested state is in place with the original Anti-Lag level.
+    /// </summary>
+    private void ApplyGpu(WindowsOperation op, List<RecordedChange> done)
+    {
+        foreach (var setting in op.GpuSettings)
+        {
+            var reading = _reader.ReadGpuFeature(setting.Vendor, setting.Feature);
+            if (reading is not { Availability: GpuAvailability.Available, Supported: true, Enabled: { } before })
+            {
+                throw new InvalidOperationException($"{setting.Label} could not be read from the {setting.Vendor.ToUpperInvariant()} driver ({reading?.Note ?? reading?.Availability.ToString() ?? "no answer"}), so nothing was changed.");
+            }
+
+            if (setting.Enabled && setting.Feature == GpuSetting.AntiLag && reading.Level is not 0)
+            {
+                throw new InvalidOperationException($"{setting.Label} is not the original (level {(reading.Level?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown")}); Mesura never changes Anti-Lag Next, so nothing was changed.");
+            }
+
+            if (before == setting.Enabled)
+            {
+                continue;
+            }
+
+            var label = $"{reading.GpuName}: {setting.Label}";
+            var result = _writer.SetGpuFeature(setting.Vendor, setting.Feature, reading.GpuIndex, setting.Enabled);
+            done.Add(new RecordedChange(ChangeKind.GpuFeature, label, null, result.ChangeId, setting.Target, null, before ? "on" : "off", setting.Enabled ? "on" : "off"));
+            var now = _reader.ReadGpuFeature(setting.Vendor, setting.Feature);
+            if (now is not { Availability: GpuAvailability.Available, Enabled: { } after } || after != setting.Enabled
+                || (setting.Feature == GpuSetting.AntiLag && now.Level is not 0))
+            {
+                throw new InvalidOperationException($"{label}: the driver doesn't report {setting.Label} as {(setting.Enabled ? "on" : "off")} with the original level after the change.");
+            }
+        }
+    }
+
+    private string? ReadGpuValue(RecordedChange change)
+    {
+        var parts = (change.Name ?? "").Split(' ', 2);
+        return parts.Length == 2 && _reader.ReadGpuFeature(parts[0], parts[1]) is { Availability: GpuAvailability.Available, Enabled: { } on } ? (on ? "on" : "off") : null;
     }
 
     private void WriteAdapter(string interfaceGuid, AdapterSettingKind kind, string key, string value)
@@ -755,6 +814,7 @@ public sealed class WindowsConfigurator
         ChangeKind.PowerSchemeCreated => change.After is not null && !_reader.ReadPower().Schemes.Contains(change.After),
         ChangeKind.AdapterProperty or ChangeKind.AdapterBinding or ChangeKind.AdapterPower =>
             string.Equals(ReadAdapterValue(change), change.Before, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.GpuFeature => string.Equals(ReadGpuValue(change), change.Before, StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
 
@@ -784,6 +844,7 @@ public sealed class WindowsConfigurator
         ChangeKind.PowerScheme => string.Equals(_reader.ReadPower().ActiveScheme, change.After, StringComparison.OrdinalIgnoreCase),
         ChangeKind.AdapterProperty or ChangeKind.AdapterBinding or ChangeKind.AdapterPower =>
             string.Equals(ReadAdapterValue(change), change.After, StringComparison.OrdinalIgnoreCase),
+        ChangeKind.GpuFeature => string.Equals(ReadGpuValue(change), change.After, StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
 
@@ -856,6 +917,9 @@ public sealed class WindowsConfigurator
                 break;
             case ChangeKind.AdapterPower when change.Path is not null && bool.TryParse(change.Before, out var power):
                 _writer.SetAdapterPower(change.Path, power);
+                break;
+            case ChangeKind.GpuFeature when change.Path is not null:
+                _writer.UndoGpuChange(change.Path); // the GPU writer's own record puts back the switch and what the driver changed beside it
                 break;
             default:
                 throw new InvalidOperationException($"No before-image recorded for {change.Target}.");

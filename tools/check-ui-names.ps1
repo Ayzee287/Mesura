@@ -1,4 +1,4 @@
-# Checks what assistive technology (and UI Automation scripts) read from the running app: every button, checkbox, list item,
+﻿# Checks what assistive technology (and UI Automation scripts) read from the running app: every button, checkbox, list item,
 # radio button and text box on every page must have an accessible name, and none may be named after a C# type
 # ("Mesura.App.SettingRow"). Exits 1 and lists what it found when something fails.
 #
@@ -45,6 +45,9 @@ try {
       elseif ($n -match '^[A-Za-z_]+(\.[A-Za-z_]+)+$') { $problems.Add("${label}: $t is named after a type, '$n'") }
     }
   }
+  Scan 'Welcome (the start page)'   # the page the app opens on: its items used to be read out as a type name (Mesura.App.WelcomeDoor)
+  $firstNav = Pick $strings.'Nav.Optimize' $CT::RadioButton
+  if (-not $firstNav) { $problems.Add("The navigation was not found by its $Lang names: a Release build shows Windows' language and ignores MESURA_PREVIEW_LANGUAGE, so run -Lang ru on a Russian Windows (or -Lang en on an English one), or check a Debug build.") }
   foreach ($page in 'Nav.Optimize', 'Nav.Tweaks', 'Nav.Debloat', 'Nav.Apps', 'Nav.Configurations', 'Nav.Profiles', 'Nav.Activation', 'Nav.Activity', 'Nav.Settings') {
     $nav = Pick $strings.$page $CT::RadioButton
     if (-not $nav) {

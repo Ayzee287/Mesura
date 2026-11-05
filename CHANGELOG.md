@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.0 (Stable; built locally, not published; docs/profiles-0.6.md, docs/release-0.6.md)
+
+- **Profiles know the PC.** Mesura reads the hardware (kind of PC, processor, memory, graphics, drives, network adapters) and plans each level for it: per group (Telemetry, Privacy and promotions, Windows, Power management,
+  Processor, Memory, Graphics, Storage, Network, Gaming and latency) what would be applied, what is already set, what waits for a restart, what the level's own power plan already covers, and what is not for this PC,
+  with the reason. Each group has a switch and every setting can be unticked. Nothing the profile cannot apply is shown as a switch.
+- **Telemetry is off in every level**, as its own group apart from privacy and promotions: required diagnostic data only, the improvement, application-telemetry and inventory programs off, no extra logs or large dumps.
+- **Maximum performance applies everything that applies to the PC**: the power plan, processor (cores unparked, energy hint, ramp-up, performance cores, power throttling), memory, hardware-accelerated GPU scheduling,
+  NTFS, drive and link power states, Edge, widgets, window animations, Game Bar recording and mouse acceleration. More heat, noise and idle power are accepted; the cost of each entry is shown beside it. What stays
+  unticked is held back only because its stored value is known from community sources.
+- **Laptops are not limited.** The processor, drive and PCI Express entries that write only the mains side of the power plan apply on a laptop (the battery side is never touched). Power throttling is off in Maximum performance on a laptop too;
+  that shortens the time on battery, and the entry says so.
+- **`mesura hardware [--json]`** shows what Mesura knows about the PC, and **`mesura windows plan [--profile <level>]`** shows a level planned for it; both read-only. **`mesura windows apply --profile <level> [--group-off a,b]
+  [--entry-off x,y] [--entry-on x,y]`** applies exactly what the plan lists (previewing unless `--apply`), the same operations the window applies. `--preset` still applies a preset's whole list whatever the hardware.
+- **GPU and network entries in the profiles (the owner's decisions of 2026-11-04, `docs/profile-composition-0.6.0.md`).** Maximum performance turns on the original Radeon Anti-Lag (level 0) on a Radeon that offers it (Anti-Lag+ and Anti-Lag Next are never touched; the driver turns Chill off while it is on, and Mesura puts it back on undo). Hardware-accelerated GPU scheduling is no longer applied by default (independent tests show no gain on average); it is offered unticked. Both profiles apply the per-maker network adapter preset that matches each adapter found (Realtek, Intel or Killer Ethernet; Intel, Killer or Realtek Wi-Fi), only on settings the adapter's driver declares, with preview, recorded before-values, an independent read-back and undo; an adapter or setting that is not supported is shown with the reason. No frame-rate or latency gain is claimed: none was measured. The Anti-Lag write has run a full cycle on one real card; adapter writes have run on no real adapter.
+- **A crash fixed in the AMD writer** found on the first real write: Mesura kept `amdadlx64.dll` loaded after terminating ADLX and the second initialisation in the same process crashed it; each session now loads and unloads the DLL, as AMD's own helper does.
+- **No MAC address or serial number is read from a network adapter.** Driver properties that hold an address or a serial number (`NetworkAddress` and the like) are left out of every adapter reading, so a snapshot kept on disk and the inventory printed by `mesura network --json` carry none.
+- **Accessible names on the Welcome page.** The items of the start page were read out by a screen reader as the type name `Mesura.App.WelcomeDoor`; they carry the door's name now. `tools\check-ui-names.ps1` scans the start page too.
+- **The Intel Wi-Fi preset has run on a real adapter** (the development laptop, Intel AX201): applied, read back by Windows' own cmdlets, undone, read back, the adapters equal to the snapshot taken before; four A/B cycles of latency to the router showed no measurable difference on Wi-Fi (`docs/real-pc-results/network-laptop-2026-11-05`). No other maker's preset has been written on a real adapter. `tools\tester\Test-NetworkPresetEffect.ps1` is the A/B script.
+- **A kit to test the network presets on a real adapter** (`tools\tester\make-network-kit.ps1`, `Test-NetworkPreset.ps1`): preview, a supervised apply and undo of one preset with the values read back by Windows' own cmdlets. It exists because no network adapter has been written on a real PC; the owner runs it.
+- **The owner's check kit** (`Collect Mesura stable check.cmd`) now also records `mesura hardware` and both levels' plans, read only.
+
 ## 0.5.5 (the first Stable; reliability, performance and hardware work, docs/reliability-0.5.md, docs/release-0.5.5.md)
 
 - **NVIDIA setup steps.** The profile backup before a driver install, the check after it and the import of the NVIDIA profile are reliable on a PC whose NVIDIA Profile Inspector sits in a per-user winget folder (below). The

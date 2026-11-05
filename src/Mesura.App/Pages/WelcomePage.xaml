@@ -3,6 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="clr-namespace:Mesura.App">
     <UserControl.Resources>
+        <!-- The container an ItemsControl puts around each item is not a control: it is read out as the item's type name (Mesura.App.WelcomeDoor). It is named after the door (WPF has no way to take it out of the control view), the button inside carries the same name. -->
+        <Style x:Key="QuietItem" TargetType="ContentPresenter">
+            <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+        </Style>
         <!-- A door: the whole glass card is the button, lit by the pointer like every other card, ringed when the keyboard is on it. -->
         <Style x:Key="WelcomeDoor" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Margin" Value="6" />
@@ -59,7 +63,7 @@
             </ItemsControl>
 
             <!-- Where to start: the three things most people come for. -->
-            <ItemsControl ItemsSource="{Binding Doors}" Margin="-6,34,-6,0" Focusable="False" IsTabStop="False">
+            <ItemsControl ItemsSource="{Binding Doors}" Margin="-6,34,-6,0" Focusable="False" IsTabStop="False" ItemContainerStyle="{StaticResource QuietItem}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <l:EqualRowsPanel MinColumnWidth="250" MaxColumns="3" />
@@ -75,7 +79,7 @@
 
             <!-- The rest of the dock, one quiet line. -->
             <TextBlock Text="{l:T Welcome.Also}" Style="{StaticResource GroupLabel}" Margin="0,28,0,6" />
-            <ItemsControl ItemsSource="{Binding Others}" Focusable="False" IsTabStop="False" Margin="-10,0,0,0">
+            <ItemsControl ItemsSource="{Binding Others}" Focusable="False" IsTabStop="False" Margin="-10,0,0,0" ItemContainerStyle="{StaticResource QuietItem}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />

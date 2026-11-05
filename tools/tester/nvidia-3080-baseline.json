@@ -1,0 +1,14 @@
+{
+  "taken": "2026-11-03",
+  "pc": "RTX 3080 PC (Ryzen 7 7700, 48 GB, Windows 11 Pro build 28000)",
+  "note": "What the PC looked like BEFORE the driver was reinstalled and the Maximum performance profile applied: read-only collections of 2026-11-03 (windows-graphics-state, nvapi-probe, gpu-evidence). Used by Verify-MesuraApplied.ps1 only to print a before/after line; nothing is judged against it.",
+  "driver": "610.88 (32.0.16.1088)",
+  "hwSchMode": null,
+  "gameMode": "set (default)",
+  "powerPlan": "High performance (8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c)",
+  "baseProfileSettingsHeld": 0,
+  "idle": { "pstate": "P8", "coreMhz": 210, "memoryMhz": 405, "powerW": 34.78, "tempC": 27, "fanPercent": 37, "pcieGen": 1 },
+  "vrr": { "possible": false, "display": "Mi Monitor, DisplayPort, 2560x1440 at 180 Hz" },
+  "bar1MiB": 16384,
+  "powerLimitW": { "default": 380, "min": 100, "max": 400 }
+}

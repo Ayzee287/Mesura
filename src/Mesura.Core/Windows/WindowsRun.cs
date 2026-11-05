@@ -37,6 +37,12 @@ public enum ChangeKind
 
     /// <summary>One adapter's "allow the computer to turn off this device" switch (interface GUID in Path; <c>True</c>/<c>False</c>).</summary>
     AdapterPower,
+
+    /// <summary>
+    /// A GPU driver switch (maker and feature in Name as <c>amd antilag</c>, the id of the GPU writer's own record in Path, <c>on</c>/<c>off</c> in Before/After). Undoing it
+    /// gives that record to the GPU writer, which puts back the switch and what the driver changed beside it.
+    /// </summary>
+    GpuFeature,
 }
 
 /// <summary>

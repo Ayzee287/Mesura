@@ -111,3 +111,7 @@ After `tools\publish.ps1` (which writes the portable zip), in order:
 3. Nothing is uploaded by these scripts. Publishing is a GitHub release made by the owner, with those files attached under exactly those names.
 
 End-to-end check of installing and updating without publishing anything: `tools\e2e-update.ps1`; the installer's own lifecycle (install, reinstall, upgrade, uninstall, a failed update) is `tools\e2e-installer.ps1`; what a published release looks like to the app is `tools\verify-published.ps1`.
+
+## The Stable 0.6.0 build (2026-11-04)
+
+Built from a clean tree of commit `f8e633a` with `tools\publish.ps1 -Label '' -Out artifacts\stable-0.6.0 -BuildNumber 840` and `tools\build-installer.ps1 -Out <absolute path of the same folder>` (the installer script needs an absolute `-Out`; in Windows PowerShell 5.1 call `publish.ps1` in process with `&`, because `powershell -File` drops an empty `-Label '`). The publishable set is `artifacts\stable-0.6.0\dist` (zip, the two MSIs, `SHA256SUMS.txt`, `BUILD.txt`); the `FAILTEST` packages are for the Sandbox only and never go there. Byte reproducibility is partial (see `docs/release-0.6.md`): the SHA-256 of the files that were tested is the record. Signing and publication are the owner's steps; `artifacts\current` (the 0.5.5 record) is rotated only by publishing.

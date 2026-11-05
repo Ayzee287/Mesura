@@ -30,6 +30,7 @@ public static class RevertTrust
             ChangeKind.AdapterProperty => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.Property && Same(s.Key, change.Name)),
             ChangeKind.AdapterBinding => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.Binding && Same(s.Key, change.Name)),
             ChangeKind.AdapterPower => operation.AdapterSettings.Any(s => s.Kind == AdapterSettingKind.PowerManagement),
+            ChangeKind.GpuFeature => operation.GpuSettings.Any(g => Same($"{g.Vendor} {g.Feature}", change.Name)),
             ChangeKind.PowerScheme => operation.PowerPlan is not null,
             ChangeKind.PowerSchemeCreated => operation.PowerPlan is { } plan
                 && (Same(plan.SchemeGuid, change.After) || Same(plan.SchemeGuid, change.Before)),

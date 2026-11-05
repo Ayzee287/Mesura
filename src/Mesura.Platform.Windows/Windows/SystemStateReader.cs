@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Management;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -204,6 +204,8 @@ public sealed partial class SystemStateReader : ISystemReader
     public string? ReadSystemSetting(string kind, string name) => _tools?.Read(kind, name);
 
     public IReadOnlyList<AdapterReading>? ReadAdapters() => NetworkAdapterReader.Read();
+
+    public GpuFeatureReading? ReadGpuFeature(string vendor, string feature) => GpuFeatureReader.Read(vendor, feature, _tools);
 
     public string? ReadEffect(string kind) => kind.ToLowerInvariant() switch
     {

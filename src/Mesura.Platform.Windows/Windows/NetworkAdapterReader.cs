@@ -71,7 +71,7 @@ internal static class NetworkAdapterReader
             {
                 using (row)
                 {
-                    if (row["RegistryKeyword"] is not string keyword || keyword.Length == 0)
+                    if (row["RegistryKeyword"] is not string keyword || keyword.Length == 0 || AdapterPrivacy.IsPrivate(keyword))
                     {
                         continue;
                     }

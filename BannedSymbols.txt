@@ -1,4 +1,4 @@
-// The side-effect boundaries (architecture §2.3, D021), enforced in every production project by
+﻿// The side-effect boundaries (architecture §2.3, D021), enforced in every production project by
 // Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030, an error under TreatWarningsAsErrors).
 // Every change to this file is reviewed.
 //
@@ -13,7 +13,7 @@
 // page or URL, relaunch elevated; D025); NvidiaTools in Setup (start NVCleanstall, run NVIDIA Profile Inspector's export
 // and merge import) and LicensingWriter in Setup (install a user's product key, activate, clear the key from the registry
 // through WMI; D031), and NvidiaOfficialSetup in Setup (0.5: create the folder the official NVIDIA package is unpacked into, unpack it with Windows' tar,
-// and run the package's own signed setup.exe after the user's confirmation). 2026-11-02: its neighbours in Setup.Windows\Nvidia take the same pragma: ToolProcess (start NVIDIA Profile Inspector with the
+// and run the package's own signed setup.exe after the user's confirmation). 2026-11-04: AmdCommandLineRunner in Setup (start Mesura's own cli\mesura.exe with fixed words, so the window never calls AMD's amdadlx64.dll in its own process; a crash there cannot be caught). 2026-11-02: its neighbours in Setup.Windows\Nvidia take the same pragma: ToolProcess (start NVIDIA Profile Inspector with the
 // user's own token or this process's), ProfileInspectorStager and ProtectedToolFolder (copy a verified NVIDIA Profile Inspector and the profile file into a folder only administrators can write to).
 // Nothing here may be unbanned to make a collector "work", and the diagnostic projects gain no new owner.
 
@@ -186,15 +186,15 @@ M:System.Environment.SetEnvironmentVariable(System.String,System.String);Can wri
 M:System.Environment.SetEnvironmentVariable(System.String,System.String,System.EnvironmentVariableTarget);Can write the registry; only WindowsWriter (Setup) may (architecture §2.3)
 
 // System.Diagnostics.Process
-M:System.Diagnostics.Process.Start~System.Boolean;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.Diagnostics.ProcessStartInfo)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.String,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.String,System.Collections.Generic.IEnumerable{System.String})~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.String,System.String,System.Security.SecureString,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Start(System.String,System.String,System.String,System.Security.SecureString,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Kill;Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
-M:System.Diagnostics.Process.Kill(System.Boolean);Process launch and control only in its owner class: WingetRunner or WindowsWriter (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start~System.Boolean;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.Diagnostics.ProcessStartInfo)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.String,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.String,System.Collections.Generic.IEnumerable{System.String})~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.String,System.String,System.Security.SecureString,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Start(System.String,System.String,System.String,System.Security.SecureString,System.String)~System.Diagnostics.Process;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Kill;Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
+M:System.Diagnostics.Process.Kill(System.Boolean);Process launch and control only in its owner class: WingetRunner, WindowsWriter or AmdCommandLineRunner (Setup), ShellLauncher (App), PresentMonRunner (Platform, planned) (architecture §2.3)
 
 // System.Management.ManagementObject
 M:System.Management.ManagementObject.CopyTo(System.Management.ManagementOperationObserver,System.Management.ManagementPath);No WMI writes or method calls; a method such as MSFT_PhysicalDisk.Reset changes the system (architecture §2.3)

@@ -46,6 +46,9 @@ internal static partial class Program
         {WindowsCli.Usage}
         {ProfileCli.Usage}
         {SetupCli.Usage}
+          {HardwareCli.Usage}
+          {GpuCli.Usage}
+          {NetworkCli.Usage}
         {UpdateCli.Usage}
         {TrackACli.Usage}
 
@@ -124,6 +127,9 @@ internal static partial class Program
                 ProfileCommand profile => ProfileCli.RunProfile(profile.Args),
                 HistoryCommand history => ProfileCli.RunHistory(history.Args),
                 FirmwareCommand firmware => FirmwareCli.Run(firmware.Args),
+                HardwareCommand hardware => HardwareCli.Run(hardware.Args),
+                GpuCommand gpu => GpuCli.Run(gpu.Args),
+                NetworkCommand network => NetworkCli.Run(network.Args),
                 SetupCommand setup => SetupCli.Run(setup.Args),
                 UpdateCommand update => UpdateCli.Run(update.Args),
                 _ => throw new InvalidOperationException("Unknown command."),
@@ -298,6 +304,21 @@ internal static partial class Program
         if (args[0] == "firmware")
         {
             return new FirmwareCommand(args[1..]);
+        }
+
+        if (args[0] == "hardware")
+        {
+            return new HardwareCommand(args[1..]);
+        }
+
+        if (args[0] == "gpu")
+        {
+            return new GpuCommand(args[1..]);
+        }
+
+        if (args[0] == "network")
+        {
+            return new NetworkCommand(args[1..]);
         }
 
         if (args[0] == "history")
@@ -532,6 +553,12 @@ internal static partial class Program
     private sealed record ProfileCommand(string[] Args) : Command("profile");
 
     private sealed record HistoryCommand(string[] Args) : Command("history");
+
+    private sealed record HardwareCommand(string[] Args) : Command("hardware");
+
+    private sealed record GpuCommand(string[] Args) : Command("gpu");
+
+    private sealed record NetworkCommand(string[] Args) : Command("network");
 
     private sealed record FirmwareCommand(string[] Args) : Command("firmware");
 

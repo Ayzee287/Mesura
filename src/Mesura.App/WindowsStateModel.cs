@@ -56,6 +56,9 @@ public sealed class SettingRow : Observable
 
     public OperationState State => _eval.State;
 
+    /// <summary>The engine's reading of this entry on this PC, or <c>null</c> while it hasn't been read.</summary>
+    public OperationEvaluation? Evaluation => _checking ? null : _eval;
+
     public bool Checking => _checking;
 
     public string Name => Loc.Name(Operation);
@@ -206,46 +209,17 @@ public sealed class SettingRow : Observable
         _ => "",
     };
 
-    private string InapplicableReason()
+    private string InapplicableReason() => Loc.Get(Mesura.Core.Profiles.ProfilePlanner.InapplicableCode(Operation, _services.Reader) switch
     {
-        var reader = _services.Reader;
-        if ((Operation.MinBuild is { } min && reader.Build < min) || (Operation.MaxBuild is { } max && reader.Build > max))
-        {
-            return Loc.Get("Reason.Build");
-        }
-
-        if (Operation.Requirements.Contains(DeviceRequirement.NoBattery) && reader.HasBattery == true)
-        {
-            return Loc.Get("Reason.Battery");
-        }
-
-        if (Operation.Requirements.Contains(DeviceRequirement.NoModernStandby) && reader.ModernStandby == true)
-        {
-            return Loc.Get("Reason.ModernStandby");
-        }
-
-        if (Operation.Requirements.Contains(DeviceRequirement.ProEdition) && reader.PolicyEdition == false)
-        {
-            return Loc.Get("Reason.Edition");
-        }
-
-        if (Operation.Requirements.Contains(DeviceRequirement.Ram16Gb) && reader.PhysicalMemoryBytes < 15UL * 1024 * 1024 * 1024)
-        {
-            return Loc.Get("Reason.Memory");
-        }
-
-        if (Operation.Requirements.Contains(DeviceRequirement.HybridCpu) && reader.HybridCpu == false)
-        {
-            return Loc.Get("Reason.Hybrid");
-        }
-
-        if (Operation.Effect is { } check && string.Equals(reader.ReadEffect(check.Kind), "unsupported", StringComparison.OrdinalIgnoreCase))
-        {
-            return Loc.Get("Reason.Unsupported");
-        }
-
-        return Loc.Get("Reason.Absent");
-    }
+        Mesura.Core.Profiles.PlanReason.Build => "Reason.Build",
+        Mesura.Core.Profiles.PlanReason.Battery => "Reason.Battery",
+        Mesura.Core.Profiles.PlanReason.ModernStandby => "Reason.ModernStandby",
+        Mesura.Core.Profiles.PlanReason.Edition => "Reason.Edition",
+        Mesura.Core.Profiles.PlanReason.Memory => "Reason.Memory",
+        Mesura.Core.Profiles.PlanReason.Hybrid => "Reason.Hybrid",
+        Mesura.Core.Profiles.PlanReason.EffectUnsupported => "Reason.Unsupported",
+        _ => "Reason.Absent",
+    });
 
     /// <summary>Needs a restart to take effect.</summary>
     public bool NeedsRestart => Operation.Applicable && Operation.Activation == Activation.Reboot;

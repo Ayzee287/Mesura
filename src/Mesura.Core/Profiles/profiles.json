@@ -1,0 +1,199 @@
+﻿{
+  // Mesura's optimization profiles (0.6, docs/profiles-0.6.md): the two levels, as groups of entries over the Windows catalog's operations.
+  // An entry only names an operation, the group it belongs to, whether it is applied with the profile ("default") or offered unticked
+  // ("optional"), why it is there, and the hardware it is for ("when"). How a setting is written, read back and reverted stays in the operation.
+  // Rules the tests hold: every default entry's stored value is documented, verified or confirmed by an effect check (a value known from community sources
+  // only is optional); every entry says why; no text promises speed (no gain is claimed unless it was measured); the catalog presets of the same id list the
+  // same operations as the default and optional entries.
+  // Maximum performance is "everything that applies to this PC that is meant to make it faster, heat, noise and idle power accepted": an operation that can't
+  // apply here is skipped with its reason, and one with a cost says so ("sideEffects") instead of being left out.
+  // "when" is hardware relevance beyond the operation's own requirements: form (desktop, compact, portable), cpu (intel, amd, hybrid), gpu (any, discrete,
+  // nvidia, amd, intel), disk (nvme, sata, ssd, hdd), network (wifi, ethernet). A fact that couldn't be read leaves the entry alone.
+  "kind": "Mesura.OptimizationProfiles",
+  "schemaVersion": 1,
+  "groups": [
+    { "id": "telemetry", "name": "Telemetry", "summary": "Windows diagnostic and usage reporting to Microsoft, off in every profile." },
+    { "id": "privacy", "name": "Privacy and promotions", "summary": "Advertising profile, tips, suggestions and promotions in Windows." },
+    { "id": "windows", "name": "Windows", "summary": "Background work and defaults of Windows itself." },
+    { "id": "power", "name": "Power management", "summary": "The power plan and what the PC's devices may power down." },
+    { "id": "cpu", "name": "Processor", "summary": "How Windows runs and schedules the processor." },
+    { "id": "memory", "name": "Memory", "summary": "How Windows uses installed memory." },
+    { "id": "gpu", "name": "Graphics", "summary": "The graphics driver's own switches and graphics scheduling." },
+    { "id": "storage", "name": "Storage", "summary": "Drives and the file system." },
+    { "id": "network", "name": "Network", "summary": "Network behaviour of Windows and the settings of the network adapter's own driver, chosen by the adapter found." },
+    { "id": "gaming", "name": "Gaming and latency", "summary": "Game Mode, game recording and input behaviour." }
+  ],
+  "profiles": [
+    {
+      "id": "recommended-gaming",
+      "entries": [
+        { "op": "privacy.diagnostic-data-required", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.ceip-policy-off", "group": "telemetry" },
+        { "op": "telemetry.application-telemetry-off", "group": "telemetry" },
+        { "op": "telemetry.inventory-collector-off", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.limit-diagnostic-logs", "group": "telemetry" },
+        { "op": "telemetry.limit-dump-collection", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.onesettings-downloads-off", "group": "telemetry", "role": "optional", "sideEffects": true },
+
+        { "op": "privacy.no-advertising-id", "group": "privacy" },
+        { "op": "privacy.no-tailored-experiences", "group": "privacy" },
+        { "op": "privacy.no-language-list", "group": "privacy" },
+        { "op": "notifications.no-feedback-prompts", "group": "privacy" },
+        { "op": "notifications.no-tips-and-suggestions", "group": "privacy" },
+        { "op": "notifications.no-setup-nags", "group": "privacy" },
+        { "op": "lockscreen.no-spotlight-ads", "group": "privacy" },
+        { "op": "start.no-recommendations", "group": "privacy" },
+        { "op": "start.no-account-notifications", "group": "privacy" },
+        { "op": "suggestions.no-third-party-in-spotlight", "group": "privacy" },
+        { "op": "search.no-highlights-policy", "group": "privacy" },
+
+        { "op": "repair.ncsi-active-probing", "group": "windows" },
+        { "op": "repair.threaded-dpc", "group": "windows" },
+
+        { "op": "power.mesura-balanced-plan", "group": "power" },
+
+        { "op": "network.preset-realtek-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-intel-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-killer-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-intel-wifi", "group": "network", "when": { "network": "wifi" }, "sideEffects": true },
+        { "op": "network.preset-realtek-wifi", "group": "network", "when": { "network": "wifi" }, "sideEffects": true },
+        { "op": "gaming.game-mode-on", "group": "gaming" },
+        { "op": "input.accessibility-shortcuts-off", "group": "gaming" }
+      ]
+    },
+    {
+      "id": "maximum-performance",
+      "entries": [
+        { "op": "privacy.diagnostic-data-required", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.ceip-policy-off", "group": "telemetry" },
+        { "op": "telemetry.application-telemetry-off", "group": "telemetry" },
+        { "op": "telemetry.inventory-collector-off", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.limit-diagnostic-logs", "group": "telemetry" },
+        { "op": "telemetry.limit-dump-collection", "group": "telemetry", "sideEffects": true },
+        { "op": "telemetry.onesettings-downloads-off", "group": "telemetry", "role": "optional", "sideEffects": true },
+
+        { "op": "privacy.no-advertising-id", "group": "privacy" },
+        { "op": "privacy.no-tailored-experiences", "group": "privacy" },
+        { "op": "privacy.no-language-list", "group": "privacy" },
+        { "op": "notifications.no-feedback-prompts", "group": "privacy" },
+        { "op": "notifications.no-tips-and-suggestions", "group": "privacy" },
+        { "op": "notifications.no-setup-nags", "group": "privacy" },
+        { "op": "lockscreen.no-spotlight-ads", "group": "privacy" },
+        { "op": "start.no-recommendations", "group": "privacy" },
+        { "op": "start.no-account-notifications", "group": "privacy" },
+        { "op": "suggestions.no-third-party-in-spotlight", "group": "privacy" },
+        { "op": "search.no-highlights-policy", "group": "privacy" },
+
+        { "op": "repair.ncsi-active-probing", "group": "windows" },
+        { "op": "repair.threaded-dpc", "group": "windows" },
+        { "op": "taskbar.widgets-policy-off", "group": "windows", "sideEffects": true },
+        { "op": "edge.no-startup-boost", "group": "windows", "sideEffects": true },
+        { "op": "edge.no-background-mode", "group": "windows", "sideEffects": true },
+        { "op": "dwm.window-animations-off", "group": "windows", "sideEffects": true },
+        { "op": "visual.transparency-off", "group": "windows", "role": "optional" },
+
+        { "op": "power.mesura-maximum-plan", "group": "power", "sideEffects": true },
+        { "op": "power.usb-keep-awake", "group": "power", "sideEffects": true },
+        { "op": "power.disk-never-off", "group": "power", "sideEffects": true },
+        { "op": "power.pcie-aspm-off", "group": "power", "sideEffects": true },
+
+        { "op": "cpu.core-parking-off", "group": "cpu", "sideEffects": true },
+        { "op": "power.cpu-epp-performance-ac", "group": "cpu", "sideEffects": true },
+        { "op": "power.cpu-ramp-up-fast-ac", "group": "cpu", "sideEffects": true },
+        { "op": "cpu.hybrid-prefer-performance-cores", "group": "cpu", "sideEffects": true },
+        { "op": "power.power-throttling-off", "group": "cpu", "sideEffects": true },
+
+        { "op": "memory.compression-off", "group": "memory", "sideEffects": true },
+        { "op": "memory.keep-kernel-in-ram", "group": "memory", "sideEffects": true },
+
+        { "op": "gpu.amd-anti-lag-on", "group": "gpu", "when": { "gpu": "amd" }, "sideEffects": true },
+        { "op": "gpu.hardware-scheduling-on", "group": "gpu", "role": "optional", "when": { "gpu": "any" }, "sideEffects": true },
+
+        { "op": "system.ntfs-last-access-off", "group": "storage", "sideEffects": true },
+        { "op": "system.ntfs-8dot3-off", "group": "storage", "sideEffects": true },
+        { "op": "power.nvme-stay-active-ac", "group": "storage", "when": { "disk": "nvme" }, "sideEffects": true },
+        { "op": "power.sata-link-power-off-ac", "group": "storage", "when": { "disk": "sata" }, "sideEffects": true },
+
+        { "op": "updates.no-p2p-delivery", "group": "network" },
+        { "op": "network.preset-realtek-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-intel-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-killer-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
+        { "op": "network.preset-intel-wifi", "group": "network", "when": { "network": "wifi" }, "sideEffects": true },
+        { "op": "network.preset-realtek-wifi", "group": "network", "when": { "network": "wifi" }, "sideEffects": true },
+        { "op": "gaming.game-mode-on", "group": "gaming" },
+        { "op": "input.accessibility-shortcuts-off", "group": "gaming" },
+        { "op": "gaming.game-recording-policy-off", "group": "gaming", "sideEffects": true },
+        { "op": "input.pointer-precision-off", "group": "gaming", "sideEffects": true },
+        { "op": "gaming.background-recording-off", "group": "gaming", "role": "optional" },
+        { "op": "gaming.controller-game-bar-off", "group": "gaming", "role": "optional" }
+      ]
+    }
+  ],
+  // Why each operation is in a profile: one sentence, the same wherever it appears. The Russian texts are in the app (Localization\catalog-ru.json).
+  "why": {
+    "privacy.diagnostic-data-required": "Windows sends only the diagnostic data it requires; the optional kind is not sent.",
+    "telemetry.ceip-policy-off": "Opts every user out of the Customer Experience Improvement Program.",
+    "telemetry.application-telemetry-off": "Stops the engine that reports how programs use Windows components.",
+    "telemetry.inventory-collector-off": "Stops Windows inventorying apps, files, devices and drivers for Microsoft.",
+    "telemetry.limit-diagnostic-logs": "Keeps Windows from gathering extra diagnostic logs when it troubleshoots a problem.",
+    "telemetry.limit-dump-collection": "Limits error reports to small dumps, never full memory dumps.",
+    "telemetry.onesettings-downloads-off": "Stops Windows fetching configuration from Microsoft's OneSettings service; offered, not applied, because some components may then miss changes.",
+
+    "privacy.no-advertising-id": "Apps no longer get an advertising ID to profile you with.",
+    "privacy.no-tailored-experiences": "Microsoft stops tailoring tips and ads to your diagnostic data.",
+    "privacy.no-language-list": "Websites no longer receive the list of languages you use.",
+    "notifications.no-feedback-prompts": "Windows stops asking for feedback.",
+    "notifications.no-tips-and-suggestions": "No tips, suggestions or promoted apps in notifications and Settings.",
+    "notifications.no-setup-nags": "No \"finish setting up your device\" screens.",
+    "lockscreen.no-spotlight-ads": "No promotions on the lock screen.",
+    "start.no-recommendations": "Start stops recommending apps and tips.",
+    "start.no-account-notifications": "Start stops showing Microsoft account prompts and badges.",
+    "suggestions.no-third-party-in-spotlight": "No suggestions from third parties in Windows Spotlight.",
+    "search.no-highlights-policy": "Search stops showing daily highlights.",
+
+    "repair.ncsi-active-probing": "Puts Windows' connectivity check back on if a tweak tool turned it off, so apps know when the PC is online.",
+    "repair.threaded-dpc": "Puts threaded DPCs back to Windows' default if a tweak tool changed them.",
+    "taskbar.widgets-policy-off": "Stops the Widgets process from running for every user.",
+    "edge.no-startup-boost": "Edge no longer starts its processes at sign-in, which leaves that memory and CPU time free.",
+    "edge.no-background-mode": "Edge exits fully when its last window closes instead of staying resident.",
+    "dwm.window-animations-off": "Windows stops animating minimise, maximise and restore, so windows change state at once.",
+    "visual.transparency-off": "Makes the taskbar, Start and other surfaces opaque.",
+
+    "power.mesura-balanced-plan": "Balanced without the brakes on mains power: boosting is no longer held back and USB devices are not put to sleep; battery behaviour stays Windows'.",
+    "power.mesura-maximum-plan": "A copy of Balanced that, on mains power, keeps the processor asking for full speed and every power-saving state off; battery behaviour stays Windows'.",
+    "power.usb-keep-awake": "Idle USB devices are not suspended on mains power, so a controller or headset never drops out.",
+    "power.disk-never-off": "Drives are never powered down on mains power, so they do not have to spin up when a game needs them.",
+    "power.pcie-aspm-off": "The links to the graphics card and NVMe drives stay at full power on mains power instead of sleeping between uses.",
+
+    "cpu.core-parking-off": "Windows no longer parks processor cores on mains power, so every core is ready when load arrives.",
+    "power.cpu-epp-performance-ac": "Asks the processor to favour speed over saving energy on mains power.",
+    "power.cpu-ramp-up-fast-ac": "On processors Windows controls, it jumps to the highest performance state when load rises.",
+    "cpu.hybrid-prefer-performance-cores": "On a processor with performance and efficiency cores, threads prefer the performance cores.",
+    "power.power-throttling-off": "Windows stops limiting the speed of background programs, which then compete with a game at full speed.",
+
+    "memory.compression-off": "Windows stops compressing rarely used memory pages, spending no processor time on it when there is memory to spare.",
+    "memory.keep-kernel-in-ram": "Kernel and driver code stays in memory instead of being paged out to disk.",
+
+    "gpu.amd-anti-lag-on": "Turns on the original Radeon Anti-Lag (level 0) on a Radeon card that offers it; the driver turns Chill off while it is on, and Mesura puts Chill back on undo. No gain is claimed.",
+    "gpu.hardware-scheduling-on": "Lets a graphics card and driver that support it schedule their own work; set only once Windows confirms it is in effect. Offered, not applied: no independent test shows a gain, and frame times got worse in some games.",
+
+    "system.ntfs-last-access-off": "NTFS stops writing a last-access time on every file read.",
+    "system.ntfs-8dot3-off": "NTFS stops making a second, DOS-style name for each new file.",
+    "power.nvme-stay-active-ac": "NVMe drives stay in their working state on mains power instead of dropping into idle states they must wake from.",
+    "power.sata-link-power-off-ac": "SATA drives keep their link active on mains power instead of powering it down after idle.",
+
+    "updates.no-p2p-delivery": "Windows stops sharing downloaded updates with other PCs, so it uses none of your upload for them.",
+    "network.preset-realtek-ethernet": "Turns off interrupt moderation, Energy-Efficient Ethernet and the card's own power saving and raises the receive buffers, on a Realtek Ethernet card whose driver lists them. No gain is claimed.",
+    "network.preset-intel-ethernet": "Turns off interrupt moderation, Energy-Efficient Ethernet and Intel's own power saving and raises the receive buffers, on an Intel Ethernet card whose driver lists them. No gain is claimed.",
+    "network.preset-killer-ethernet": "Turns off interrupt moderation and Energy-Efficient Ethernet and raises the receive buffers, on a Killer Ethernet card whose driver lists them. No gain is claimed.",
+    "network.preset-intel-wifi": "Keeps all antenna chains awake, makes roaming rare and prefers 5 GHz, on an Intel or Killer Wi-Fi card whose driver lists them. No gain is claimed.",
+    "network.preset-realtek-wifi": "Turns off Leisure Power Save on an older Realtek Wi-Fi card whose driver has it. No gain is claimed.",
+
+    "gaming.game-mode-on": "Keeps Game Mode on, Windows' default, so Windows favours the game in the foreground.",
+    "input.accessibility-shortcuts-off": "Pressing Shift five times in a game no longer opens Sticky Keys and takes focus.",
+    "gaming.game-recording-policy-off": "Blocks Game Bar recording and broadcasting for every user, so nothing records in the background.",
+    "input.pointer-precision-off": "Turns off mouse acceleration, so the pointer moves the same distance for the same hand movement.",
+    "gaming.background-recording-off": "Game Bar stops recording gameplay in the background; offered, not applied, because its stored value is known from community sources only.",
+    "gaming.controller-game-bar-off": "The controller's Xbox button no longer opens Game Bar; offered, not applied, because its stored value is known from community sources only."
+  }
+}

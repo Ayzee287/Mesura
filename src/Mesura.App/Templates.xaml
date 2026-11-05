@@ -187,11 +187,16 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <CheckBox IsChecked="{Binding Included}" VerticalAlignment="Top" Margin="0,2,14,0"
+                <CheckBox IsChecked="{Binding Included}" IsEnabled="{Binding GroupEnabled}" VerticalAlignment="Top" Margin="0,2,14,0"
                           AutomationProperties.Name="{Binding Row.Name}" />
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="{Binding Row.Name}" Style="{StaticResource Body}" />
-                    <TextBlock Text="{Binding Row.Summary}" Style="{StaticResource Caption}" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding WhyText}" Style="{StaticResource Caption}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                    <!-- What it costs, said before it is applied (heat, noise, idle power, a function given up): two lines, the whole text on hover and in the details. -->
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="36" ToolTip="{Binding Cost}"
+                               Visibility="{Binding HasCost, Converter={StaticResource BoolToVisibility}}">
+                        <Run Text="{l:T Plan.Cost}" Foreground="{StaticResource Warning}" /><Run Text=" · " /><Run Text="{Binding Cost, Mode=OneWay}" />
+                    </TextBlock>
                     <ContentControl Content="{Binding Row}" ContentTemplate="{StaticResource SettingDetails}" Margin="0,12,0,4"
                                     Visibility="{Binding Expanded, Converter={StaticResource BoolToVisibility}}" Focusable="False" />
                 </StackPanel>
@@ -206,6 +211,9 @@
                     <Border Style="{StaticResource Tag}" Margin="0,0,6,0" Background="{Binding Row.RiskTone, Converter={StaticResource StateBackground}}"
                             Visibility="{Binding Row.ShowRisk, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding Row.RiskWhy}">
                         <TextBlock Text="{Binding Row.RiskText}" Style="{StaticResource TagText}" Foreground="{Binding Row.RiskTone, Converter={StaticResource StateBrush}}" />
+                    </Border>
+                    <Border Style="{StaticResource Tag}" Margin="0,0,6,0" Visibility="{Binding IsOptional, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{l:T Plan.Group.Optional}" Style="{StaticResource TagText}" />
                     </Border>
                     <Border Style="{StaticResource Tag}">
                         <TextBlock Text="{Binding Row.ImpactText}" Style="{StaticResource TagText}" />
