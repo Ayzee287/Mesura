@@ -37,6 +37,36 @@ public sealed class WingetOutputTests
         Assert.Equal(InstallState.Unknown, WingetOutput.DetectState(new WingetRunResult(launched, exitCode, output), "Brave.Brave"));
     }
 
+    [Fact]
+    public void A_winget_that_was_not_started_says_why_in_the_launchers_words()
+    {
+        var (state, reason, technical) = WingetOutput.Diagnose(WingetRunResult.Refused("Secondary Logon is disabled (1058)."), "Brave.Brave");
+
+        Assert.Equal(InstallState.Unknown, state);
+        Assert.Equal(UnknownReason.NotStarted, reason);
+        Assert.Contains("Secondary Logon", technical);
+        Assert.Equal(UnknownReason.NotStarted, WingetOutput.Diagnose(WingetRunResult.NotLaunched, "Brave.Brave").Reason);
+    }
+
+    [Fact]
+    public void A_winget_error_names_its_exit_code_and_a_clean_exit_without_the_id_is_its_own_reason()
+    {
+        var error = WingetOutput.Diagnose(new WingetRunResult(true, unchecked((int)0x8A15000F), "Failed when opening source(s)"), "Brave.Brave");
+        Assert.Equal((InstallState.Unknown, UnknownReason.SourceError), (error.State, error.Reason));
+        Assert.Contains("0x8A15000F", error.Technical);
+
+        var other = WingetOutput.Diagnose(new WingetRunResult(true, 0, "Name Id\n-------\nOther Other.App"), "Brave.Brave");
+        Assert.Equal((InstallState.Unknown, UnknownReason.OutputNotUnderstood), (other.State, other.Reason));
+        Assert.Contains("Brave.Brave", other.Technical);
+    }
+
+    [Fact]
+    public void A_known_state_has_no_reason()
+    {
+        Assert.Equal((InstallState.Installed, UnknownReason.None, ""), WingetOutput.Diagnose(new WingetRunResult(true, 0, BraveList), "Brave.Brave"));
+        Assert.Equal((InstallState.NotInstalled, UnknownReason.None, ""), WingetOutput.Diagnose(new WingetRunResult(true, WingetOutput.NoApplicationsFound), "Zoom.Zoom"));
+    }
+
     [Theory]
     [InlineData(0, InstallStatus.Succeeded)]
     [InlineData(unchecked((int)0x8A150061), InstallStatus.AlreadyInstalled)]

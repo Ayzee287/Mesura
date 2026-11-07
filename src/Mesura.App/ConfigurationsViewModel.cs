@@ -226,6 +226,7 @@ public sealed class ConfigurationsViewModel : Observable, IPageState
     {
         _services = services;
         _openActivity = openActivity;
+        Cursors = new CursorBonusViewModel(services);
         foreach (var port in ConfigCatalog.All)
         {
             Cards.Add(new ConfigCard(this, port));
@@ -255,6 +256,9 @@ public sealed class ConfigurationsViewModel : Observable, IPageState
     }
 
     public ObservableCollection<ConfigCard> Cards { get; } = [];
+
+    /// <summary>The bonus cursor pack, below the apps.</summary>
+    public CursorBonusViewModel Cursors { get; }
 
     public Banner Result { get; } = new();
 
@@ -614,22 +618,26 @@ public sealed class ConfigurationsViewModel : Observable, IPageState
     private void DoChooseSaved()
     {
         var dialog = new OpenFileDialog { Title = Loc.Get("Config.OpenDialogTitle"), Filter = Loc.Get("Config.FileFilter") };
-        if (dialog.ShowDialog() != true)
+        if (dialog.ShowDialog() == true)
         {
-            return;
+            UseSavedFile(dialog.FileName);
         }
+    }
 
+    /// <summary>Makes a file of app settings "your saved settings" (what Choose file does, and what Backups' Open does for such a file).</summary>
+    internal void UseSavedFile(string path)
+    {
         try
         {
-            ConfigBundleFile.Load(File.ReadAllText(dialog.FileName));
+            ConfigBundleFile.Load(File.ReadAllText(path));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException or ArgumentException)
         {
-            Result.Show(Tone.Danger, Loc.Format("Config.SavedUnreadable", Path.GetFileName(dialog.FileName)), technical: e.Message);
+            Result.Show(Tone.Danger, Loc.Format("Config.SavedUnreadable", Path.GetFileName(path)), technical: e.Message);
             return;
         }
 
-        _services.Settings.SavedConfiguration = dialog.FileName;
+        _services.Settings.SavedConfiguration = path;
         _services.SaveSettings();
         LoadSaved();
         SavedChanged?.Invoke();

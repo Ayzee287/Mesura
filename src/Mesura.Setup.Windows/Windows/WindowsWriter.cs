@@ -89,6 +89,22 @@ public sealed partial class WindowsWriter : IWindowsWriter
 #pragma warning restore RS0030
     }
 
+    /// <summary>Writes a REG_EXPAND_SZ value; only for the signed-in user's cursor roles (the cursor bonus), nothing else needs an expandable string.</summary>
+    public void SetRegistryExpandString(string hive, string path, string name, string value)
+    {
+        if (hive != "HKCU" || !path.StartsWith(@"Control Panel\Cursors", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($@"Expandable strings are only written under HKCU\Control Panel\Cursors, not {hive}\{path}.", nameof(path));
+        }
+
+        using var root = Root(hive);
+#pragma warning disable RS0030 // The Windows configuration layer's one registry writer (class remarks).
+        using var key = root.CreateSubKey(path, writable: true)
+            ?? throw new InvalidOperationException($@"Couldn't open {hive}\{path} for writing.");
+        key.SetValue(name, value, RegistryValueKind.ExpandString);
+#pragma warning restore RS0030
+    }
+
     public void DeleteRegistry(string hive, string path, string name)
     {
         using var root = Root(hive);

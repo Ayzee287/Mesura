@@ -73,7 +73,7 @@ $word = if ($want) { 'on' } else { 'off' }
 $setArgs = @('gpu', 'amd', 'set', $Feature, $word, '--gpu', "$Gpu") + $(if ($Feature -eq 'freesync') { @('--display', "$Display") } else { @() })
 $preview = Run $setArgs
 $preview.Text -split "`n" | ForEach-Object { Say 'INFO' "  preview: $_" }
-if ($preview.Text -match 'not supported|does not offer|Anti-Lag Next|could not be read|ADLX is not available') { Say 'FAIL' 'The preview says this switch cannot be written here; nothing was written.'; $lines | Out-File (Join-Path $Out "amd-writer-test-$Feature.txt") -Encoding utf8; exit 1 }
+if ($preview.Text -match 'not supported|does not offer|Anti-Lag Next|could not be read|ADLX is not available') { Say 'INFO' 'Not available here: the preview says this switch cannot be written here; nothing was written (the driver or the display does not offer it: an answer, not a failure).'; $lines | Out-File (Join-Path $Out "amd-writer-test-$Feature.txt") -Encoding utf8; exit 0 }
 
 Write-Host ''
 Write-Host "About to turn $Feature $word on the REAL card and then back. Mesura records the state first; an undo is always available." -ForegroundColor Yellow

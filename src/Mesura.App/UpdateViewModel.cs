@@ -324,7 +324,9 @@ public sealed class UpdateViewModel : Observable
             if (userInitiated)
             {
                 Message = FailureText(result.Failure);
-                Result.Show(result.Failure == UpdateFailure.NotFound ? Tone.Muted : Tone.Warn, FailureText(result.Failure), Loc.Get("Update.FailureHint"), technical: result.Detail);
+                // "Nothing is published yet" is an answer, not a fault: no hint to retry and no HTTP detail (the session log keeps it).
+                var notPublished = result.Failure == UpdateFailure.NotFound;
+                Result.Show(notPublished ? Tone.Muted : Tone.Warn, FailureText(result.Failure), notPublished ? "" : Loc.Get("Update.FailureHint"), technical: notPublished ? null : result.Detail);
             }
 
             return;

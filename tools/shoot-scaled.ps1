@@ -107,14 +107,14 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc(); [Dpi]::PrintWindow($h, $hdc, 2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose()
     $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
   }
-  $map = @{ Welcome = 'Nav.Home'; Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Profiles = 'Nav.Profiles'; SystemInfo = 'Nav.SystemInfo'
-            Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Configurations'; Activation = 'Nav.Activation' }
+  $map = @{ Welcome = 'Nav.Home'; Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Backups = 'Nav.Backups'; Profiles = 'Nav.Backups'; SystemInfo = 'Nav.SystemInfo'
+            Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Backups'; Activation = 'Nav.Activation' }
   $i = 0
   foreach ($page in ($Pages -join ',').Split(',')) {
     $i++
     $key = $map[$page]; $label = $strings.$key
     if (-not $label) { Write-Host "skip $page"; continue }
-    if ($page -in 'Configurations', 'Profiles', 'Settings') { $mb = Find-Named $strings.'Nav.More'; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
+    if ($page -in 'Configurations', 'Profiles', 'Backups', 'Settings') { $mb = Find-Named $strings.'Nav.More'; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
     $item = $null; $deadline = (Get-Date).AddSeconds(5)
     $kind = if ($page -eq 'Welcome') { $CT::Button } else { $CT::RadioButton }   # the logo (home) is a button, the dock's pages are radio buttons
     while (-not $item -and (Get-Date) -lt $deadline) {
@@ -127,6 +127,8 @@ try {
     if ($page -eq 'Welcome') { $item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
     else { $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select() }
     Start-Sleep -Milliseconds $Wait
+    if ($page -eq 'Configurations') { $tab = Find-Named $strings.'Backups.TabSettings'; if ($tab) { $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds $Wait } }
+    elseif ($page -in 'Backups', 'Profiles') { $tab = Find-Named $strings.'Backups.TabSetup'; if ($tab) { $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds $Wait } }
     $file = Join-Path $Out ("{0:00}-{1}-{2}-{3}pct.png" -f $i, $page.ToLower(), $Lang, $Scale)
     Shot $file
     Write-Host "saved $file"

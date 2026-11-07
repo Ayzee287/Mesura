@@ -91,7 +91,7 @@
         <GradientStop Color="#F0151719" Offset="1" />
     </LinearGradientBrush>
     <!-- The atmosphere behind everything (AmbientField, 0.4.4): every layer a soft gradient with no edge, a few percent over the ground at its brightest. A key
-         light (silver-blue), a safelight (the violet of the logo), a haze (its mint), a pale diagonal beam, the dust motes and a vignette. Stops are spread
+         light (silver-blue), a safelight (the violet of the logo), a haze (the key light's silver-blue, low in the opposite corner; not mint: mint means "verified"), a pale diagonal beam, the dust motes and a vignette. Stops are spread
          like a gaussian, so there is no visible rim and little banding on a dark ground. -->
     <RadialGradientBrush x:Key="AmbientKey" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
         <GradientStop Color="#2E86A2F4" Offset="0" />
@@ -109,11 +109,11 @@
         <GradientStop Color="#00A070FF" Offset="1" />
     </RadialGradientBrush>
     <RadialGradientBrush x:Key="AmbientHaze" Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
-        <GradientStop Color="#2C34F0B0" Offset="0" />
-        <GradientStop Color="#1634F0B0" Offset="0.25" />
-        <GradientStop Color="#0A34F0B0" Offset="0.5" />
-        <GradientStop Color="#0334F0B0" Offset="0.75" />
-        <GradientStop Color="#0034F0B0" Offset="1" />
+        <GradientStop Color="#2C86A2F4" Offset="0" />
+        <GradientStop Color="#1686A2F4" Offset="0.25" />
+        <GradientStop Color="#0A86A2F4" Offset="0.5" />
+        <GradientStop Color="#0386A2F4" Offset="0.75" />
+        <GradientStop Color="#0086A2F4" Offset="1" />
     </RadialGradientBrush>
     <LinearGradientBrush x:Key="AmbientBeam" StartPoint="0,0.5" EndPoint="1,0.5">
         <GradientStop Color="#00C8D8FF" Offset="0.30" />

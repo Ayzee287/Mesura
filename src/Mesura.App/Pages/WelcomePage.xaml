@@ -24,9 +24,6 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource AccentRim}" />
                             </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}" />
-                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -45,25 +42,14 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="900" Margin="36,56,36,24">
-            <!-- Who is here and what it promises: a mark, a name, one line, three quiet facts. -->
-            <Image x:Name="Mark" Width="60" Height="60" HorizontalAlignment="Left" Margin="-10,0,0,0" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="Mesura" />
-            <TextBlock Text="{l:T Welcome.Title}" Style="{StaticResource PageTitle}" FontSize="36" Margin="0,22,0,0" TextWrapping="Wrap" />
+        <StackPanel MaxWidth="900" Margin="36,48,36,24">
+            <!-- Who is here: the title, in which the M of Mesura carries the colour of the mark (a letter of the word, not a symbol beside it), then the one line of what Mesura is. -->
+            <TextBlock x:Name="Title" Style="{StaticResource PageTitle}" FontSize="40" Margin="0,8,0,0" TextWrapping="Wrap" />
             <TextBlock Text="{l:T Welcome.Tagline}" FontFamily="{StaticResource ExpressiveFont}" FontStyle="Italic" FontSize="22" Foreground="{StaticResource TextSecondary}"
-                       Margin="0,8,0,0" TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding Promises}" Margin="0,22,0,0" Focusable="False" IsTabStop="False">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Style="{StaticResource Icon}" Text="{StaticResource IconCheck}" FontSize="13" Foreground="{StaticResource Accent}" Margin="0,1,10,0" VerticalAlignment="Top" />
-                            <TextBlock Text="{Binding}" Style="{StaticResource Secondary}" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                       Margin="0,14,0,0" TextWrapping="Wrap" />
 
             <!-- Where to start: the three things most people come for. -->
-            <ItemsControl ItemsSource="{Binding Doors}" Margin="-6,34,-6,0" Focusable="False" IsTabStop="False" ItemContainerStyle="{StaticResource QuietItem}">
+            <ItemsControl ItemsSource="{Binding Doors}" Margin="-6,32,-6,0" Focusable="False" IsTabStop="False" ItemContainerStyle="{StaticResource QuietItem}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <l:EqualRowsPanel MinColumnWidth="250" MaxColumns="3" />

@@ -21,7 +21,7 @@ public sealed class WelcomeDoor(string titleKey, string hintKey, string glyph, A
 }
 
 /// <summary>
-/// The Welcome page: what Mesura is in one line, what it promises, and the three places most people start; everything else of the dock is one
+/// The Welcome page: what Mesura is in one line and the three places most people start; everything else of the dock is one
 /// quiet line below. It shows no state of the PC and nothing that changes: the pages hold those.
 /// </summary>
 public sealed class WelcomeViewModel : Observable
@@ -49,21 +49,12 @@ public sealed class WelcomeViewModel : Observable
             {
                 door.Refresh();
             }
-
-            Raise(nameof(Promises));
         };
     }
 
     public IReadOnlyList<WelcomeDoor> Doors { get; }
 
     public IReadOnlyList<WelcomeDoor> Others { get; }
-
-    public IReadOnlyList<string> Promises =>
-    [
-        Loc.Get("Welcome.PromisePreview"),
-        Loc.Get("Welcome.PromiseUndo"),
-        Loc.Get("Welcome.PromisePrivate"),
-    ];
 
     private WelcomeDoor Add(string titleKey, string hintKey, string glyph, Action open)
     {

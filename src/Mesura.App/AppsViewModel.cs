@@ -7,6 +7,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using Mesura.Core.Apps;
 using Mesura.Core.Config;
+using Mesura.Core.Defaults;
 using Mesura.Core.Setup;
 using Mesura.Setup.Windows.Workflow;
 
@@ -49,9 +50,15 @@ public sealed class AppMod(AppPackage package, AppItem parent, Func<bool> winget
 
     public string StateTone => _checking ? Tone.Muted : _state == InstallState.Installed ? Tone.Ok : Tone.Neutral;
 
-    public void Update(InstallState state)
+    /// <summary>Why the state is "Can't check", in words; empty when it is known.</summary>
+    public string StateWhy => _checking || _state != InstallState.Unknown ? "" : AppWhy.Text(_reason);
+
+    private UnknownReason _reason;
+
+    public void Update(InstallState state, UnknownReason reason = UnknownReason.None)
     {
         _state = state;
+        _reason = reason;
         _checking = false;
         Refresh();
     }
@@ -71,6 +78,35 @@ public sealed class AppMod(AppPackage package, AppItem parent, Func<bool> winget
             Raise(nameof(Selected));
         }
     }
+}
+
+/// <summary>One installed browser that does not open web links yet, and the button that takes the user to Windows' page where the choice is made.</summary>
+public sealed class BrowserOffer(string name, string label, RelayCommand open)
+{
+    public string Name { get; } = name;
+
+    public string Label { get; } = label;
+
+    public RelayCommand Open { get; } = open;
+
+    public override string ToString() => Name;
+
+    public void Relocalize() { }
+}
+
+/// <summary>The words for why an app's state can't be checked (<see cref="UnknownReason"/>).</summary>
+internal static class AppWhy
+{
+    public static string Text(UnknownReason reason) => reason switch
+    {
+        UnknownReason.NoWinget => Loc.Get("Apps.Why.NoWinget"),
+        UnknownReason.NotStarted => Loc.Get("Apps.Why.NotStarted"),
+        UnknownReason.SourceError => Loc.Get("Apps.Why.SourceError"),
+        UnknownReason.OutputNotUnderstood => Loc.Get("Apps.Why.OutputNotUnderstood"),
+        UnknownReason.NotDetectable => Loc.Get("Apps.Why.NotDetectable"),
+        UnknownReason.DetectorFailed => Loc.Get("Apps.Why.DetectorFailed"),
+        _ => "",
+    };
 }
 
 /// <summary>A package Setup's Apps card shows: an app or a customisation, by its own name and icon (<see cref="AppGlyph"/>).</summary>
@@ -187,9 +223,15 @@ public sealed class AppItem : Observable
         Raise(nameof(UpdateLine));
     }
 
-    public void Update(InstallState state)
+    /// <summary>Why the state is "Can't check", in words (a tooltip on the state); empty when it is known.</summary>
+    public string StateWhy => _checking || _state != InstallState.Unknown ? "" : AppWhy.Text(_reason);
+
+    private UnknownReason _reason;
+
+    public void Update(InstallState state, UnknownReason reason = UnknownReason.None)
     {
         _state = state;
+        _reason = reason;
         _checking = false;
         if (state != InstallState.Installed)
         {
@@ -317,7 +359,64 @@ public sealed class AppsViewModel : Observable, IPageState
 
             Raise(string.Empty);
         };
+        Loc.Instance.LanguageChanged += RefreshBrowser;
+        if (System.Windows.Application.Current is { } app)
+        {
+            app.Activated += (_, _) => RefreshBrowser(); // the user comes back from the page of Settings: read the choice again
+        }
+
         Refresh.Execute(null);
+    }
+
+    // ---- the default browser (0.7): shown only when an installed browser of the list is not the one that opens web links ----------------------------------------------
+
+    private DefaultBrowserState _browser = new(null, DefaultBrowsers.Edge, false);
+    private string? _pendingBrowser;
+
+    /// <summary>Installed browsers of the Apps list that do not open web links yet, each with the button that opens their page in Settings.</summary>
+    public ObservableCollection<BrowserOffer> BrowserOffers { get; } = [];
+
+    public bool HasBrowserOffer => BrowserOffers.Count > 0;
+
+    public string BrowserLine => _browser.Browser is { } b ? Loc.Format("Apps.Default.Line", b.Name) : Loc.Get("Apps.Default.Other");
+
+    /// <summary>Reads the choice again and rebuilds the offers; says so once when a browser the user asked for has become the default.</summary>
+    private void RefreshBrowser()
+    {
+        _browser = DefaultBrowsers.Read(_services.Reader);
+#if DEBUG
+        // Screenshots on a PC whose browser is already the right one: MESURA_PREVIEW_DEFAULT_BROWSER=edge shows the card; nothing is written.
+        if (Environment.GetEnvironmentVariable("MESURA_PREVIEW_DEFAULT_BROWSER") == "edge")
+        {
+            _browser = new DefaultBrowserState(null, DefaultBrowsers.Edge, false);
+        }
+#endif
+        BrowserOffers.Clear();
+        foreach (var item in Items.Where(i => i.State == InstallState.Installed && DefaultBrowsers.ByAppId(i.Package.Id) is not null && !_browser.Is(i.Package.Id)))
+        {
+            var choice = DefaultBrowsers.ByAppId(item.Package.Id)!;
+            BrowserOffers.Add(new BrowserOffer(choice.Name, Loc.Format("Apps.Default.Make", choice.Name), new RelayCommand(() =>
+            {
+                _pendingBrowser = choice.Id;
+                if (ShellLauncher.Open(choice.SettingsUri) is { } failed)
+                {
+                    Result.Show(Tone.Warn, Loc.Get("Apps.Default.CantOpen"), technical: failed);
+                }
+            })));
+        }
+
+        if (_pendingBrowser is { } asked && _browser.Is(asked))
+        {
+            _pendingBrowser = null;
+            Result.Show(Tone.Ok, Loc.Format("Apps.Default.Done", _browser.Browser!.Name));
+        }
+
+        Raise(nameof(BrowserLine));
+        Raise(nameof(HasBrowserOffer));
+        foreach (var offer in BrowserOffers)
+        {
+            offer.Relocalize();
+        }
     }
 
     public ObservableCollection<AppItem> Items { get; } = [];
@@ -573,15 +672,23 @@ public sealed class AppsViewModel : Observable, IPageState
             _wingetMissing = wingetItems.Count > 0 && wingetItems.All(p => p.State == InstallState.Unknown);
             foreach (var item in Items)
             {
-                item.Update(plan.First(p => p.Package.Id == item.Package.Id).State);
+                var found = plan.First(p => p.Package.Id == item.Package.Id);
+                item.Update(found.State, found.Reason);
                 foreach (var mod in item.Mods)
                 {
-                    mod.Update(plan.First(p => p.Package.Id == mod.Package.Id).State);
+                    mod.Update(plan.First(p => p.Package.Id == mod.Package.Id).State, plan.First(p => p.Package.Id == mod.Package.Id).Reason);
                 }
+            }
+
+            // Every "Can't check" leaves its reason in the session log, with winget's exit code or the launcher's words: the window says what it means, the log says what happened.
+            foreach (var unknown in plan.Where(p => p.State == InstallState.Unknown && p.Reason is not (UnknownReason.None or UnknownReason.NotDetectable)))
+            {
+                _services.Log($"Apps: can't check {unknown.Package.Name}: {unknown.Reason}. {unknown.Technical}".TrimEnd());
             }
 
             _loaded = true;
             _services.Log($"Apps: {Items.Count(i => i.State == InstallState.Installed)} installed of {Items.Count} listed ({Services.Describe(_services.Apps.Source)}).");
+            RefreshBrowser();
             Raise(nameof(WingetMissing));
             Raise(nameof(WingetMissingText));
             Raise(nameof(CanGetWinget));

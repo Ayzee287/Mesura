@@ -130,6 +130,7 @@ internal static partial class Program
                 HardwareCommand hardware => HardwareCli.Run(hardware.Args),
                 GpuCommand gpu => GpuCli.Run(gpu.Args),
                 NetworkCommand network => NetworkCli.Run(network.Args),
+                BonusCommand bonus => BonusCli.Run(bonus.Args),
                 SetupCommand setup => SetupCli.Run(setup.Args),
                 UpdateCommand update => UpdateCli.Run(update.Args),
                 _ => throw new InvalidOperationException("Unknown command."),
@@ -319,6 +320,11 @@ internal static partial class Program
         if (args[0] == "network")
         {
             return new NetworkCommand(args[1..]);
+        }
+
+        if (args[0] == "bonus")
+        {
+            return new BonusCommand(args[1..]);
         }
 
         if (args[0] == "history")
@@ -559,6 +565,8 @@ internal static partial class Program
     private sealed record GpuCommand(string[] Args) : Command("gpu");
 
     private sealed record NetworkCommand(string[] Args) : Command("network");
+
+    private sealed record BonusCommand(string[] Args) : Command("bonus");
 
     private sealed record FirmwareCommand(string[] Args) : Command("firmware");
 

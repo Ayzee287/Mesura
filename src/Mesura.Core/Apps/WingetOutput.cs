@@ -16,22 +16,35 @@ public static class WingetOutput
     /// installed, "no applications found" is not installed, and anything else (not launched, a source error, output
     /// without the id) is unknown rather than guessed.
     /// </summary>
-    public static InstallState DetectState(WingetRunResult list, string wingetId)
+    public static InstallState DetectState(WingetRunResult list, string wingetId) => Diagnose(list, wingetId).State;
+
+    /// <summary>
+    /// The same decision as <see cref="DetectState"/> with the reason when it is unknown: winget was not started (with the launcher's own words),
+    /// winget answered with an error (its exit code), or it exited cleanly without the id in its list.
+    /// </summary>
+    public static (InstallState State, UnknownReason Reason, string Technical) Diagnose(WingetRunResult list, string wingetId)
     {
         ArgumentNullException.ThrowIfNull(list);
         ArgumentException.ThrowIfNullOrWhiteSpace(wingetId);
 
         if (!list.Launched)
         {
-            return InstallState.Unknown;
+            return (InstallState.Unknown, UnknownReason.NotStarted, list.Refusal.Length > 0 ? list.Refusal : "winget could not be started.");
         }
 
         if (list.ExitCode == NoApplicationsFound)
         {
-            return InstallState.NotInstalled;
+            return (InstallState.NotInstalled, UnknownReason.None, "");
         }
 
-        return list.ExitCode == 0 && ContainsIdToken(list.Output, wingetId) ? InstallState.Installed : InstallState.Unknown;
+        if (list.ExitCode != 0)
+        {
+            return (InstallState.Unknown, UnknownReason.SourceError, $"winget list exited with {FormatExitCode(list.ExitCode)}.");
+        }
+
+        return ContainsIdToken(list.Output, wingetId)
+            ? (InstallState.Installed, UnknownReason.None, "")
+            : (InstallState.Unknown, UnknownReason.OutputNotUnderstood, $"winget list exited with 0 but its output didn't contain {wingetId}.");
     }
 
     /// <summary>

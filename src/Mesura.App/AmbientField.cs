@@ -8,7 +8,7 @@ namespace Mesura.App;
 /// <summary>
 /// The atmosphere behind the glass (0.4.4, docs/redesign-0.4.md): a dark room with a soft light in it, not an animation. After the look of a darkroom
 /// seen from a distance: a very large, very faint key light that wanders across the window over about forty seconds, a violet "safelight" in the upper
-/// corner that breathes, a faint mint haze low in the opposite corner, a pale diagonal beam that crosses the window in about a minute, and a few motes
+/// corner that breathes, a faint silver-blue haze low in the opposite corner, a pale diagonal beam that crosses the window in about a minute, and a few motes
 /// of dust that rise through the dark, each at its own depth, speed and pace. The edges fall off into a vignette. Nothing in it has a hard edge and
 /// nothing is brighter than a few percent over the ground, so text keeps its contrast (measured, docs/redesign-0.4.md).
 ///

@@ -48,10 +48,10 @@ try {
   Scan 'Welcome (the start page)'   # the page the app opens on: its items used to be read out as a type name (Mesura.App.WelcomeDoor)
   $firstNav = Pick $strings.'Nav.Optimize' $CT::RadioButton
   if (-not $firstNav) { $problems.Add("The navigation was not found by its $Lang names: a Release build shows Windows' language and ignores MESURA_PREVIEW_LANGUAGE, so run -Lang ru on a Russian Windows (or -Lang en on an English one), or check a Debug build.") }
-  foreach ($page in 'Nav.Optimize', 'Nav.Tweaks', 'Nav.Debloat', 'Nav.Apps', 'Nav.Configurations', 'Nav.Profiles', 'Nav.Activation', 'Nav.Activity', 'Nav.Settings') {
+  foreach ($page in 'Nav.Optimize', 'Nav.Tweaks', 'Nav.Debloat', 'Nav.Apps', 'Nav.Backups', 'Nav.Activation', 'Nav.Activity', 'Nav.Settings') {
     $nav = Pick $strings.$page $CT::RadioButton
     if (-not $nav) {
-      # Configurations and Activation sit under the dock's "More" menu: open it, then look again.
+      # Backups and Activation sit under the dock's "More" menu: open it, then look again.
       $more = Pick $strings.'Nav.More' $CT::Button
       if ($more) {
         $o = $null
@@ -67,6 +67,14 @@ try {
       foreach ($tab in 'Debloat.Tab.ai', 'Debloat.Tab.startup') {
         $chip = Pick $strings.$tab $CT::RadioButton
         if ($chip) { $chip.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1500; Scan "Debloat ($tab)" }
+      }
+    }
+    if ($page -eq 'Nav.Backups') {
+      # Both tabs are scanned (the page opens on PC setup); the New menu is not open here, its two items are named in XAML.
+      foreach ($tab in 'Backups.TabSettings', 'Backups.TabSetup') {
+        $chip = Pick $strings.$tab $CT::RadioButton
+        if ($chip) { $chip.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1500; Scan "Backups ($tab)" }
+        else { $problems.Add("Backups: tab '$tab' not found") }
       }
     }
   }

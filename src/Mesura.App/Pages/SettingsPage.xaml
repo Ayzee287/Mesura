@@ -29,24 +29,7 @@
                 </Grid>
             </Border>
 
-            <!-- Lighting -->
-            <TextBlock Text="{l:T Settings.Lighting}" Style="{StaticResource SectionTitle}" Margin="0,26,0,10" />
-            <Border Style="{StaticResource Card}">
-                <Grid>
-                    <StackPanel Margin="0,0,380,0">
-                        <TextBlock Text="{l:T Settings.LightingLabel}" Style="{StaticResource SettingLabel}" />
-                        <TextBlock Text="{l:T Settings.LightingHint}" Style="{StaticResource Caption}" Margin="0,2,0,0" />
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding LightingChoices}" ItemTemplate="{StaticResource ChipTemplate}" Tag="Lighting" HorizontalAlignment="Right"
-                                  VerticalAlignment="Center" Focusable="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </Grid>
-            </Border>
+
 
             <!-- Start-up -->
             <TextBlock Text="{l:T Settings.Startup}" Style="{StaticResource SectionTitle}" Margin="0,26,0,10" />
@@ -205,6 +188,27 @@
                         <TextBlock Text="{l:T Settings.Privacy}" Style="{StaticResource Caption}" Margin="0,10,0,0" />
                     </StackPanel>
                 </Grid>
+            </Border>
+
+            <!-- What's new in the running version: short notes carried in the build, offline -->
+            <Border Style="{StaticResource Card}" Margin="0,10,0,0" Visibility="{Binding HasWhatsNew, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding WhatsNewTitle}" Style="{StaticResource BodyStrong}" />
+                    <ItemsControl ItemsSource="{Binding WhatsNew}" Margin="0,8,0,0" Focusable="False" IsTabStop="False" AutomationProperties.Name="{Binding WhatsNewTitle}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="5" Height="5" Fill="{StaticResource TextTertiary}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding}" Style="{StaticResource Secondary}" TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </Border>
         </StackPanel>
     </ScrollViewer>

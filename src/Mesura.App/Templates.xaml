@@ -286,10 +286,15 @@
                            Margin="0,6,0,12" VerticalAlignment="Top" />
                 <Border Grid.Row="3" BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0" Padding="0,11,0,0">
                     <Grid>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <Ellipse Width="6" Height="6" Fill="{Binding StateTone, Converter={StaticResource StateBrush}}" Margin="0,1,7,0" />
-                            <TextBlock Text="{Binding StateText}" Style="{StaticResource Caption}" FontSize="12.5"
-                                       Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="{Binding StateTone, Converter={StaticResource StateBrush}}" Margin="0,1,7,0" />
+                                <TextBlock Text="{Binding StateText}" Style="{StaticResource Caption}" FontSize="12.5"
+                                           Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
+                            </StackPanel>
+                            <!-- Why it isn't here, in a few words, where the status is (a missing port, another maker, a driver that says no). -->
+                            <TextBlock Text="{Binding CardReason}" Style="{StaticResource Caption}" FontSize="12" TextWrapping="Wrap" Margin="13,3,0,0"
+                                       Visibility="{Binding CardReason, Converter={StaticResource Presence}}" />
                         </StackPanel>
                         <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Selected}" HorizontalAlignment="Right"
                                   AutomationProperties.Name="{Binding Name}"

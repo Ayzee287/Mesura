@@ -37,6 +37,42 @@ public static class PlanReason
     public const string Hybrid = "hybrid";
     public const string EffectUnsupported = "effect-unsupported";
     public const string Absent = "absent";
+
+    /// <summary>No physical adapter of the kind the operation is for: <c>adapter-none.ethernet</c> (no Ethernet port), <c>adapter-none.wifi</c>, <c>adapter-none.any</c>.</summary>
+    public const string AdapterNonePrefix = "adapter-none.";
+
+    /// <summary>An adapter of the right kind, from another maker than the operation is for: <c>adapter-maker.ethernet</c>, <c>adapter-maker.wifi</c>, <c>adapter-maker.any</c>.</summary>
+    public const string AdapterMakerPrefix = "adapter-maker.";
+
+    /// <summary>The right adapter is there and its driver offers none of the settings with the wanted values: the hardware or driver says no (so "not supported", not "not here").</summary>
+    public const string AdapterDriver = "adapter-driver";
+
+    /// <summary>No graphics adapter of the maker the setting is for.</summary>
+    public const string GpuNone = "gpu-none";
+
+    /// <summary>The graphics adapter is there but its driver can't offer or read the control: the hardware or driver says no.</summary>
+    public const string GpuDriver = "gpu-driver";
+
+    /// <summary>
+    /// Whether a code means that the hardware or its driver says no ("not supported"), as opposed to something simply not being on this PC ("not for this PC"). Neither is an
+    /// error, and neither is said in the other's words.
+    /// </summary>
+    public static bool MeansUnsupported(string? code) => code is EffectUnsupported or AdapterDriver or GpuDriver;
+
+    /// <summary>
+    /// The interface's string key for the adapter and graphics codes of 0.7 (<c>Reason.NoAdapter.ethernet</c>...), or <c>null</c> for any other code. One place, so the list of settings
+    /// and the plan of Optimization say the same thing.
+    /// </summary>
+    public static string? AdapterReasonKey(string? code) => code switch
+    {
+        null => null,
+        AdapterDriver => "Reason.AdapterDriver",
+        GpuNone => "Reason.NoGpu",
+        GpuDriver => "Reason.GpuDriver",
+        _ when code.StartsWith(AdapterNonePrefix, StringComparison.Ordinal) => "Reason.NoAdapter." + code[AdapterNonePrefix.Length..],
+        _ when code.StartsWith(AdapterMakerPrefix, StringComparison.Ordinal) => "Reason.OtherMaker." + code[AdapterMakerPrefix.Length..],
+        _ => null,
+    };
     public const string Unread = "unread";
     public const string Blocked = "blocked";
     public const string Covered = "covered";
@@ -190,7 +226,7 @@ public static class ProfilePlanner
         switch (evaluation.State)
         {
             case OperationState.Inapplicable:
-                return Not(EntryState.Unsupported, InapplicableCode(op, reader), detail);
+                return Not(EntryState.Unsupported, InapplicableCode(evaluation, reader), detail);
             case OperationState.Blocked:
                 return Not(EntryState.CantTell, PlanReason.Blocked, detail);
             case OperationState.Unknown:
@@ -243,6 +279,16 @@ public static class ProfilePlanner
     private static bool OnlyPowerSettings(WindowsOperation op) =>
         op.PowerSettings.Count > 0 && op.PowerPlan is null && op.Registry.Count == 0 && op.RegistryEachSettings.Count == 0 && op.Services.Count == 0
         && op.Features.Count == 0 && op.Tasks.Count == 0 && op.TcpSettings.Count == 0 && op.SystemSettings.Count == 0 && op.AppxSettings.Count == 0 && op.AdapterSettings.Count == 0;
+
+    /// <summary>
+    /// Why an evaluated operation doesn't apply here, as a code: the one the evaluation recorded when it knew better (an adapter or graphics case), else the operation's own
+    /// requirements (<see cref="InapplicableCode(WindowsOperation, ISystemReader)"/>). Cheap: it reads nothing the evaluation did not already read, except for that fallback.
+    /// </summary>
+    public static string InapplicableCode(OperationEvaluation evaluation, ISystemReader reader)
+    {
+        ArgumentNullException.ThrowIfNull(evaluation);
+        return evaluation.ReasonCode ?? InapplicableCode(evaluation.Operation, reader);
+    }
 
     /// <summary>Why an operation that doesn't apply here doesn't, as a code (the same questions the engine asked, in the order it asks them).</summary>
     public static string InapplicableCode(WindowsOperation op, ISystemReader reader)

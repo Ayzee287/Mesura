@@ -16,7 +16,7 @@ public sealed class AppRedesignTests
     {
         string[] unlisted = ["zoom", "firefox", "epic", "vlc", "git", "nvpi", "nvcleanstall"];
         Assert.All(unlisted, id => Assert.False(Catalog.ById(id)!.Listed, id));
-        Assert.All(["brave", "discord", "vencord", "spotify", "steam", "sevenzip", "obs", "chrome", "notepadpp", "vscode", "medal", "regorganizer", "telegram", "ayugram"],
+        Assert.All(["brave", "discord", "vencord", "spotify", "steam", "sevenzip", "obs", "chrome", "notepadpp", "vscode", "medal", "regorganizer", "autoruns", "anydesk", "telegram", "ayugram"],
             id => Assert.True(Catalog.ById(id)!.Listed, id));
     }
 

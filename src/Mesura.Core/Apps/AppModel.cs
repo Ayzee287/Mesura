@@ -111,7 +111,35 @@ public sealed record AppPackage(
 public sealed record AppBundle(string Id, string Name, string Description, IReadOnlyList<string> AppIds);
 
 /// <summary>One line of an install plan: a package and whether it is already present.</summary>
-public sealed record AppPlanItem(AppPackage Package, InstallState State);
+public sealed record AppPlanItem(AppPackage Package, InstallState State, UnknownReason Reason = UnknownReason.None, string Technical = "");
+
+/// <summary>
+/// Why an app's state is <see cref="InstallState.Unknown"/> (0.7): "Can't check" always has a reason the window can say and the log can keep, so a
+/// check that failed by chance is never shown the same as one that can't be done by construction.
+/// </summary>
+public enum UnknownReason
+{
+    /// <summary>The state is known.</summary>
+    None,
+
+    /// <summary>winget isn't on this PC (or isn't usable), so nothing that needs it can be asked.</summary>
+    NoWinget,
+
+    /// <summary>winget was not started for this app: the user it would run as couldn't be reached, or Windows refused the launch (the technical text says which).</summary>
+    NotStarted,
+
+    /// <summary>winget ran and answered with an error (a source that didn't respond, an agreement, a timeout); the exit code is in the technical text.</summary>
+    SourceError,
+
+    /// <summary>winget exited cleanly but its list didn't contain the package id.</summary>
+    OutputNotUnderstood,
+
+    /// <summary>winget can't see this app once it is installed (an installer that patches another app, a manual download): no check exists to run.</summary>
+    NotDetectable,
+
+    /// <summary>The app's own files couldn't be read.</summary>
+    DetectorFailed,
+}
 
 /// <summary>Whether winget offers a newer version of an installed application.</summary>
 public enum UpdateState

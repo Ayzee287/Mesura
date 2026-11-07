@@ -71,12 +71,11 @@ public sealed class WingetRunner : IWingetRunner
     public WingetRunResult List(AppPackage package)
     {
         ArgumentNullException.ThrowIfNull(package);
-        // Detection runs where the install would: a per-user app is listed as the signed-in user sees it, against the
-        // source the install uses. The source also keeps winget from querying the Store for every app, which takes
+        // A read-only question (WingetContext.Query): the same user, elevated or not, sees the same per-user installs, so no launch as the shell's user is needed. The source keeps winget from querying the Store for every app, which takes
         // 40 to 60 seconds a call where the Store is slow or blocked (it still matches apps installed outside winget).
         var run = Run(
             ["list", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--accept-source-agreements", "--disable-interactivity"],
-            package.Context, null, ListTimeout, CancellationToken.None);
+            WingetContext.Query, null, ListTimeout, CancellationToken.None);
         return new WingetRunResult(run.Launched, run.ExitCode, run.Stdout, run.Refusal);
     }
 
@@ -111,7 +110,7 @@ public sealed class WingetRunner : IWingetRunner
         ArgumentNullException.ThrowIfNull(package);
         var run = Run(
             ["list", "--exact", "--id", package.WingetId, "--source", package.SourceArgument, "--upgrade-available", "--accept-source-agreements", "--disable-interactivity"],
-            package.Context, null, ListTimeout, CancellationToken.None);
+            WingetContext.Query, null, ListTimeout, CancellationToken.None);
         return new WingetRunResult(run.Launched, run.ExitCode, run.Stdout, run.Refusal);
     }
 

@@ -11,7 +11,7 @@ it installs, and makes no promise that your games run faster: see [What it does 
 
 ## What it does
 
-- **Optimization** is the start page. Choose **Mesura Reference** or **Maximum performance**, look at the plan for *this* PC, then apply it.
+- **Home** is the start page; **Optimization** is where you choose **Mesura Reference** or **Maximum performance**, look at the plan for *this* PC, then apply it.
   - *Mesura Reference*: everyday Windows with telemetry off, less promotion, ad profiling and nagging, Game Mode, the Balanced Mesura power plan and, for each network adapter it finds, the preset
     for that adapter's maker and kind (27 settings, one you tick yourself). It removes no feature and touches no service or security setting; the network presets change the adapter's own driver
     settings, and the adapter restarts for a few seconds when a value is written.
@@ -19,17 +19,18 @@ it installs, and makes no promise that your games run faster: see [What it does 
     Radeon Anti-Lag on a Radeon that offers it, with the price of each named (49 settings, five you tick yourself, among them hardware-accelerated GPU scheduling, which has no confirmed gain). Settings that
     do not apply to the PC (no battery, no NVMe, no Radeon, no matching network adapter, Windows Home) are listed under "not on this PC" with the reason and are never written.
   - The lists are on the Optimization page, each setting with what it changes and what it costs; the exact composition is in [docs/profile-composition-0.6.0.md](docs/profile-composition-0.6.0.md). Neither promises a frame-rate or latency change.
-- **Tweaks** lists about 100 Windows settings in eight groups (real performance, gaming, power, privacy, maintenance, convenience, experimental and the removable components) as cards: a risk label, what each writes, its status, and what is known
+- **Tweaks** lists about 170 Windows settings in eight groups (real performance, gaming, power, privacy, maintenance, convenience, experimental and the removable components) as cards: a risk label, what each writes, its status, and what is known
   about it (documented by Microsoft, verified, or community-only). Pick any of them one by one, or a collection (Edge
   policies, less data sharing, fewer network discovery protocols, desktop performance and more).
+  Two collections are for people who accept the price: *Security protections off* (memory integrity, virtualization-based security, the Spectre and Meltdown mitigations, not starting the hypervisor, SmartScreen, the download mark)
+  and *Less in the background* (Store apps in the background, location, Store and driver updates, OneDrive sync, the telemetry service, printing). They are in no profile, each names what it costs (anti-cheat may refuse to start, lower protection, Hyper-V and WSL stop working), none promises a faster PC, and each can be undone from Activity.
 - **Debloat** removes bundled apps for your account, turns off Windows' AI features (Recall, Click to Do, Copilot,
   Paint AI) and the programs that start with Windows. Nothing Windows itself depends on can be removed, and Undo
   registers an app again where Windows still has its copy.
-- **BIOS & Firmware** reads the board, BIOS, boot mode, Secure Boot, TPM, virtualization, memory profile and channels, Resizable BAR and the Intel microcode, and says which few firmware
+- **BIOS** reads the board, BIOS, boot mode, Secure Boot, TPM, virtualization, memory profile and channels, Resizable BAR and the Intel microcode, and says which few firmware
   settings are worth a look on this PC, with the menu steps for its maker. It changes nothing in the firmware; its one action is Windows' own *restart to firmware*.
 - **Apps** installs apps through winget (browsers, Steam, Discord with Vencord, Telegram, AyuGram, Git, runtimes and the like), detecting what is there. One choice for the whole install: Mesura's prepared settings, your own saved ones, or none.
-- **Configurations** exports and restores a short allowlist of app settings (Steam, Brave, Discord, Vencord, Spotify).
-- **Profiles** saves a PC's setup and runs it again on a new one.
+- **Backups** has two tabs. *PC setup* saves a PC's setup (apps, their settings, Windows settings) and runs it again on a new one; *App settings* exports and restores a short allowlist of app settings (Steam, Brave, Discord, Vencord, Spotify). Mesura recognises which kind a file is.
 - **NVIDIA** (when the PC has a GeForce card): looks up the current WHQL driver, installs it trimmed with NVCleanstall
   to the selection you choose, and imports [Mesura's own driver profile](docs/nvidia-profile.md), backing up and putting
   back your own profiles around the install.
@@ -49,7 +50,7 @@ Details, silent install and all-users install: `docs/installing.md`.
 
 **Portable.** Unzip `Mesura-<version>-win-x64.zip` (the whole folder) anywhere and start `Mesura.exe`. A portable copy checks for updates too, and "Install" opens the verified installer.
 
-**Administrator rights depend on the install.** An **all-users** install (`Program Files`, `ALLUSERS=1`) asks at start whether to continue normally or restart as administrator (it can remember the answer; Settings changes it), because changes to the whole PC need administrator rights, and has every function.
+**Administrator rights depend on the install.** An **all-users** install (`Program Files`, `ALLUSERS=1`) asks Windows for administrator rights as soon as it starts (one Windows prompt, no dialog in front of it; decline it and Mesura keeps running without them and says which changes are skipped; Settings chooses between always asking Windows, a question first, and never), because changes to the whole PC need administrator rights, and has every function.
 A **per-user** install (the default) lives in your profile, where any program you run could replace `Mesura.exe`, so Mesura never asks for administrator rights from there: functions that need none work, and the
 window says which ones are skipped and how to get full access (install for all users). There is no setting to override this. `docs/security.md`.
 **Nothing changes until you confirm an Apply, Install, Undo or profile run.**
@@ -74,6 +75,8 @@ Requirements: Windows 10 1607 or later (64-bit) or Windows 11. No .NET or Visual
   stand-ins and in Windows Sandbox (real Windows, no GPU, virtual network adapter). On real PCs only these have run: undoing and re-applying one Windows operation (two PCs), a full Radeon Anti-Lag write,
   read-back and undo (one RX 9070 XT), the Intel Wi-Fi network preset applied, read back and undone on one real adapter (an Intel AX201 laptop), and read-only GPU and hardware reports (a Radeon and a GeForce PC). **No other network preset (Realtek, Killer, Intel Ethernet, Realtek Wi-Fi) has been written on a real adapter**, no profile was applied as a whole on a real PC,
   nothing has run on Windows Home or Windows 10, and the NVIDIA step has never run on a GeForce card. The preview shows what would be written before anything is: treat the first run as one.
+- **The advanced settings and the 14 generic network adapter settings** (see Tweaks) were applied and undone only in Windows Sandbox (the adapter ones on stand-ins: the Sandbox has no physical adapter); none has run on a real PC. They are in no profile. The security ones lower protection on purpose and some break things you may use (anti-cheat, Hyper-V, WSL, Windows Sandbox, OneDrive sync, printing); read what each costs before you tick it.
+- **The administrator prompt at start** was checked in Windows Sandbox, where it is already elevated, so the Windows prompt itself (accepting and declining it) is confirmed only by the unit tests of its decision table and by the manual steps in `docs/admin-start-0.7.md`.
 - **The AMD driver is used through the command line.** The window asks `cli\mesura.exe` for everything that calls AMD's library, so a crash inside it cannot take the window down.
 - **Windows Home** ignores machine policies. Mesura marks those entries "not applicable" there instead of writing them.
 - **Telemetry:** Mesura reduces what Windows lets you reduce. Windows always sends its *Required* diagnostic data on Home

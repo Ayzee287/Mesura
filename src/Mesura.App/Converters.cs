@@ -102,6 +102,27 @@ public sealed class InvertConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 }
 
+/// <summary>
+/// The count line of a group of entries that belong together (the network adapter presets): "Fit this PC: 1 of 5". Empty for any other group, so the same heading template serves
+/// every group in the list.
+/// </summary>
+public sealed class FamilyFitConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not System.Collections.IEnumerable items)
+        {
+            return "";
+        }
+
+        var rows = items.OfType<SettingRow>().Where(r => r.InFamily).ToList();
+        return rows.Count == 0 ? "" : " · " + Loc.Format("Family.Fit", rows.Count(r => r.State != Mesura.Core.Windows.OperationState.Inapplicable), rows.Count);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>The icon for a tone: done, warning, error, or information.</summary>
 public sealed class ToneGlyphConverter : IValueConverter
 {

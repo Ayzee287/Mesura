@@ -148,7 +148,7 @@
       "mesura.platform.windows": {
         "type": "Project",
         "dependencies": {
-          "Mesura.Core": "[0.1.0, )",
+          "Mesura.Core": "[0.7.0, )",
           "System.Management": "[10.0.12, )"
         }
       }

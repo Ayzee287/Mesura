@@ -1,0 +1,60 @@
+{
+  // "What's new" for the running version, written by hand for each release in both languages and keyed by major.minor (0.7.1 shows the 0.7 notes).
+  // Read by ReleaseNotes (Core). Keep each note to one sentence a user would say aloud.
+  "0.7": {
+    "en": [
+      "Backups: PC setups and app settings are one section with two tabs, and Mesura recognises which kind of file you open.",
+      "Mesura asks Windows for administrator rights as it starts, once; decline and it keeps running and says what it skips.",
+      "Settings that cannot apply say why: no Ethernet port, another maker's card, an edition, a battery.",
+      "New advanced choices outside every profile: security protections, background functions and 14 network adapter settings, each with its cost.",
+      "Discord and Vencord are detected and restored more reliably, and a restore of app settings can be undone.",
+      "A new look: monochrome mark, always-on background, clearer focus, a simpler System page."
+    ],
+    "ru": [
+      "Резервные копии: копия ПК и настройки приложений в одном разделе с двумя вкладками; Mesura сама узнаёт тип открытого файла.",
+      "Mesura один раз просит у Windows права администратора при запуске; при отказе она продолжает работу и говорит, что пропущено.",
+      "Настройки, которые нельзя применить, называют причину: нет порта Ethernet, карта другого производителя, редакция, батарея.",
+      "Новые расширенные настройки вне профилей: защита, фоновые функции и 14 настроек сетевых адаптеров, у каждой названа цена.",
+      "Discord и Vencord определяются и восстанавливаются надёжнее, а восстановление настроек приложений можно отменить.",
+      "Новый вид: монохромный знак, постоянный фон, понятнее фокус, проще страница «Система»."
+    ]
+  },
+  "0.6": {
+    "en": [
+      "Profiles know your PC: each level is planned for your hardware, and what does not apply is listed with the reason.",
+      "Telemetry is off in every level, as its own group.",
+      "Maximum performance applies everything that applies to the PC, with the cost of each setting beside it.",
+      "Network adapter presets for Realtek, Intel and Killer, with a before and after you can read.",
+      "Two Mesura power plans, written on mains power only."
+    ],
+    "ru": [
+      "Профили знают ваш ПК: каждый уровень планируется под ваше оборудование, а что не подходит, показано с причиной.",
+      "Телеметрия выключена на каждом уровне, отдельной группой.",
+      "«Максимальная производительность» применяет всё, что подходит ПК, с ценой каждой настройки рядом.",
+      "Пресеты сетевых адаптеров Realtek, Intel и Killer: до и после можно прочитать.",
+      "Два плана питания Mesura, записанные только для работы от сети."
+    ]
+  },
+  "0.7": {
+    "en": [
+      "A bonus: Windows 11 light cursors. Configurations, Bonus. It is not part of any profile: one click applies them and one click puts your own cursors back.",
+      "A calmer look: the background is always on (it stays still when Windows animations are off or a high-contrast theme is used) and the green glow in the corner is gone.",
+      "The start page, System and Settings carry fewer words; System no longer shows power, uptime and type (the saved report still has them).",
+      "A button no longer keeps a glow after a mouse click; the keyboard ring still shows when you press Tab.",
+      "Apps says why it cannot check an app instead of only \"Can't check\", and the log keeps winget's own answer.",
+      "On Optimization, settings that are not for this PC are gathered by reason, and the button is simply \"Apply\" (a window still shows everything first).",
+      "Checking for updates when nothing is published yet no longer shows a technical code.",
+      "Apps offers to make an installed browser (Brave, Chrome) the one that opens web links: Windows keeps that choice to itself, so the button opens its page and Mesura checks the result when you come back."
+    ],
+    "ru": [
+      "Бонус: светлые курсоры в стиле Windows 11. Конфигурации, «Бонус». Они не входят ни в один профиль: одно нажатие применяет их, одно возвращает ваши прежние.",
+      "Спокойнее вид: фон всегда включён (он замирает, если в Windows выключены анимации или включена контрастная тема), зелёного свечения в углу больше нет.",
+      "На главной, в «Системе» и в настройках меньше слов; «Система» больше не показывает питание, время работы и тип (в сохранённом отчёте они остаются).",
+      "Кнопка больше не светится после щелчка мышью; кольцо для клавиатуры по-прежнему видно при нажатии Tab.",
+      "«Приложения» объясняют, почему не удалось проверить приложение, а не пишут просто «Не удалось проверить»; журнал хранит ответ winget.",
+      "В «Оптимизации» то, что не подходит этому ПК, собрано по причинам, а кнопка называется просто «Применить» (окно по-прежнему сначала всё показывает).",
+      "Проверка обновлений, когда ничего ещё не опубликовано, больше не показывает технический код.",
+      "«Приложения» предлагают сделать установленный браузер (Brave, Chrome) основным для веб-ссылок: Windows оставляет этот выбор за собой, поэтому кнопка открывает его страницу, а Mesura проверяет результат, когда вы возвращаетесь."
+    ]
+  }
+}

@@ -297,12 +297,15 @@
                             <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource PlanGroupTemplate}" Focusable="False" />
                             <Border Style="{StaticResource Divider}" Margin="0,12,0,6" Visibility="{Binding HasNotHere, Converter={StaticResource BoolToVisibility}}" />
                             <Expander Style="{StaticResource Disclosure}" Header="{Binding NotHereHeader}" Visibility="{Binding HasNotHere, Converter={StaticResource BoolToVisibility}}">
-                                <ItemsControl ItemsSource="{Binding NotHere}" Focusable="False">
+                                <ItemsControl ItemsSource="{Binding NotHereGroups}" Focusable="False">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Style="{StaticResource Caption}" Margin="0,3">
-                                                <Run Text="{Binding Name, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text=" · " /><Run Text="{Binding Text, Mode=OneWay}" />
-                                            </TextBlock>
+                                        <DataTemplate DataType="{x:Type l:PlanLineGroup}">
+                                            <StackPanel Margin="0,5">
+                                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap">
+                                                    <Run Text="{Binding Text, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text="{Binding CountText, Mode=OneWay}" Foreground="{StaticResource Text}" />
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding NamesText}" Style="{StaticResource Tertiary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                            </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

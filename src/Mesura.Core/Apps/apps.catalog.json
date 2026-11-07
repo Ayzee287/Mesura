@@ -50,6 +50,10 @@
       "note": "Game clips and replays (Medal B.V.). Its installer has no folder option." },
     { "id": "regorganizer", "wingetId": "ChemTableSoftware.RegOrganizer", "name": "Reg Organizer", "category": "Utility", "installLocation": true,
       "note": "Registry and uninstall tools (ChemTable Software); a paid app with a trial. Mesura installs it and changes nothing in it." },
+    { "id": "anydesk", "wingetId": "AnyDesk.AnyDesk", "name": "AnyDesk", "category": "Utility",
+      "note": "Remote desktop (AnyDesk Software GmbH, proprietary). It can let other people connect to this PC: Mesura installs it and changes nothing in it; set your own access password in AnyDesk." },
+    { "id": "autoruns", "wingetId": "Microsoft.Sysinternals.Autoruns", "name": "Autoruns", "category": "Utility",
+      "note": "Microsoft Sysinternals: everything that starts with Windows, in one list. A portable app: it asks you to accept Sysinternals' licence terms the first time it runs and shows more when started as administrator. Mesura installs it and changes nothing in it." },
     { "id": "git", "wingetId": "Git.Git", "name": "Git", "category": "Developer", "listed": false, "upgrade": true },
     { "id": "zoom", "wingetId": "Zoom.Zoom", "name": "Zoom", "category": "Communication", "listed": false }
   ],

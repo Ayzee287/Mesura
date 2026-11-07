@@ -23,6 +23,13 @@ public enum WingetLaunch
 /// </summary>
 public static class WingetContext
 {
+    /// <summary>
+    /// The context of a question that only reads (<c>winget list</c>, with or without <c>--upgrade-available</c>). It does not follow the package's install context: an elevated process of the same
+    /// user reads the same profile and the same <c>HKCU</c>, so it sees that user's per-user installs without starting anything as the shell's user. Installing and upgrading still follow
+    /// <see cref="AppPackage.Context"/>. (Before 0.7 the question for a per-user app went through that launch too, and any failure of it showed as "Can't check" for every per-user app.)
+    /// </summary>
+    public const AppRunContext Query = AppRunContext.Any;
+
     /// <param name="userKnown">Whether the user signed in to this session could be established.</param>
     /// <param name="sameUser">Whether Mesura runs as that user (elevated or not).</param>
     /// <param name="elevated">Whether Mesura runs elevated.</param>

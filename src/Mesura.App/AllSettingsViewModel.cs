@@ -410,6 +410,9 @@ public sealed class AllSettingsViewModel : Observable, IPageState, IPageBack
                 View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.ImpactOrder), ListSortDirection.Ascending));
             }
             // Inside one group the list is flat (0.4): a second level of headings (Taskbar and Start, File Explorer…) said nothing the names don't.
+            // The one exception (0.7) is a family of entries that belong together, the per-maker network adapter presets: they are one group with a heading that says how many fit this PC.
+            View.GroupDescriptions.Add(new PropertyGroupDescription(nameof(SettingRow.FamilyText)));
+            View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.FamilyRank), ListSortDirection.Ascending));
 
             View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.SortRank), ListSortDirection.Ascending));
             View.SortDescriptions.Add(new SortDescription(nameof(SettingRow.CatalogIndex), ListSortDirection.Ascending));

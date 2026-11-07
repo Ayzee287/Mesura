@@ -32,6 +32,29 @@ public partial class MainWindow : Window
 
     /// <param name="services">The shared services (one per process, so the tray and the window agree).</param>
     /// <param name="hostedInTray">When true, closing the window hides it (the tray keeps Mesura running) instead of exiting.</param>
+    private const double DockFadeHeight = 34;
+
+    /// <summary>
+    /// The page fades out over its last 34 px, where it runs into the dock. It is an opacity mask, so the page becomes transparent onto the field behind it (the one AmbientField that
+    /// fills the window); the fade used to be a dark rectangle laid over the page, which did not match the lit field under the dock and showed as a band above it.
+    /// </summary>
+    private void UpdateDockFade()
+    {
+        var height = PageHost.ActualHeight;
+        if (height <= 0)
+        {
+            return;
+        }
+
+        var edge = Math.Min(DockFadeHeight, height / 2) / height;
+        var mask = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(0, 1) };
+        mask.GradientStops.Add(new GradientStop(Colors.Black, 0));
+        mask.GradientStops.Add(new GradientStop(Colors.Black, 1 - edge));
+        mask.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
+        mask.Freeze();
+        PageHost.OpacityMask = mask;
+    }
+
     public MainWindow(Services services, bool hostedInTray = false)
     {
         InitializeComponent();
@@ -42,8 +65,12 @@ public partial class MainWindow : Window
         _services = services;
         Icon = Branding.WindowIcon;
         Logo.Source = Branding.Mark;
-        DockFade.Visibility = HighContrastTheme.IsOn ? Visibility.Collapsed : Visibility.Visible; // a fixed dark fade would smear a light high-contrast theme
-        LightField.Mode = LightField.Resolve(services.Settings.Lighting);
+        if (!HighContrastTheme.IsOn) // a high-contrast theme has a plain field and no fade
+        {
+            PageHost.SizeChanged += (_, _) => UpdateDockFade();
+            UpdateDockFade();
+        }
+        LightField.Mode = LightField.Resolve();
         LightField.Attach(this);
         ApplyAccessState();
         Loc.Instance.LanguageChanged += ApplyAccessState;
@@ -70,8 +97,7 @@ public partial class MainWindow : Window
         FirmwarePage.DataContext = new FirmwareViewModel(services);
         var configurations = new ConfigurationsViewModel(services, OpenActivity);
         configurations.SavedChanged += _apps.RefreshSaved;
-        ConfigurationsPage.DataContext = configurations;
-        ProfilesPage.DataContext = new ProfilesViewModel(services, OpenActivity);
+        BackupsPage.DataContext = new BackupsViewModel(services, new ProfilesViewModel(services, OpenActivity), configurations);
         ActivityPage.DataContext = _activity;
         ActivationPage.DataContext = new ActivationViewModel(services);
         SystemInfoPage.DataContext = new SystemInfoViewModel(services);
@@ -108,8 +134,7 @@ public partial class MainWindow : Window
             _ when sender == NavDebloat => DebloatPage,
             _ when sender == NavFirmware => FirmwarePage,
             _ when sender == NavApps => AppsPage,
-            _ when sender == NavConfigurations => ConfigurationsPage,
-            _ when sender == NavProfiles => ProfilesPage,
+            _ when sender == NavBackups => BackupsPage,
             _ when sender == NavActivation => ActivationPage,
             _ when sender == NavSystem => SystemInfoPage,
             _ when sender == NavActivity => ActivityPage,
@@ -143,7 +168,7 @@ public partial class MainWindow : Window
         _current = page;
         BackButton.Visibility = _history.Count > 0 || page.DataContext is IPageBack ? Visibility.Visible : Visibility.Collapsed;
         var changed = page.Visibility != Visibility.Visible;
-        foreach (var child in new UserControl[] { WelcomePage, OptimizePage, AllSettingsPage, DebloatPage, FirmwarePage, AppsPage, ConfigurationsPage, ProfilesPage, ActivationPage, SystemInfoPage, ActivityPage, SettingsPage })
+        foreach (var child in new UserControl[] { WelcomePage, OptimizePage, AllSettingsPage, DebloatPage, FirmwarePage, AppsPage, BackupsPage, ActivationPage, SystemInfoPage, ActivityPage, SettingsPage })
         {
             if (child != page && child.Visibility == Visibility.Visible)
             {
@@ -164,8 +189,7 @@ public partial class MainWindow : Window
             : page == DebloatPage ? NavDebloat
             : page == FirmwarePage ? NavFirmware
             : page == AppsPage ? NavApps
-            : page == ConfigurationsPage ? NavConfigurations
-            : page == ProfilesPage ? NavProfiles
+            : page == BackupsPage ? NavBackups
             : page == ActivationPage ? NavActivation
             : page == SystemInfoPage ? NavSystem
             : page == ActivityPage ? NavActivity
@@ -173,7 +197,7 @@ public partial class MainWindow : Window
             : null;
         // The dock's entries are kept in step by hand: the ones in the "more" menu are not in the visual tree until it opens, so the
         // group's own mutual exclusion cannot reach them.
-        foreach (var item in new[] { NavOptimize, NavTweaks, NavDebloat, NavFirmware, NavApps, NavActivation, NavSystem, NavActivity, NavConfigurations, NavProfiles, NavSettings })
+        foreach (var item in new[] { NavOptimize, NavTweaks, NavDebloat, NavFirmware, NavApps, NavActivation, NavSystem, NavActivity, NavBackups, NavSettings })
         {
             var want = item == nav;
             if (item.IsChecked != want)
@@ -185,7 +209,7 @@ public partial class MainWindow : Window
         }
 
         NavMore.IsChecked = false;
-        NavMore.Tag = page == ConfigurationsPage || page == ProfilesPage || page == SettingsPage ? "active" : null;
+        NavMore.Tag = page == BackupsPage || page == SettingsPage ? "active" : null;
 
         var template = (page as IDockPage)?.DockTemplate;
         ActionZone.ContentTemplate = template;

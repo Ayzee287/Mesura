@@ -16,5 +16,8 @@ Collected on 2026-10-23, then resized with high-quality bicubic scaling, alpha k
 | regorganizer | ChemTable's site: `apple-touch-icon.png` (the company's mark, resized; collected on 2026-10-30) |
 | ayugram | AyuGram Desktop's repository: `Telegram/Resources/art/icon256.png` (collected on 2026-10-30) |
 
+| autoruns | Microsoft's own `Autoruns64.exe` from `https://download.sysinternals.com/files/Autoruns.zip` (SHA-256 7b3a8eed…cf9d6, the value in the winget manifest; the file was only unpacked, never run; the 256 px icon resource, collected on 2026-11-07) |
+| anydesk | AnyDesk's own `AnyDesk.exe` from `https://download.anydesk.com/AnyDesk.exe` (SHA-256 979a295b…5de9, the value in the winget manifest; read for its icon resource, never run; collected on 2026-11-07) |
+
 An app without an icon here shows its initial instead. A new app's icon comes from the same kind of source: its own
 executable or the vendor's official site or repository, never a third-party icon pack.

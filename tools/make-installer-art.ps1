@@ -1,5 +1,6 @@
 # Draws the two pictures the installer wizard uses (installer\art\banner.bmp and dialog.bmp) from the logo's colours, so the Windows Installer
-# wizard looks like Mesura: a graphite panel with the violet-azure-mint light on the welcome and finish pages, a white banner with the mark on the others.
+# wizard looks like Mesura: a graphite panel with the window's ambient light on the welcome and finish pages, a white banner with the mark on the others. (0.7: the mark is monochrome silver;
+# the panel's ambient lights are the window's atmosphere and stay as they were, the banner's thin edge follows the mark.)
 # The wizard's own text stays Windows' (it cannot be dark: it is the system's dialog), which is why the banner is white and the art carries no words.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\make-installer-art.ps1
@@ -48,7 +49,7 @@ $g.Dispose(); Save-Bmp $b 'dialog.bmp'
 ($b, $g) = New-Canvas 493 58
 $g.Clear([System.Drawing.Color]::White)
 $g.DrawImage($mark, (New-Object System.Drawing.Rectangle(427, 3, 52, 52)))
-$edge = New-Object System.Drawing.Drawing2D.LinearGradientBrush((New-Object System.Drawing.Rectangle(0, 54, 493, 4)), [System.Drawing.ColorTranslator]::FromHtml('#7A5CFF'), [System.Drawing.ColorTranslator]::FromHtml('#34F0B0'), 0.0)
+$edge = New-Object System.Drawing.Drawing2D.LinearGradientBrush((New-Object System.Drawing.Rectangle(0, 54, 493, 4)), [System.Drawing.ColorTranslator]::FromHtml('#7F93BD'), [System.Drawing.ColorTranslator]::FromHtml('#DCE4F4'), 0.0)
 $g.FillRectangle($edge, 0, 54, 493, 4)
 $g.Dispose(); Save-Bmp $b 'banner.bmp'
 $mark.Dispose()

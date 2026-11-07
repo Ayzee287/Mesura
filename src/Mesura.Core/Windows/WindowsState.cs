@@ -177,7 +177,11 @@ public enum OperationState
 public sealed record ItemState(string Target, string Current, string Desired, bool Matches, bool Present);
 
 /// <summary>An operation evaluated against the current state.</summary>
-public sealed record OperationEvaluation(WindowsOperation Operation, OperationState State, string Reason, IReadOnlyList<ItemState> Items);
+/// <param name="ReasonCode">
+/// For an operation that is not here: a <c>Mesura.Core.Profiles.PlanReason</c> code that says which of the true reasons it is, when the evaluation knows it better than the operation's own
+/// requirements can tell (a missing Ethernet port, an adapter of another maker, a driver that says no); otherwise <c>null</c>.
+/// </param>
+public sealed record OperationEvaluation(WindowsOperation Operation, OperationState State, string Reason, IReadOnlyList<ItemState> Items, string? ReasonCode = null);
 
 /// <summary>Evaluates catalog operations against the current state. Pure: it reads only through <see cref="ISystemReader"/>.</summary>
 public static class WindowsEvaluator
@@ -297,18 +301,10 @@ public static class WindowsEvaluator
             var adapters = reader.ReadAdapters();
             unknown |= adapters is null;
             var itemsBefore = items.Count;
-            var adaptersOfTheKind = 0;
             foreach (var adapter in adapters ?? [])
             {
-                var counted = false;
                 foreach (var setting in op.AdapterSettings.Where(s => s.Matches(adapter)))
                 {
-                    if (!counted)
-                    {
-                        adaptersOfTheKind++;
-                        counted = true;
-                    }
-
                     if (setting.Wanted(adapter) is not { } wanted)
                     {
                         continue; // this adapter's driver doesn't offer it (or doesn't list the value): not for this adapter
@@ -321,12 +317,15 @@ public static class WindowsEvaluator
 
             if (!unknown && items.Count == itemsBefore)
             {
-                // Nothing to set on any adapter: say which of the two reasons it is, so the plan shows why instead of "already removed".
-                var makers = string.Join("/", op.AdapterSettings.SelectMany(s => s.Vendors).Distinct(StringComparer.OrdinalIgnoreCase));
-                var kinds = string.Join("/", op.AdapterSettings.SelectMany(s => s.Kinds).Distinct().Select(k => k.ToString().ToLowerInvariant()));
-                return new(op, OperationState.Inapplicable, adaptersOfTheKind == 0
-                    ? $"This PC has no physical {kinds} network adapter{(makers.Length > 0 ? $" of {makers}" : "")}."
-                    : $"The driver of the {kinds} adapter{(makers.Length > 0 ? $" ({makers})" : "")} offers none of these settings with the wanted values, so nothing is written to it.", items);
+                // Nothing to set on any adapter: say which of the true reasons it is (no adapter of the kind, another maker, a driver that offers none), so the plan shows why instead of "already removed".
+                var gap = AdapterAvailability.Explain(op, adapters);
+                var code = gap.Gap switch
+                {
+                    AdapterGap.NoAdapter => Mesura.Core.Profiles.PlanReason.AdapterNonePrefix + gap.KindToken,
+                    AdapterGap.OtherMaker => Mesura.Core.Profiles.PlanReason.AdapterMakerPrefix + gap.KindToken,
+                    _ => Mesura.Core.Profiles.PlanReason.AdapterDriver,
+                };
+                return new(op, OperationState.Inapplicable, AdapterAvailability.Sentence(gap), items, code);
             }
         }
 
@@ -344,15 +343,15 @@ public static class WindowsEvaluator
             switch (reading.Availability)
             {
                 case GpuAvailability.NoAdapter:
-                    return new(op, OperationState.Inapplicable, $"This PC has no {gpu.Vendor.ToUpperInvariant()} graphics adapter.", items);
+                    return new(op, OperationState.Inapplicable, $"This PC has no {gpu.Vendor.ToUpperInvariant()} graphics adapter.", items, Mesura.Core.Profiles.PlanReason.GpuNone);
                 case GpuAvailability.NoDriver:
-                    return new(op, OperationState.Inapplicable, $"The {gpu.Vendor.ToUpperInvariant()} graphics driver here has no ADLX interface, so {gpu.Label} can't be read or set.", items);
+                    return new(op, OperationState.Inapplicable, $"The {gpu.Vendor.ToUpperInvariant()} graphics driver here has no ADLX interface, so {gpu.Label} can't be read or set.", items, Mesura.Core.Profiles.PlanReason.GpuDriver);
             }
 
             var label = $"{reading.GpuName ?? gpu.Vendor.ToUpperInvariant()}: {gpu.Label}";
             if (reading.Supported is false)
             {
-                return new(op, OperationState.Inapplicable, $"The driver says {reading.GpuName ?? "this GPU"} doesn't offer {gpu.Label}.", items);
+                return new(op, OperationState.Inapplicable, $"The driver says {reading.GpuName ?? "this GPU"} doesn't offer {gpu.Label}.", items, Mesura.Core.Profiles.PlanReason.GpuDriver);
             }
 
             if (reading.Supported is null || reading.Enabled is null)

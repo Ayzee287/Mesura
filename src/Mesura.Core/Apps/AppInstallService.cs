@@ -93,30 +93,46 @@ public sealed class AppInstallService
     {
         ArgumentNullException.ThrowIfNull(packages);
         var distinct = packages.DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).ToList();
-        var states = new InstallState[distinct.Count];
+        var items = new AppPlanItem[distinct.Count];
 
-        var queryable = distinct.Any(p => !HasDetector(p) && p.Source != AppSource.Manual && p.Detectable) && _winget.IsAvailable();
+        var wingetAvailable = distinct.Any(p => !HasDetector(p) && p.Source != AppSource.Manual && p.Detectable) && _winget.IsAvailable();
         Parallel.For(0, distinct.Count, new ParallelOptions { MaxDegreeOfParallelism = 4 }, i =>
         {
             var package = distinct[i];
-            states[i] = HasDetector(package) ? Detect(package)
-                : queryable && package.Source != AppSource.Manual && package.Detectable
-                    ? WingetOutput.DetectState(_winget.List(package), package.WingetId)
-                    : InstallState.Unknown;
+            if (HasDetector(package))
+            {
+                items[i] = Detect(package);
+            }
+            else if (package.Source == AppSource.Manual || !package.Detectable)
+            {
+                items[i] = new AppPlanItem(package, InstallState.Unknown, UnknownReason.NotDetectable);
+            }
+            else if (!wingetAvailable)
+            {
+                // winget is "not available" either because it isn't there, or because it could not be started as the user the app belongs to (the runner says which).
+                var refusal = _winget.Refusal;
+                items[i] = new AppPlanItem(package, InstallState.Unknown, refusal.Length > 0 ? UnknownReason.NotStarted : UnknownReason.NoWinget, refusal);
+            }
+            else
+            {
+                var (state, reason, technical) = WingetOutput.Diagnose(_winget.List(package), package.WingetId);
+                items[i] = new AppPlanItem(package, state, reason, technical);
+            }
         });
 
-        return [.. distinct.Select((p, i) => new AppPlanItem(p, states[i]))];
+        return items;
     }
 
-    private InstallState Detect(AppPackage package)
+    private AppPlanItem Detect(AppPackage package)
     {
         try
         {
-            return _detectors[package.Detector]();
+            return new AppPlanItem(package, _detectors[package.Detector]());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return InstallState.Unknown; // the app's files couldn't be read: unknown, never "not installed"
+            // The app's files couldn't be read: unknown, never "not installed".
+            return new AppPlanItem(package, InstallState.Unknown, UnknownReason.DetectorFailed, e.Message);
         }
     }
 

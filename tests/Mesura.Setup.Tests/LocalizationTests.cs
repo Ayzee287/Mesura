@@ -53,6 +53,43 @@ public sealed partial class LocalizationTests
         }
     }
 
+    [Theory]
+    [InlineData(PlanReason.AdapterNonePrefix + "ethernet")]
+    [InlineData(PlanReason.AdapterNonePrefix + "wifi")]
+    [InlineData(PlanReason.AdapterNonePrefix + "any")]
+    [InlineData(PlanReason.AdapterMakerPrefix + "ethernet")]
+    [InlineData(PlanReason.AdapterMakerPrefix + "wifi")]
+    [InlineData(PlanReason.AdapterMakerPrefix + "any")]
+    [InlineData(PlanReason.AdapterDriver)]
+    [InlineData(PlanReason.GpuNone)]
+    [InlineData(PlanReason.GpuDriver)]
+    public void Every_reason_for_a_setting_that_is_not_here_has_words_in_both_languages(string code)
+    {
+        // The words are looked up by a key built from the code, which the "every key the app names" test cannot see.
+        var key = PlanReason.AdapterReasonKey(code);
+        Assert.NotNull(key);
+        foreach (var language in new[] { "en", "ru" })
+        {
+            Assert.True(Strings(language).TryGetValue(key!, out var text) && text.Length > 0, $"{language}: {key}");
+        }
+    }
+
+    [Fact]
+    public void The_network_presets_listed_as_one_group_are_exactly_the_per_maker_collection()
+    {
+        // The window groups the entries whose id starts with network.preset- (SettingRow.InFamily); the catalog's own collection of them must be the same five.
+        var catalog = WindowsCatalog.Default;
+        var byPrefix = catalog.Operations.Where(o => o.Id.StartsWith("network.preset-", StringComparison.Ordinal)).Select(o => o.Id).Order().ToList();
+        var collection = catalog.Presets.Single(p => p.Id == "network-adapter-makers").OperationIds.Order().ToList();
+        Assert.Equal(5, byPrefix.Count);
+        Assert.Equal(collection, byPrefix);
+        Assert.Contains("\"network.preset-\"", File.ReadAllText(Path.Combine(RepoRoot(), "src", "Mesura.App", "WindowsStateModel.cs")), StringComparison.Ordinal);
+        foreach (var language in new[] { "en", "ru" })
+        {
+            Assert.True(Strings(language).ContainsKey("Family.NetworkPresets") && Strings(language).ContainsKey("Family.Fit"), language);
+        }
+    }
+
     private static readonly string[] PluralForms = [".one", ".few", ".many", ".other"];
 
     /// <summary>A key with its plural suffix removed.</summary>

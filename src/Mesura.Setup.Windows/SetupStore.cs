@@ -70,8 +70,24 @@ public sealed partial class SetupStore
 
 #pragma warning disable RS0030 // The setup component's one file writer: a config the user chose to import (class remarks).
         File.Copy(path, backup, overwrite: true);
-        File.WriteAllBytes(temp, content);
-        File.Move(temp, path, overwrite: true);
+        try
+        {
+            File.WriteAllBytes(temp, content);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            // The original is untouched (the move is the only step that replaces it): do not leave the half-written copy beside the app's file.
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+            }
+
+            throw;
+        }
 #pragma warning restore RS0030
         return backup;
     }

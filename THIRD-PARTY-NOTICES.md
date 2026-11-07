@@ -159,6 +159,14 @@ app is meant, and imply no endorsement. They were taken from each app's own exec
 repository. If an owner objects to one, it is removed and the app shows its initial instead. Mesura is not affiliated
 with any of them, with Microsoft, or with NVIDIA.
 
+## Bonus cursor pack
+
+The 17 cursor files Mesura carries for its optional bonus (`src/Mesura.Setup.Windows/Bonus/Cursors`, 15 `.cur` and 2 animated `.ani`, byte for byte as received) are
+"W11 Cursors Light Free v2.2" by Jepri Creations (2022). The copy Mesura received had no licence file, so the MIT licence of Mesura's code does not cover them and no
+licence is claimed for them: they belong to their author, and they are included by the owner's decision as an optional extra that the user chooses to apply
+(Configurations, Bonus; `mesura bonus cursors`), never as part of a profile. Mesura's own code for the bonus is under the MIT licence. The pack's own installer is not used.
+If the author objects, the files and the bonus card are removed from the next release.
+
 ## Tools Mesura starts but does not ship
 
 Mesura downloads or runs these only when you ask, through winget or from their own pages; none is part of the release

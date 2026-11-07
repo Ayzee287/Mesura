@@ -81,6 +81,32 @@
                 </Grid>
             </Border>
 
+            <!-- Web links: shown only when an installed browser of the list does not open them; Windows keeps the choice, so the button goes to its page -->
+            <Border Style="{StaticResource Banner}" Background="{StaticResource AccentSubtle}" Margin="0,14,0,0" Visibility="{Binding HasBrowserOffer, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding BrowserLine}" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="0,0,16,0" TextWrapping="Wrap" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding BrowserOffers}" Focusable="False" IsTabStop="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type l:BrowserOffer}">
+                                    <Button Content="{Binding Label}" Command="{Binding Open}" Margin="8,0,0,0" AutomationProperties.Name="{Binding Label}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                    <TextBlock Text="{l:T Apps.Default.Hint}" Style="{StaticResource Caption}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
             <ItemsControl ItemsSource="{Binding Categories}" ItemTemplate="{StaticResource ChipTemplate}" Tag="AppCategory" Margin="0,18,0,0" Focusable="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -121,7 +147,7 @@
                                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                             <!-- The state in one word. With a newer version on offer the word is "Update" and the pill is the button that does it. -->
                                             <Border Style="{StaticResource Pill}" Background="{Binding StateTone, Converter={StaticResource StateBackground}}" VerticalAlignment="Center" Margin="0,0,10,0"
-                                                    Visibility="{Binding NoUpdate, Converter={StaticResource BoolToVisibility}}">
+                                                    ToolTip="{Binding StateWhy}" Visibility="{Binding NoUpdate, Converter={StaticResource BoolToVisibility}}">
                                                 <TextBlock Text="{Binding StateText}" Style="{StaticResource PillText}" Foreground="{Binding StateTone, Converter={StaticResource StateBrush}}" />
                                             </Border>
                                             <Button Style="{StaticResource PillAction}" Margin="0,0,10,0" VerticalAlignment="Center"

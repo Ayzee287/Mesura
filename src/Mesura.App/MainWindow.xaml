@@ -22,23 +22,14 @@
             <p:DebloatPage x:Name="DebloatPage" Visibility="Collapsed" />
             <p:FirmwarePage x:Name="FirmwarePage" Visibility="Collapsed" />
             <p:AppsPage x:Name="AppsPage" Visibility="Collapsed" />
-            <p:ConfigurationsPage x:Name="ConfigurationsPage" Visibility="Collapsed" />
-            <p:ProfilesPage x:Name="ProfilesPage" Visibility="Collapsed" />
+            <p:BackupsPage x:Name="BackupsPage" Visibility="Collapsed" />
             <p:ActivationPage x:Name="ActivationPage" Visibility="Collapsed" />
             <p:SystemInfoPage x:Name="SystemInfoPage" Visibility="Collapsed" />
             <p:ActivityPage x:Name="ActivityPage" Visibility="Collapsed" />
             <p:SettingsPage x:Name="SettingsPage" Visibility="Collapsed" />
         </Grid>
 
-        <!-- Where a page scrolls under the dock it fades into the field instead of being cut. -->
-        <Rectangle x:Name="DockFade" VerticalAlignment="Bottom" Height="34" IsHitTestVisible="False">
-            <Rectangle.Fill>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#0008090B" Offset="0" />
-                    <GradientStop Color="#E608090B" Offset="1" />
-                </LinearGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
+        <!-- Where a page runs into the dock it fades out (an opacity mask on PageHost, MainWindow.xaml.cs): into the one field behind everything, not into a colour laid over it, so there is no seam above the dock. -->
 
         <!-- An update waiting (UpdateViewModel): one quiet card above the dock, never a pop-up. -->
         <l:UpdateCard x:Name="UpdateNotice" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="320" Margin="0,0,40,10"
@@ -96,10 +87,8 @@
                                         <DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.5" Color="Black" />
                                     </Border.Effect>
                                     <StackPanel>
-                                        <RadioButton x:Name="NavConfigurations" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconConfigurations}" Content="{l:T Nav.Configurations}"
-                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Configurations}" />
-                                        <RadioButton x:Name="NavProfiles" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconProfiles}" Content="{l:T Nav.Profiles}"
-                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Profiles}" />
+                                        <RadioButton x:Name="NavBackups" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconSave}" Content="{l:T Nav.Backups}"
+                                                     Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Backups}" />
                                         <RadioButton x:Name="NavSettings" Style="{StaticResource DockMenuItem}" GroupName="Nav" Tag="{StaticResource IconSettings}" Content="{l:T Nav.Settings}"
                                                      Checked="OnNavigate" AutomationProperties.Name="{l:T Nav.Settings}" />
                                     </StackPanel>

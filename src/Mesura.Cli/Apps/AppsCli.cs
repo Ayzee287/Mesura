@@ -190,7 +190,8 @@ internal static class AppsCli
             Console.WriteLine(group.Key);
             foreach (var item in group)
             {
-                Console.WriteLine($"  [{StateLabel(item)}] {item.Package.Id,-13} {item.Package.Name}  ({Origin(item.Package)})");
+                Console.WriteLine($"  [{StateLabel(item)}] {item.Package.Id,-13} {item.Package.Name}  ({Origin(item.Package)})"
+                    + (item.State == InstallState.Unknown && item.Reason is not (UnknownReason.None or UnknownReason.NotDetectable) ? $"  - can't check: {item.Reason}" + (item.Technical.Length > 0 ? $" ({item.Technical})" : "") : ""));
             }
         }
 

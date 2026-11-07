@@ -35,7 +35,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     public RegistryReading ReadRegistry(string hive, string path, string name) =>
         Unreadable.Contains(Key(hive, path, name)) ? RegistryReading.Failed
         : Registry.TryGetValue(Key(hive, path, name), out var v)
-            ? new RegistryReading(true, true, v.Kind, v.Value)
+            ? new RegistryReading(true, true, ExpandKeys.Contains(Key(hive, path, name)) ? null : v.Kind, v.Value)
             : new RegistryReading(KeyExists(hive, path), false, null, null);
 
     /// <summary>Values whose read fails (access denied): nothing is known about them.</summary>
@@ -221,6 +221,19 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
         ChangeAdapter(interfaceGuid, a => a with { AllowTurnOff = allowTurnOff });
     }
 
+    /// <summary>The values written as REG_EXPAND_SZ (the cursor bonus); the fake reads them back as plain strings, as the real reader does.</summary>
+    public List<string> ExpandWrites { get; } = [];
+
+    /// <summary>Keys that hold a REG_EXPAND_SZ value: the real reader returns such a value without a kind, and so does the fake.</summary>
+    public HashSet<string> ExpandKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public void SetRegistryExpandString(string hive, string path, string name, string value)
+    {
+        SetRegistry(hive, path, name, RegistryKind.String, value);
+        ExpandWrites.Add(Key(hive, path, name));
+        ExpandKeys.Add(Key(hive, path, name));
+    }
+
     public void SetRegistry(string hive, string path, string name, RegistryKind kind, string value)
     {
         var key = Key(hive, path, name);
@@ -234,6 +247,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
         if (!Protected.Contains(key))
         {
             Registry[key] = (kind, value); // a protected value silently refuses, as a policy-owned key does
+            ExpandKeys.Remove(key);
         }
 
         if (FailAfterWrite.Contains(key))
@@ -249,6 +263,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     {
         Writes.Add("delete " + Key(hive, path, name));
         Registry.Remove(Key(hive, path, name));
+        ExpandKeys.Remove(Key(hive, path, name));
     }
 
     public void SetServiceStart(string name, int start)
@@ -366,8 +381,8 @@ public sealed class WindowsConfiguratorTests
             Assert.All(ops, o => Assert.True(o.Applicable && o.Risk != RiskClass.Undocumented));
         }
 
-        // Security features are never something the catalog applies: only observed, with a link to Windows Security.
-        Assert.All(Catalog.Operations.Where(o => o.Category.StartsWith("Security", StringComparison.Ordinal)),
+        // The security status entries (category "Security (information)") are only observed, with a link to Windows Security. The protections an owner chooses to switch off live in the separate, individually selected "Security" category (0.7.0, advanced, in no profile).
+        Assert.All(Catalog.Operations.Where(o => o.Category.StartsWith("Security (", StringComparison.Ordinal)),
             o => Assert.Equal(RiskClass.Observe, o.Risk));
     }
 

@@ -122,7 +122,9 @@ public partial class App : Application
             StartupLog.Note($"administrator mode is not offered from this folder: {exposed}");
         }
 
-        if (!Has("--tray") && !relaunched && !Has(NoElevateArgument) && !IsElevated() && StartupChoice.WantsAdministrator(preferences, new Mesura.Setup.Windows.SetupStore()))
+        var startupAction = StartupChoice.Decide(preferences, IsElevated(), relaunched, Has(NoElevateArgument), trayStart: Has("--tray"));
+        StartupLog.Note($"stage: administrator rights at start: {startupAction} (elevated now: {IsElevated()})");
+        if (StartupChoice.WantsAdministrator(startupAction, preferences, new Mesura.Setup.Windows.SetupStore()))
         {
             _elevationAsked = true;
             if (ShellLauncher.RelaunchElevated(e.Args) is null)
@@ -403,7 +405,8 @@ public partial class App : Application
             if (_tray is not null && !_elevationAsked && !_services.Changing && !IsElevated())
             {
                 _elevationAsked = true;
-                if (StartupChoice.WantsAdministrator(_services.Settings, _services.Store) && ShellLauncher.RelaunchElevated(["--tray"]) is null)
+                var action = StartupChoice.Decide(_services.Settings, alreadyElevated: false, relaunched: false, noElevateArgument: false, trayStart: false);
+                if (StartupChoice.WantsAdministrator(action, _services.Settings, _services.Store) && ShellLauncher.RelaunchElevated(["--tray"]) is null)
                 {
                     Shutdown(); // the elevated instance shows the window and keeps the tray
                     return;

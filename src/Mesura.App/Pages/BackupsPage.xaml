@@ -1,0 +1,69 @@
+<UserControl x:Class="Mesura.App.Pages.BackupsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:Mesura.App"
+             xmlns:p="clr-namespace:Mesura.App.Pages">
+    <!-- Backups: what Mesura saves and brings back, in one place. Two kinds that must not be mixed up (a PC setup installs apps and changes Windows;
+         app settings never touch Windows) are two tabs; the one "Open a backup" door reads a file's kind and picks the tab. Both tabs are kept alive,
+         so a plan, a result or a running restore survives a switch. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="36,0,36,28">
+            <l:PageHero Title="{l:T Nav.Backups}" Subtitle="{l:T Backups.Subtitle}" HeroMargin="0,28,0,12" />
+
+            <Grid Margin="0,14,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Style="{StaticResource Segment}" GroupName="BackupTabs" Content="{l:T Backups.TabSetup}" IsChecked="{Binding ShowSetup, Mode=TwoWay}"
+                                 AutomationProperties.Name="{l:T Backups.TabSetup}" GotKeyboardFocus="OnTabFocused" />
+                    <RadioButton Style="{StaticResource Segment}" GroupName="BackupTabs" Content="{l:T Backups.TabSettings}" IsChecked="{Binding ShowAppSettings, Mode=TwoWay}"
+                                 AutomationProperties.Name="{l:T Backups.TabSettings}" GotKeyboardFocus="OnTabFocused" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="{l:T Backups.Open}" Style="{StaticResource Ghost}" Command="{Binding OpenBackup}" Margin="0,0,8,0" />
+                    <Grid>
+                        <Button x:Name="NewButton" Content="{l:T Backups.New}" Click="OnNewClick" AutomationProperties.Name="{l:T Backups.New}" />
+                        <Popup x:Name="NewPopup" PlacementTarget="{Binding ElementName=NewButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                               VerticalOffset="6" PopupAnimation="Fade" Closed="OnNewClosed">
+                            <Border Background="{StaticResource Popover}" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" CornerRadius="14"
+                                    Padding="6" Width="320" Margin="0,0,10,12">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="Black" />
+                                </Border.Effect>
+                                <StackPanel KeyDown="OnNewKeyDown" KeyboardNavigation.TabNavigation="Cycle" KeyboardNavigation.DirectionalNavigation="Cycle">
+                                    <Button x:Name="NewSetupItem" Command="{Binding NewSetup}" Style="{StaticResource Ghost}" HorizontalContentAlignment="Stretch" Padding="12,8" Click="OnNewChosen"
+                                            AutomationProperties.Name="{l:T Backups.NewSetup}">
+                                        <StackPanel HorizontalAlignment="Left">
+                                            <TextBlock Text="{l:T Backups.NewSetup}" Foreground="{StaticResource Text}" />
+                                            <TextBlock Text="{l:T Backups.NewSetupHint}" Style="{StaticResource Caption}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="NewSettingsItem" Command="{Binding NewAppSettings}" Style="{StaticResource Ghost}" HorizontalContentAlignment="Stretch" Padding="12,8" Click="OnNewChosen"
+                                            AutomationProperties.Name="{l:T Backups.NewSettings}">
+                                        <StackPanel HorizontalAlignment="Left">
+                                            <TextBlock Text="{l:T Backups.NewSettings}" Foreground="{StaticResource Text}" />
+                                            <TextBlock Text="{l:T Backups.NewSettingsHint}" Style="{StaticResource Caption}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+
+            <ContentControl Content="{Binding Result}" ContentTemplate="{StaticResource BannerTemplate}" Margin="0,14,0,0" Focusable="False" />
+
+            <TextBlock Text="{l:T Backups.SetupAbout}" Style="{StaticResource Secondary}" MaxWidth="760" HorizontalAlignment="Left" Margin="2,14,0,0"
+                       Visibility="{Binding ShowSetup, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Text="{l:T Backups.SettingsAbout}" Style="{StaticResource Secondary}" MaxWidth="760" HorizontalAlignment="Left" Margin="2,14,0,0"
+                       Visibility="{Binding ShowAppSettings, Converter={StaticResource BoolToVisibility}}" />
+
+            <p:ProfilesPage DataContext="{Binding Setup}" Visibility="{Binding DataContext.ShowSetup, RelativeSource={RelativeSource AncestorType=p:BackupsPage}, Converter={StaticResource BoolToVisibility}}" />
+            <p:ConfigurationsPage DataContext="{Binding AppSettings}" Visibility="{Binding DataContext.ShowAppSettings, RelativeSource={RelativeSource AncestorType=p:BackupsPage}, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

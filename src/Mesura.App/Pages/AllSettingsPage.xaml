@@ -169,7 +169,10 @@
                         <GroupStyle ContainerStyle="{StaticResource FlatGroupItem}">
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource GroupLabel}" Margin="2,12,0,8" />
+                                    <!-- A category's name, or the name of a family of entries with how many of them fit this PC; a group with no name (the single entries) has no heading. -->
+                                    <TextBlock Style="{StaticResource GroupLabel}" Margin="2,12,0,8" Visibility="{Binding Name, Converter={StaticResource Presence}}">
+                                        <Run Text="{Binding Name, Mode=OneWay}" /><Run Text="{Binding Items, Mode=OneWay, Converter={StaticResource FamilyFit}}" FontWeight="Normal" Foreground="{StaticResource TextSecondary}" />
+                                    </TextBlock>
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
                         </GroupStyle>

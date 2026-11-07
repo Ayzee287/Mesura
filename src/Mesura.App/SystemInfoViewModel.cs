@@ -269,7 +269,6 @@ public sealed class SystemInfoViewModel : Observable, IPageState
         cards.Add(new InfoCard("computer", Glyph("IconSystem"), Loc.Get("System.Computer"),
         [
             new InfoGroup("", "", [
-                Row("System.Type", Tr(machine.Kind)),
                 Row("System.Board", Join(" ", machine.BoardManufacturer, machine.Board)),
                 Row("System.Bios", Join(" ", r.Firmware.Vendor, r.Firmware.Version)),
                 Row("System.BiosDate", r.Firmware.ReleaseDate),
@@ -285,7 +284,6 @@ public sealed class SystemInfoViewModel : Observable, IPageState
                 Row("System.Build", os.Build is { } b ? b.ToString(CultureInfo.InvariantCulture) + (os.Revision is { } rev ? "." + rev.ToString(CultureInfo.InvariantCulture) : "") : null),
                 Row("System.Architecture", os.Architecture),
                 Row("System.InstalledOn", os.InstalledOn?.ToString("d", CultureInfo.CurrentCulture)),
-                Row("System.Uptime", os.Uptime is { } up ? Uptime(up) : null),
             ], []),
         ]));
 
@@ -390,17 +388,6 @@ public sealed class SystemInfoViewModel : Observable, IPageState
 
         cards.Add(new InfoCard("displays", Glyph("IconMonitor"), Loc.Get("System.Displays"), displayGroups));
 
-        var power = r.Power;
-        cards.Add(new InfoCard("power", Glyph("IconBattery"), Loc.Get("System.Power"),
-        [
-            new InfoGroup("", "", [
-                Row("System.PowerSource", power.OnAc switch { true => Loc.Get("System.PluggedIn"), false => Loc.Get("System.OnBattery"), _ => null }),
-                Row("System.Battery", power.HasBattery switch { true => Loc.Get("System.Present"), false => Loc.Get("System.None"), _ => null }),
-                Row("System.PowerPlan", power.PlanName is { } plan ? PlanName(plan) : null),
-                Row("System.ModernStandby", power.ModernStandby switch { true => Loc.Get("System.Supported"), false => Loc.Get("System.NotSupported"), _ => null }),
-            ], []),
-        ]));
-
         Cards = cards;
         Deal();
         Raise(nameof(Cards));
@@ -423,26 +410,11 @@ public sealed class SystemInfoViewModel : Observable, IPageState
 
     private static string Hz(double hz) => hz.ToString("0.##", CultureInfo.CurrentCulture) + " " + Loc.Get("System.Hz");
 
-    private static string Uptime(TimeSpan span) =>
-        span.TotalDays >= 1 ? Loc.Format("System.UptimeDays", (int)span.TotalDays, span.Hours)
-        : span.TotalHours >= 1 ? Loc.Format("System.UptimeHours", (int)span.TotalHours, span.Minutes)
-        : Loc.Format("System.UptimeMinutes", Math.Max(1, span.Minutes));
-
     private static string HealthText(string health) => health switch
     {
         "Healthy" => Loc.Get("System.Healthy"),
         "Warning" => Loc.Get("System.HealthWarning"),
         "Unhealthy" => Loc.Get("System.Unhealthy"),
         _ => health,
-    };
-
-    private static string PlanName(string plan) => plan switch
-    {
-        "Balanced" => Loc.Get("System.PlanBalanced"),
-        "High performance" => Loc.Get("System.PlanHigh"),
-        "Power saver" => Loc.Get("System.PlanSaver"),
-        "Ultimate Performance" => Loc.Get("System.PlanUltimate"),
-        "Custom" => Loc.Get("System.PlanCustom"),
-        _ => plan,
     };
 }

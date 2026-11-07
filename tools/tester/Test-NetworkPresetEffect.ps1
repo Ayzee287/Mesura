@@ -35,7 +35,8 @@ function Say([string]$kind, [string]$text) { $line = ('{0,-5} {1}' -f $kind, $te
 function Check([string]$what, [bool]$ok) { if (-not $ok) { $script:failed = $true }; Say $(if ($ok) { 'PASS' } else { 'FAIL' }) $what }
 function Run([string[]]$arguments) { $t = (& $Cli @arguments 2>&1 | ForEach-Object { "$_" }) -join "`n"; [pscustomobject]@{ Text = $t; Exit = $LASTEXITCODE } }
 function Save { $lines | Out-File (Join-Path $Out 'network-preset-effect.txt') -Encoding utf8 }
-if (-not $ReadProperty) { $ReadProperty = { param($name, $keyword) @((Get-NetAdapterAdvancedProperty -Name $name -RegistryKeyword $keyword -ErrorAction SilentlyContinue).RegistryValue) -join ',' } }
+# The keyword is matched exactly: -RegistryKeyword is a wildcard ('*EEE' also matches AdvancedEEE and reads '1,0').
+if (-not $ReadProperty) { $ReadProperty = { param($name, $keyword) @((Get-NetAdapterAdvancedProperty -Name $name -RegistryKeyword $keyword -ErrorAction SilentlyContinue | Where-Object { $_.RegistryKeyword -ceq $keyword }).RegistryValue) -join ',' } }
 if (-not $ReadStatus) { $ReadStatus = { param($name) "$((Get-NetAdapter -Name $name -ErrorAction SilentlyContinue).Status)" } }
 function IsAdmin { ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
 $changePattern = '^\s+(?<desc>.+) \((?<name>[^()]+)\): (?<key>[^:]+): (?<from>.*) -> (?<to>.*)$'
@@ -70,6 +71,9 @@ if ($Cycles -lt 3) { Say 'FAIL' 'At least 3 cycles are needed (the first is a wa
 if (-not ($AssumeAdmin -or (IsAdmin))) { Say 'FAIL' 'Writing adapter settings needs administrator rights: start this script from an elevated terminal.'; Save; exit 3 }
 if (-not $CaptureHook -and -not (Gateway)) { Say 'FAIL' 'No default gateway: the test measures the round trip to your router.'; Save; exit 3 }
 
+# An adapter with no link cannot be measured: stop before anything is written (the preset test checks the write itself without a link).
+$notUp = @($names | Where-Object { (& $ReadStatus $_) -ne 'Up' })
+if (-not $CaptureHook -and $notUp.Count -gt 0) { Say 'INFO' "Not measurable: adapter(s) $($notUp -join ', ') have no link (cable out or Wi-Fi off). Nothing was written; connect it and run again."; Save; exit 0 }
 # 2. the starting values, in Windows' own words, and the second way back
 $start = @{}; foreach ($c in $cs) { $start["$($c.Adapter)|$($c.Keyword)"] = & $ReadProperty $c.Adapter $c.Keyword }
 foreach ($c in $cs) { Check "start: $($c.Adapter) $($c.Keyword) reads $($start["$($c.Adapter)|$($c.Keyword)"]) in Windows (Mesura's preview said $($c.From))" ($start["$($c.Adapter)|$($c.Keyword)"] -eq $c.From) }

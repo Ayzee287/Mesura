@@ -79,6 +79,7 @@
     <local:StateBrushConverter x:Key="StateBrush" />
     <local:StateBrushConverter x:Key="StateBackground" Background="True" />
     <local:PresenceToVisibilityConverter x:Key="Presence" />
+    <local:FamilyFitConverter x:Key="FamilyFit" />
     <local:HalfWidthConverter x:Key="HalfWidth" />
     <local:CardColumnsConverter x:Key="CardColumns" />
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
@@ -385,9 +386,6 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="B" Property="Background" Value="{StaticResource AccentFillHover}" />
                             <Setter TargetName="Halo" Property="Opacity" Value="0.55" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.4" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="B" Property="Background" Value="{StaticResource AccentFillPressed}" />
@@ -875,6 +873,7 @@
 
     <!-- The logo as a button: no chrome, a lift and a glow on hover, a ring for the keyboard. -->
     <Style x:Key="LogoButton" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
@@ -892,7 +891,7 @@
                             </Setter>
                             <Setter TargetName="B" Property="Effect">
                                 <Setter.Value>
-                                    <DropShadowEffect Color="#2AB6FF" BlurRadius="16" ShadowDepth="0" Opacity="0.55" />
+                                    <DropShadowEffect Color="#9DB4E8" BlurRadius="16" ShadowDepth="0" Opacity="0.55" />
                                 </Setter.Value>
                             </Setter>
                         </Trigger>
@@ -902,9 +901,6 @@
                                     <ScaleTransform ScaleX="0.96" ScaleY="0.96" />
                                 </Setter.Value>
                             </Setter>
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="B" Property="BorderBrush" Value="{StaticResource Accent}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

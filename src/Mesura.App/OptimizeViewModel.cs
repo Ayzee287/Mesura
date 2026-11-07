@@ -94,6 +94,26 @@ public sealed record PlanLine(string Name, string Text, string Tone)
 }
 
 /// <summary>
+/// The entries that are not for this PC (or couldn't be read), gathered by their reason: one line "Windows Home doesn't have this (3)" with the names under it, instead of
+/// one "not available" line per setting. Failures of a run are never here: only entries the plan left out as unsupported or unreadable.
+/// </summary>
+public sealed record PlanLineGroup(string Text, IReadOnlyList<string> Names)
+{
+    public int Count => Names.Count;
+
+    /// <summary>" (3)" when more than one setting shares the reason, nothing for one.</summary>
+    public string CountText => Names.Count > 1 ? $" ({Names.Count})" : "";
+
+    public string NamesText => string.Join(", ", Names);
+
+    public override string ToString() => Text;
+
+    /// <summary>Groups lines that give the same reason, in the order the reasons first appear; names stay in the plan's order.</summary>
+    public static IReadOnlyList<PlanLineGroup> Of(IEnumerable<PlanLine> lines) =>
+        [.. lines.GroupBy(l => l.Text, StringComparer.Ordinal).Select(g => new PlanLineGroup(g.Key, [.. g.Select(l => l.Name)]))];
+}
+
+/// <summary>
 /// One group of the plan (Telemetry, Processor, Storage...): the entries that can be applied, ticked or not; the ones already in place; what the power plan
 /// covers; and a switch for the whole group. A group with nothing that applies to this PC is not shown (its entries are counted under "not on this PC").
 /// </summary>
@@ -364,6 +384,9 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     /// <summary>Every entry that isn't for this PC or couldn't be read, with the reason, in one list.</summary>
     public ObservableCollection<PlanLine> NotHere { get; } = [];
+
+    /// <summary>The same entries gathered by reason, for the "not on this PC" list.</summary>
+    public ObservableCollection<PlanLineGroup> NotHereGroups { get; } = [];
 
     public ObservableCollection<GuideItem> NvidiaGuides { get; } = [];
 
@@ -933,6 +956,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
         Groups.Clear();
         NotHere.Clear();
+        NotHereGroups.Clear();
         NvidiaGuides.Clear();
         _plan = null;
 
@@ -940,6 +964,11 @@ public sealed class OptimizeViewModel : Observable, IPageState
         {
             _plan = PlanFor(outcome.Preset, CurrentChoices());
             BuildGroups(_plan);
+            foreach (var group in PlanLineGroup.Of(NotHere))
+            {
+                NotHereGroups.Add(group);
+            }
+
             var groupsOnly = new ProfileChoices(GroupsOff(), new Dictionary<string, bool>());
             foreach (var other in Outcomes)
             {

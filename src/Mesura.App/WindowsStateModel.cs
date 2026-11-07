@@ -56,6 +56,18 @@ public sealed class SettingRow : Observable
 
     public OperationState State => _eval.State;
 
+    /// <summary>
+    /// Whether it is one of the per-maker network adapter presets (Realtek, Intel, Killer; Ethernet, Wi-Fi). On any PC most of them are not for it; they are listed as one group with the count
+    /// that fit, each with its own status and reason, instead of five loose cards.
+    /// </summary>
+    public bool InFamily => Operation.Id.StartsWith("network.preset-", StringComparison.Ordinal);
+
+    /// <summary>The group's name for the list (empty for an entry that is in no group), in the language in use.</summary>
+    public string FamilyText => InFamily ? Loc.Get("Family.NetworkPresets") : "";
+
+    /// <summary>Where the group sorts inside its category: after the single entries.</summary>
+    public int FamilyRank => InFamily ? 1 : 0;
+
     /// <summary>The engine's reading of this entry on this PC, or <c>null</c> while it hasn't been read.</summary>
     public OperationEvaluation? Evaluation => _checking ? null : _eval;
 
@@ -127,6 +139,8 @@ public sealed class SettingRow : Observable
                 },
                 OperationState.Applied when Operation.Applicable && Operation.Confirmation == Confirmation.Stored => "Stored",
                 OperationState.NotApplied when Operation.Category == WindowsCatalog.StartupCategory => "StartsUp",
+                // "Not supported" is for a driver or card that says no; a component, edition, battery or kind of PC that is simply not here is "Not for this PC", as Optimization and the profile steps say it.
+                OperationState.Inapplicable when !Mesura.Core.Profiles.PlanReason.MeansUnsupported(InapplicableCode) => "InapplicableHere",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.Failed => "Failed",
                 OperationState.NotApplied or OperationState.Partial when session == WindowsOpStatus.NeedsElevation => "NeedsAdmin",
                 OperationState.PendingRestart when Operation.Activation == Activation.SignOut => "NeedsSignOut",
@@ -140,7 +154,7 @@ public sealed class SettingRow : Observable
 
     public string StateTone => StatusKey switch
     {
-        "Checking" or "Inapplicable" => Tone.Muted,
+        "Checking" or "Inapplicable" or "InapplicableHere" => Tone.Muted,
         "Applied" or "NotInstalled" or "TurnedOff" => Tone.Ok,
         "Stored" => Tone.Info,
         "NotApplied" => Tone.Neutral,
@@ -209,7 +223,13 @@ public sealed class SettingRow : Observable
         _ => "",
     };
 
-    private string InapplicableReason() => Loc.Get(Mesura.Core.Profiles.ProfilePlanner.InapplicableCode(Operation, _services.Reader) switch
+    /// <summary>Why it doesn't apply here, as a code: the one the evaluation recorded (an adapter or graphics case), else what the operation's own requirements say.</summary>
+    private string InapplicableCode => Mesura.Core.Profiles.ProfilePlanner.InapplicableCode(_eval, _services.Reader);
+
+    /// <summary>The short reason on the card itself, for an entry that is not for this PC or not supported (the rest keep their status line alone).</summary>
+    public string CardReason => !_checking && _eval.State == OperationState.Inapplicable ? ShortReason : "";
+
+    private string InapplicableReason() => Mesura.Core.Profiles.PlanReason.AdapterReasonKey(InapplicableCode) is { } adapterKey ? Loc.Get(adapterKey) : Loc.Get(InapplicableCode switch
     {
         Mesura.Core.Profiles.PlanReason.Build => "Reason.Build",
         Mesura.Core.Profiles.PlanReason.Battery => "Reason.Battery",

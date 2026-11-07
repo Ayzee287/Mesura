@@ -159,8 +159,9 @@ public sealed class ProfileDecisionsTests
 
             var intel = plan.Entry("network.preset-intel-ethernet")!;
             Assert.Equal(EntryState.Unsupported, intel.State);
-            Assert.Equal(PlanReason.Absent, intel.Reason);
-            Assert.Contains("no physical ethernet network adapter of Intel", intel.Detail, StringComparison.Ordinal);
+            // An Ethernet adapter is there, from another maker: that is neither "no port" nor "absent" (0.7).
+            Assert.Equal(PlanReason.AdapterMakerPrefix + "ethernet", intel.Reason);
+            Assert.Contains("ethernet adapter is from Realtek, not Intel", intel.Detail, StringComparison.Ordinal);
             Assert.Equal(EntryState.Unsupported, plan.Entry("network.preset-killer-ethernet")!.State);
 
             // The Wi-Fi presets are not for a PC with no Wi-Fi adapter.
@@ -177,7 +178,7 @@ public sealed class ProfileDecisionsTests
         var plan = Plan(Maximum, pc, hardware);
 
         Assert.Equal(["network.preset-intel-wifi"], plan.OperationIds.Where(id => id.StartsWith("network.preset-", StringComparison.Ordinal)));
-        Assert.Equal(PlanReason.Absent, plan.Entry("network.preset-realtek-wifi")!.Reason);
+        Assert.Equal(PlanReason.AdapterMakerPrefix + "wifi", plan.Entry("network.preset-realtek-wifi")!.Reason);
         Assert.Equal("hardware.network.ethernet", plan.Entry("network.preset-realtek-ethernet")!.Reason);
         Assert.Equal("hardware.network.ethernet", plan.Entry("network.preset-intel-ethernet")!.Reason);
     }
@@ -191,6 +192,8 @@ public sealed class ProfileDecisionsTests
         var entry = plan.Entry("network.preset-intel-ethernet")!;
         Assert.Equal(EntryState.Unsupported, entry.State);
         Assert.Contains("offers none of these settings", entry.Detail, StringComparison.Ordinal);
+        Assert.Equal(PlanReason.AdapterDriver, entry.Reason);   // the driver says no: "not supported", not "absent"
+        Assert.True(PlanReason.MeansUnsupported(entry.Reason));
         Assert.DoesNotContain(entry.OperationId, plan.OperationIds);
     }
 
@@ -203,6 +206,81 @@ public sealed class ProfileDecisionsTests
 
         Assert.Equal(EntryState.CantTell, plan.Entry("network.preset-realtek-ethernet")!.State);
         Assert.DoesNotContain(plan.OperationIds, id => id.StartsWith("network.preset-", StringComparison.Ordinal));
+    }
+
+    // ---- why a network preset is not here: four different true statements (0.7) ------------------------------------------------------------------------------
+
+    private static OperationEvaluation Evaluate(string id, FakeWindows pc) => WindowsEvaluator.Evaluate(Catalog.ById(id)!, pc);
+
+    [Fact]
+    public void A_pc_with_no_ethernet_adapter_at_all_says_there_is_no_port_not_that_the_maker_is_wrong()
+    {
+        var pc = Pc(null, IntelWifi());
+        var evaluation = Evaluate("network.preset-realtek-ethernet", pc);
+
+        Assert.Equal(OperationState.Inapplicable, evaluation.State);
+        Assert.Equal(PlanReason.AdapterNonePrefix + "ethernet", evaluation.ReasonCode);
+        Assert.Equal(PlanReason.AdapterNonePrefix + "ethernet", ProfilePlanner.InapplicableCode(evaluation, pc));
+        Assert.Contains("no physical ethernet network adapter", evaluation.Reason, StringComparison.Ordinal);
+        Assert.False(PlanReason.MeansUnsupported(evaluation.ReasonCode));
+    }
+
+    [Fact]
+    public void An_adapter_of_another_maker_is_told_apart_from_no_adapter_and_names_both_makers()
+    {
+        var pc = Pc(null, RealtekEthernet());
+        var evaluation = Evaluate("network.preset-intel-ethernet", pc);
+
+        Assert.Equal(PlanReason.AdapterMakerPrefix + "ethernet", evaluation.ReasonCode);
+        Assert.Contains("Realtek", evaluation.Reason, StringComparison.Ordinal);
+        Assert.Contains("Intel", evaluation.Reason, StringComparison.Ordinal);
+        Assert.False(PlanReason.MeansUnsupported(evaluation.ReasonCode));   // not for this PC, nothing is wrong with the hardware
+    }
+
+    [Fact]
+    public void A_driver_that_offers_none_of_the_settings_is_unsupported_and_is_not_called_absent()
+    {
+        var pc = Pc(null, IntelEthernetWithoutTheKeywords());
+        var evaluation = Evaluate("network.preset-intel-ethernet", pc);
+
+        Assert.Equal(PlanReason.AdapterDriver, evaluation.ReasonCode);
+        Assert.True(PlanReason.MeansUnsupported(evaluation.ReasonCode));
+        Assert.NotEqual(PlanReason.Absent, ProfilePlanner.InapplicableCode(evaluation, pc));
+    }
+
+    [Fact]
+    public void An_unreadable_adapter_list_is_not_a_reason_it_is_unknown()
+    {
+        var pc = Pc(null);
+        pc.Adapters = null;
+        var evaluation = Evaluate("network.preset-realtek-ethernet", pc);
+
+        Assert.Equal(OperationState.Unknown, evaluation.State);
+        Assert.Null(evaluation.ReasonCode);
+    }
+
+    [Theory]
+    [InlineData("adapter-none.ethernet", "Reason.NoAdapter.ethernet")]
+    [InlineData("adapter-none.wifi", "Reason.NoAdapter.wifi")]
+    [InlineData("adapter-none.any", "Reason.NoAdapter.any")]
+    [InlineData("adapter-maker.ethernet", "Reason.OtherMaker.ethernet")]
+    [InlineData("adapter-maker.wifi", "Reason.OtherMaker.wifi")]
+    [InlineData("adapter-driver", "Reason.AdapterDriver")]
+    [InlineData("gpu-none", "Reason.NoGpu")]
+    [InlineData("gpu-driver", "Reason.GpuDriver")]
+    public void Every_adapter_and_graphics_code_has_its_own_words(string code, string key)
+    {
+        Assert.Equal(key, PlanReason.AdapterReasonKey(code));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("absent")]
+    [InlineData("build")]
+    [InlineData("effect-unsupported")]
+    public void The_other_codes_keep_the_words_they_had(string? code)
+    {
+        Assert.Null(PlanReason.AdapterReasonKey(code));
     }
 
     // ---- Anti-Lag is chosen by the GPU found ------------------------------------------------------------------------------------------------------------------

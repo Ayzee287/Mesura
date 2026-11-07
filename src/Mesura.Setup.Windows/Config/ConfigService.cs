@@ -212,7 +212,28 @@ public static class ConfigService
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                return Outcome(ConfigImportStatus.Failed, result, written, $"Writing the {sourceId} file failed: {e.Message}");
+                // All or nothing per app (0.7): a file already replaced goes back from its backup, so a failure on the second file never leaves the app half set up.
+                var putBack = new List<string>();
+                var stuck = new List<string>();
+                foreach (var done in written)
+                {
+                    var original = changed.First(c => c.Key == done.SourceId).Value.File.Path;
+                    try
+                    {
+                        store.ReplaceAppConfig(original, store.ReadBackupBytes(runId!, done.BackupName) ?? throw new IOException("its backup is missing"), runId!, done.BackupName + ".rollback");
+                        putBack.Add(done.SourceId);
+                    }
+                    catch (Exception again) when (again is IOException or UnauthorizedAccessException)
+                    {
+                        stuck.Add($"{done.SourceId} ({again.Message})");
+                    }
+                }
+
+                var tail = stuck.Count == 0
+                    ? putBack.Count == 0 ? "" : $" The {string.Join(" and ", putBack)} file was put back as it was."
+                    : $" Putting back the {string.Join(", ", stuck)} file failed: it stays as written, its earlier copy is in this run's backups.";
+                return Outcome(ConfigImportStatus.Failed, result with { Applied = [], SkippedUnavailable = [] }, [.. written.Where(w => stuck.Any(s => s.StartsWith(w.SourceId, StringComparison.Ordinal)))],
+                    $"Writing the {sourceId} file failed: {e.Message}.{tail}");
             }
         }
 
@@ -271,10 +292,19 @@ public static class ConfigService
                 }
 
                 current = File.ReadAllBytes(located.Path);
+                // A backup the format cannot read (cut short, emptied, overwritten) is never put over a working file: the import only ever backed up a file it had parsed.
+                using (var reader = new StreamReader(new MemoryStream(backup), Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+                {
+                    _ = MakeDocument(located.Format, reader.ReadToEnd()); // read as File.ReadAllText reads the file: a byte order mark is not part of the text
+                }
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 return Outcome(ConfigImportStatus.Failed, [], $"The {w.SourceId} file or its backup couldn't be read ({e.Message}); nothing was restored.");
+            }
+            catch (Exception e) when (e is FormatException or System.Text.Json.JsonException or ArgumentException)
+            {
+                return Outcome(ConfigImportStatus.Failed, [], $"The backup of the {w.SourceId} file from {importRunId} is damaged ({e.Message}); nothing was restored, the file stays as it is.");
             }
 
             var file = files[w.SourceId];
@@ -310,7 +340,24 @@ public static class ConfigService
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                return Outcome(ConfigImportStatus.Failed, restored, $"Restoring the {file.SourceId} file failed: {e.Message}");
+                // All or nothing (0.7), as for an import: a file already put back goes to the state it had a moment ago (its copy was made first, under this run), so an undo that
+                // fails on the second file never leaves the app half undone.
+                var stuck = new List<WrittenConfigFile>();
+                foreach (var done in restored)
+                {
+                    var original = plan.First(p => p.File.SourceId == done.SourceId).File.Path;
+                    try
+                    {
+                        store.ReplaceAppConfig(original, store.ReadBackupBytes(runId, done.BackupName) ?? throw new IOException("its copy is missing"), runId, done.BackupName + ".rollback");
+                    }
+                    catch (Exception again) when (again is IOException or UnauthorizedAccessException)
+                    {
+                        stuck.Add(done);
+                    }
+                }
+
+                var tail = stuck.Count == 0 ? "" : $" Putting back the {string.Join(", ", stuck.Select(s => s.SourceId))} file failed too: it stays restored.";
+                return Outcome(ConfigImportStatus.Failed, stuck, $"Restoring the {file.SourceId} file failed: {e.Message}.{tail}");
             }
         }
 

@@ -37,7 +37,8 @@ function Say([string]$kind, [string]$text) { $line = ('{0,-5} {1}' -f $kind, $te
 function Check([string]$what, [bool]$ok) { if (-not $ok) { $script:failed = $true }; Say $(if ($ok) { 'PASS' } else { 'FAIL' }) $what }
 function Run([string[]]$arguments) { $t = (& $Cli @arguments 2>&1 | ForEach-Object { "$_" }) -join "`n"; [pscustomobject]@{ Text = $t; Exit = $LASTEXITCODE } }
 function Save { $lines | Out-File (Join-Path $Out 'network-preset-test.txt') -Encoding utf8 }
-if (-not $ReadProperty) { $ReadProperty = { param($name, $keyword) @((Get-NetAdapterAdvancedProperty -Name $name -RegistryKeyword $keyword -ErrorAction SilentlyContinue).RegistryValue) -join ',' } }
+# The keyword is matched exactly: -RegistryKeyword is a wildcard ('*EEE' also matches AdvancedEEE and reads '1,0').
+if (-not $ReadProperty) { $ReadProperty = { param($name, $keyword) @((Get-NetAdapterAdvancedProperty -Name $name -RegistryKeyword $keyword -ErrorAction SilentlyContinue | Where-Object { $_.RegistryKeyword -ceq $keyword }).RegistryValue) -join ',' } }
 if (-not $ReadStatus) { $ReadStatus = { param($name) "$((Get-NetAdapter -Name $name -ErrorAction SilentlyContinue).Status)" } }
 function IsAdmin { ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
 # "<description> (<name>): <keyword>: <from> -> <to>" is how the preview names one change of one adapter's driver property.
@@ -70,6 +71,8 @@ $before = @{}
 foreach ($c in $cs) { $before["$($c.Adapter)|$($c.Keyword)"] = & $ReadProperty $c.Adapter $c.Keyword }
 foreach ($c in $cs) { Check "before: $($c.Adapter) $($c.Keyword) reads $($before["$($c.Adapter)|$($c.Keyword)"]) in Windows (the preview said $($c.From))" ($before["$($c.Adapter)|$($c.Keyword)"] -eq $c.From) }
 if ($failed) { Say 'FAIL' 'Windows and Mesura disagree about the starting values: nothing was written.'; Save; exit 1 }
+$statusBefore = @{}; foreach ($n in $names) { $statusBefore[$n] = & $ReadStatus $n }   # an adapter with no cable is Down before and must be Down after: "up" is not the test, "as before" is
+foreach ($n in $names) { if ($statusBefore[$n] -ne 'Up') { Say 'INFO' "adapter $n is $($statusBefore[$n]) now (no link): the write and the undo are checked, the connection is not" } }
 $snapshot = Run @('network', 'snapshot', '--name', 'before-preset-test')
 $snapshotId = if ($snapshot.Text -match 'Saved snapshot (\S+):') { $Matches[1] } else { $null }
 Say 'INFO' "Snapshot of every adapter setting before the test: $snapshotId  (second way back: mesura network restore $snapshotId --apply)"
@@ -94,7 +97,7 @@ try {
     if ($new.Count -gt 0) { $runId = $new[-1]; Say 'INFO' "A run was recorded before the command ended: $runId (it will be undone below)." }
   }
   Say 'INFO' "Run: $runId, exit code $($applied.Exit)"
-  foreach ($n in $names) { Check "after: adapter $n is up again" ((& $ReadStatus $n) -eq 'Up') }
+  foreach ($n in $names) { Check "after: adapter $n is $($statusBefore[$n]) again (as before)" ((& $ReadStatus $n) -eq $statusBefore[$n]) }
   foreach ($c in $cs) {
     $now = & $ReadProperty $c.Adapter $c.Keyword
     if ($applied.Exit -eq 0) { Check "independent read: $($c.Adapter) $($c.Keyword) is $($c.To) in Windows (Get-NetAdapterAdvancedProperty)" ($now -eq $c.To) }
@@ -107,7 +110,7 @@ finally {
   if ($runId) {
     $undo = Run @('windows', 'revert', '--run', $runId, '--apply')
     $undo.Text -split "`n" | ForEach-Object { Say 'INFO' "  undo: $_" }
-    foreach ($n in $names) { Check "after the undo: adapter $n is up" ((& $ReadStatus $n) -eq 'Up') }
+    foreach ($n in $names) { Check "after the undo: adapter $n is $($statusBefore[$n]) (as before)" ((& $ReadStatus $n) -eq $statusBefore[$n]) }
     foreach ($c in $cs) { Check "after the undo: $($c.Adapter) $($c.Keyword) reads $($before["$($c.Adapter)|$($c.Keyword)"]) again in Windows (the value from before)" ((& $ReadProperty $c.Adapter $c.Keyword) -eq $before["$($c.Adapter)|$($c.Keyword)"]) }
     $diff = Run @('network', 'diff', $snapshotId)
     Check 'Mesura compares the adapters with the snapshot taken before the test: no difference' ($diff.Text -match 'Summary: 0 would be written')

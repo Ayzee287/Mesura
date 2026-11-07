@@ -9,8 +9,14 @@
 #   nvpi-elevated     an elevated Mesura and NVIDIA Profile Inspector in a per-user winget folder: real access lists, the unelevated shell token, a genuine release verified and staged (needs the "tests" and "nvpi-sample" folders beside the packages)
 #   stable-ops        the e2e scripts for real Windows in one go: install lifecycle with a failed update, all-users install/update/uninstall, per-user and machine-wide operations, power plans
 #   update            the update from one real build to the next with real packages (artifacts\sandbox-update: a\ = 0.5.5, b\ = 0.6.0): installer lifecycle with a failed update, then what the user keeps (data byte for byte, history readable and revertible by the newer build, downgrade refused)
+#   update-flow       the app's own update flow through the window between two real builds with a signed local manifest: happy, tampered, corrupt, offline, rollback (toolse2e-update.ps1 -Staged; the staged folders come from toolse2e-update-stage.ps1)
 #   verify-kit        the owner's read-only verifier (tools	ester\Verify-MesuraApplied.ps1) on real Windows: unapplied, applied, tampered and reverted profiles must each be told apart (needs a packages folder with packages.json whose cli points at mesura.exe)
 #   profile-cycle     the owner's supervised rollback cycle (tools	ester\Test-ProfileCycle.ps1): apply Maximum performance, undo it, prove the undo, apply the same operations again, prove that (same packages folder as verify-kit)
+#   field             the field kit (tools\field) end to end: an elevated survey, the real profile cycle for both profiles, the reboot test up to its restart, the scenarios that must say not available, the merger; packages = artifacts\field-kit
+#   config-undo-ui    undo of an app-settings restore through the window (Backups > App settings): cancel, restore, undo, byte for byte, on Discord and Vencord settings files made by hand
+#   admin-start       Mesura's start-up with administrator rights by default on a real all-users install: shortcut, one process, hand-over, --exit, --no-elevate, the command line, data after uninstall (docs/admin-start-0.7.md)
+#   discord-vencord   Discord and Vencord through Mesura on a clean Windows with network: brings winget (App Installer) first, installs, the stub state before Discord's first start, the first start (never signed in), config export/import, repeats, Autoruns; nothing is faked when a step cannot run (packages = a folder with packages.json whose cli points at mesura.exe)
+#   bonus-cursors     the bonus cursor pack (mesura bonus cursors) on a real registry, user32 and disk: apply, again, a role changed by hand, restore, and the registry equal to the snapshot from before (packages = a folder with packages.json whose cli points at mesura.exe)
 #   profiles          the 0.6 optimization levels on real Windows: hardware profile vs Windows, plan, apply, independent read-back, second apply, revert (tools\e2e-profiles.ps1)
 #   power-plans       the two Mesura power plans on a real powercfg (A1)
 #   dscp              QoS policy creation, removal and a packet capture of marked traffic (docs/dscp-research-0.5.md)
@@ -21,7 +27,7 @@
 # What is shared with the host: this repository's tools folder and the packages folder, both READ ONLY; the results folder, writable. Networking is on (the DSCP scenario and winget
 # need it). The sandbox has no GPU: nothing about NVIDIA or AMD can be tested in it, and its network adapter is virtual, so adapter-tuning writes are NOT covered either.
 param(
-  [Parameter(Mandatory = $true)][ValidateSet('installer-moves', 'installer-wizard', 'nvpi-elevated', 'stable-ops', 'update', 'verify-kit', 'profile-cycle', 'profiles', 'power-plans', 'dscp', 'nvcleanstall-ui', 'nvcleanstall-automate', 'shell')][string]$Scenario,
+  [Parameter(Mandatory = $true)][ValidateSet('installer-moves', 'installer-wizard', 'nvpi-elevated', 'stable-ops', 'update', 'update-flow', 'verify-kit', 'profile-cycle', 'field', 'bonus-cursors', 'discord-vencord', 'config-undo-ui', 'admin-start', 'profiles', 'power-plans', 'dscp', 'nvcleanstall-ui', 'nvcleanstall-automate', 'shell')][string]$Scenario,
   [Parameter(Mandatory = $true)][string]$Packages,
   [string]$Out = ''
 )

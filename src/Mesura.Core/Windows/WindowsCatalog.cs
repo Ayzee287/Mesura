@@ -45,19 +45,13 @@ public sealed partial class WindowsCatalog
     private static readonly Lazy<WindowsCatalog> BuiltInFull = new(() => Parse(BuiltInJson(), includeWithheld: true));
 
     /// <summary>
-    /// What the product still holds back: the generic network adapter tuning collection and the operations that write a physical adapter's driver settings by standard keyword (their writes have run only
-    /// against a stand-in, never on a real adapter). They stay in the built-in file and in the code and tests; the product's catalog does not list them (see <see cref="Experimental"/>).
-    /// The five per-maker adapter presets (<c>network.preset-*</c>) were held back too until the owner decided on 2026-11-04 to put them in both profiles; they are in the catalog now, and their writes
-    /// are still unrun on a real adapter (the stand-in and the read-only runs are all there is; see docs/network-adapter-presets.md).
+    /// What the product holds back: nothing since 0.7.0. The generic network adapter tuning (14 operations that write a physical adapter's driver settings by standard keyword, and their
+    /// collection) was held back through 0.6 because its writes had run only against a stand-in; on 2026-11-07 the owner released it as individually selectable advanced settings, with the
+    /// real-adapter testing to come for the whole app at once. The mechanism stays so a future unfinished entry can be held back the same way (see <see cref="Experimental"/>).
     /// </summary>
-    private static readonly HashSet<string> WithheldOperations = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "network.adapter-interrupt-moderation-off", "network.adapter-receive-buffers-max", "network.adapter-eee-off", "network.adapter-selective-suspend-off",
-        "network.adapter-vendor-power-saving-off", "network.adapter-power-management-off", "network.adapter-wifi-mimo-power-save-off", "network.adapter-wifi-roaming-lowest",
-        "network.adapter-lldp-off", "network.adapter-lltd-off", "network.adapter-multiplexor-off", "network.adapter-file-sharing-off", "network.adapter-msclient-off", "network.adapter-ipv6-binding-off",
-    };
+    private static readonly HashSet<string> WithheldOperations = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly HashSet<string> WithheldPresets = new(StringComparer.OrdinalIgnoreCase) { "network-adapter" };
+    private static readonly HashSet<string> WithheldPresets = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Lazy<WindowsCatalog> BuiltInRetired = new(() => Parse(ReadResource(RetiredFileName)));
 

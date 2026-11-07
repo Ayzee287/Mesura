@@ -57,22 +57,6 @@ public sealed class SettingsViewModel : Observable
 
         Languages.First(l => l.Value == Loc.Instance.Language).IsSelected = true;
         BuildStartupModes();
-        foreach (var (code, key) in new[] { ("auto", "Settings.LightAuto"), ("full", "Settings.LightFull"), ("reduced", "Settings.LightReduced"), ("off", "Settings.LightOff") })
-        {
-            LightingChoices.Add(new FilterChoice(code, () => Loc.Get(key), chosen =>
-            {
-                var setting = chosen == "auto" ? null : chosen;
-                if (_services.Settings.Lighting != setting)
-                {
-                    _services.Settings.Lighting = setting;
-                    _services.SaveSettings();
-                }
-
-                LightField.Mode = LightField.Resolve(setting);
-            }));
-        }
-
-        LightingChoices.First(c => c.Value == (_services.Settings.Lighting ?? "auto")).IsSelected = true;
         OpenHistory = new RelayCommand(() => Note = ShellLauncher.OpenFolder(_services.Store.HistoryFolder) ?? "");
         OpenCatalogs = new RelayCommand(() => Note = ShellLauncher.OpenFolder(CatalogFiles.SharedFolder) ?? "");
         CopyCatalogs = new RelayCommand(DoCopyCatalogs, () => MissingCatalogs.Count > 0);
@@ -142,7 +126,6 @@ public sealed class SettingsViewModel : Observable
     public ObservableCollection<FilterChoice> Languages { get; } = [];
 
     /// <summary>Automatic, full, reduced or off: how much interactive light the window draws (docs/redesign-2026-11.md §4).</summary>
-    public ObservableCollection<FilterChoice> LightingChoices { get; } = [];
 
     /// <summary>The update channels (stable, preview) and the update state the Updates section shows.</summary>
     public ObservableCollection<FilterChoice> Channels { get; } = [];
@@ -179,13 +162,13 @@ public sealed class SettingsViewModel : Observable
     /// <summary>What the start-up switch does here: in a per-user install it does nothing (Mesura never elevates from a user folder), and says so.</summary>
     public string ElevateHintText => Loc.Get(Loc.AdminKey("Settings.ElevateHint"));
 
-    /// <summary>Ask each time, always as you are, or always restart as administrator (the last only where the program folder is protected).</summary>
+    /// <summary>Restart as administrator straight away (the default; only where the program folder is protected), always as you are, or ask each time.</summary>
     public ObservableCollection<FilterChoice> StartupModes { get; } = [];
 
     private void BuildStartupModes()
     {
         var blocked = ShellLauncher.ElevationBlockedReason is not null;
-        foreach (var (code, key) in new[] { ("ask", "Settings.ModeAsk"), ("normal", "Settings.ModeNormal"), ("admin", "Settings.ModeAdmin") })
+        foreach (var (code, key) in new[] { ("admin", "Settings.ModeAdmin"), ("normal", "Settings.ModeNormal"), ("ask", "Settings.ModeAsk") })
         {
             if (blocked && code == "admin")
             {
@@ -294,6 +277,14 @@ public sealed class SettingsViewModel : Observable
             return $"Mesura {version}";
         }
     }
+
+    /// <summary>The heading of the card of notes for this version.</summary>
+    public string WhatsNewTitle => Loc.Format("Settings.WhatsNew", Branding.ShortVersion);
+
+    /// <summary>The notes written for the running version, in the window's language (empty when this build has none).</summary>
+    public IReadOnlyList<string> WhatsNew => ReleaseNotesSource.Current.For(Branding.ShortVersion, Loc.Instance.Language);
+
+    public bool HasWhatsNew => WhatsNew.Count > 0;
 
     public string Runtime => $".NET {Environment.Version} · {(Environment.Is64BitProcess ? "x64" : "x86")}";
 

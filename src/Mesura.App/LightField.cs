@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace Mesura.App;
 
-/// <summary>How much of the interactive light Mesura draws (Settings > Lighting).</summary>
+/// <summary>How much of the interactive light Mesura draws (decided by <see cref="LightField.Resolve"/>, no setting).</summary>
 public enum LightingMode
 {
     /// <summary>The pointer lights every glass surface near it; the background is the full atmosphere (lights, beam, dust) and answers the pointer a little.</summary>
@@ -65,19 +65,14 @@ public static class LightField
     public static Point Pointer => _pointer;
 
     /// <summary>
-    /// What "Automatic" means on this PC: off when Windows' animation effects are off, reduced in a remote session or when the
-    /// graphics tier is below 2 (no hardware-accelerated gradients), full otherwise.
+    /// How much light this PC gets (there is no switch, the background is part of the look): off in a high-contrast theme and when Windows'
+    /// animation effects are off (the user asked Windows for stillness), reduced in a remote session or when the graphics tier is below 2
+    /// (no hardware-accelerated gradients), full otherwise.
     /// </summary>
-    public static LightingMode Resolve(string? setting) => setting switch
-    {
-        _ when HighContrastTheme.IsOn => LightingMode.Off, // a high-contrast theme is a plain field, whatever was chosen
-        "full" => LightingMode.Full,
-        "reduced" => LightingMode.Reduced,
-        "off" => LightingMode.Off,
-        _ => !SystemParameters.ClientAreaAnimation ? LightingMode.Off
-            : SystemParameters.IsRemoteSession || (System.Windows.Media.RenderCapability.Tier >> 16) < 2 ? LightingMode.Reduced
-            : LightingMode.Full,
-    };
+    public static LightingMode Resolve() =>
+        HighContrastTheme.IsOn || !SystemParameters.ClientAreaAnimation ? LightingMode.Off
+        : SystemParameters.IsRemoteSession || (System.Windows.Media.RenderCapability.Tier >> 16) < 2 ? LightingMode.Reduced
+        : LightingMode.Full;
 
     /// <summary>Starts following the pointer over <paramref name="window"/>.</summary>
     public static void Attach(Window window)

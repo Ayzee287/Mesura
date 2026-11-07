@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Tasks;
 using Mesura.Core.Apps;
+using Mesura.Core.Bonus;
 using Mesura.Core.Config;
 using Mesura.Core.Nvidia;
 using Mesura.Core.Setup;
@@ -8,6 +9,7 @@ using Mesura.Core.Windows;
 using Mesura.Platform.Windows.Windows;
 using Mesura.Setup.Windows;
 using Mesura.Setup.Windows.Apps;
+using Mesura.Setup.Windows.Bonus;
 using Mesura.Setup.Windows.Nvidia;
 using Mesura.Setup.Windows.Windows;
 using Mesura.Setup.Windows.Workflow;
@@ -28,7 +30,7 @@ public sealed class Services
     private Services(
         AppInstallService installer, LoadedCatalog<AppCatalog> apps,
         SystemStateReader reader, WindowsConfigurator windows, LoadedCatalog<WindowsCatalog> windowsCatalog,
-        SetupStore store, StartupEntry startup, bool sameUser)
+        SetupStore store, StartupEntry startup, CursorBonus cursors, bool sameUser)
     {
         Installer = installer;
         Apps = apps;
@@ -37,6 +39,7 @@ public sealed class Services
         WindowsCatalog = windowsCatalog;
         Store = store;
         Startup = startup;
+        Cursors = cursors;
         SameUser = sameUser;
         Settings = AppSettings.Load(store);
     }
@@ -72,6 +75,9 @@ public sealed class Services
 
     /// <summary>Whether Mesura starts in the tray at sign-in (shared by the tray menu and the window).</summary>
     public StartupEntry Startup { get; }
+
+    /// <summary>The bonus cursor pack (Configurations): outside the profiles, one click to apply and one to put the user's own cursors back.</summary>
+    public CursorBonus Cursors { get; }
 
     /// <summary>Mesura's own preferences.</summary>
     public AppSettings Settings { get; }
@@ -440,14 +446,16 @@ public sealed class Services
         var writer = new WindowsWriter(reader.User, tools);
         var sameUser = ProcessUser.Is(reader.User);
         var windows = CatalogFiles.Windows(reader.IsElevated);
+        var store = new SetupStore();
         return new Services(
             AppDetectors.Installer(reader.User, reader.IsElevated),
             CatalogFiles.Apps(reader.IsElevated),
             reader,
             new WindowsConfigurator(reader, writer, windows.Catalog),
             windows,
-            new SetupStore(),
+            store,
             new StartupEntry(reader, writer),
+            new CursorBonus(reader, writer, new CursorFiles(store), new CursorSession(sameUser)),
             sameUser);
     }
 }

@@ -53,6 +53,58 @@ public sealed class AppInstallServiceTests
 
         Assert.Equal(2, plan.Count);
         Assert.All(plan, p => Assert.Equal(InstallState.Unknown, p.State));
+        Assert.All(plan, p => Assert.Equal(UnknownReason.NoWinget, p.Reason));
+    }
+
+    [Fact]
+    public void Every_unknown_in_a_plan_has_a_reason_and_a_known_state_has_none()
+    {
+        var plan = new AppInstallService(new FakeWinget(true, "Brave.Brave")).BuildPlan([Brave, Spotify, Vencord, ManualTool]);
+
+        Assert.Equal(UnknownReason.None, plan.Single(p => p.Package.Id == "brave").Reason);
+        Assert.Equal(UnknownReason.None, plan.Single(p => p.Package.Id == "spotify").Reason);
+        Assert.Equal(UnknownReason.NotDetectable, plan.Single(p => p.Package.Id == "vencord").Reason);
+        Assert.Equal(UnknownReason.NotDetectable, plan.Single(p => p.Package.Id == "tool").Reason);
+        Assert.All(plan.Where(p => p.State == InstallState.Unknown), p => Assert.NotEqual(UnknownReason.None, p.Reason));
+    }
+
+    [Fact]
+    public void A_winget_that_cannot_be_started_for_one_app_is_that_apps_reason_not_everyones()
+    {
+        var plan = new AppInstallService(new ScriptedWinget(new Dictionary<string, WingetRunResult>
+        {
+            ["Brave.Brave"] = WingetRunResult.Refused("Mesura couldn't start winget as the signed-in user (Windows error 1314)."),
+            ["Spotify.Spotify"] = new WingetRunResult(true, WingetOutput.NoApplicationsFound),
+        })).BuildPlan([Brave, Spotify]);
+
+        var brave = plan.Single(p => p.Package.Id == "brave");
+        Assert.Equal((InstallState.Unknown, UnknownReason.NotStarted), (brave.State, brave.Reason));
+        Assert.Contains("1314", brave.Technical);
+        Assert.Equal(InstallState.NotInstalled, plan.Single(p => p.Package.Id == "spotify").State);
+    }
+
+    [Fact]
+    public void A_refusal_of_the_runner_makes_every_unknown_a_not_started_with_its_words()
+    {
+        var plan = new AppInstallService(new RefusingWinget()).BuildPlan([Brave, Spotify]);
+
+        Assert.All(plan, p => Assert.Equal(UnknownReason.NotStarted, p.Reason));
+        Assert.All(plan, p => Assert.Contains("1058", p.Technical));
+    }
+
+    private sealed class RefusingWinget : IWingetRunner
+    {
+        public bool IsAvailable() => false;
+        public string Refusal => "Secondary Logon is disabled (Windows error 1058).";
+        public WingetRunResult List(AppPackage package) => throw new NotSupportedException();
+        public WingetRunResult Install(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class ScriptedWinget(Dictionary<string, WingetRunResult> answers) : IWingetRunner
+    {
+        public bool IsAvailable() => true;
+        public WingetRunResult List(AppPackage package) => answers[package.WingetId];
+        public WingetRunResult Install(AppPackage package, Action<string>? onOutput, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]

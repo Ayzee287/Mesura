@@ -261,6 +261,7 @@ public sealed record SystemSetting(string Kind, string Name, string Value)
         ["bcd:useplatformtick"] = ["absent", "yes", "no"],
         ["bcd:disabledynamictick"] = ["absent", "yes", "no"],
         ["bcd:tscsyncpolicy"] = ["absent", "default", "legacy", "enhanced"],
+        ["bcd:hypervisorlaunchtype"] = ["absent", "off", "auto"],
         ["hibernate:enabled"] = ["on", "off"],
         ["mmagent:memorycompression"] = ["enabled", "disabled"],
         ["mmagent:pagecombining"] = ["enabled", "disabled"],

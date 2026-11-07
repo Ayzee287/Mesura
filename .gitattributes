@@ -11,3 +11,7 @@ track-a/**/*.md text eol=lf
 # The kit's operator files are for cmd.exe and Notepad.
 src/Mesura.Cli/TrackA/Kit/*.cmd text eol=crlf
 src/Mesura.Cli/TrackA/Kit/*.txt text eol=crlf
+
+# The bonus cursor pack is embedded byte for byte.
+*.cur binary
+*.ani binary

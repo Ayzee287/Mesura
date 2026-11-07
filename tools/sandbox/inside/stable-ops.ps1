@@ -2,6 +2,7 @@
 # and its own report. Everything it changes it undoes, and the sandbox is thrown away anyway.
 #   per-user install lifecycle with a failed update (e2e-installer.ps1), all-users install / update / uninstall (e2e-installer-allusers.ps1), per-user registry operations (e2e-user-ops.ps1),
 #   the machine-wide operations with the heaviest consequences (e2e-admin-ops.ps1: services, hibernation, NetBIOS, DISM feature, power setting, bcdedit, memory, TCP, policy, NTFS),
+#   the 0.7 advanced settings (e2e-advanced-ops.ps1: security protections, background and print/telemetry services, the hypervisor boot option, read independently, undone),
 #   the two power plans on a real powercfg (e2e-power-plans.ps1 -TryImport).
 . 'C:\Host\tools\sandbox\inside\common.ps1'
 Say "== stable-ops $(Get-Date -Format s) on $env:COMPUTERNAME as $env:USERNAME (admin: $(Is-Admin))"
@@ -24,7 +25,7 @@ function Run-Script([string]$name, [string[]]$arguments, [int]$minutes = 25) {
   $skip = @($lines | Where-Object { $_ -match '^\s*SKIP' })
   Info "$name" ("finished: $done; exit $(if ($done) { $p.ExitCode } else { 'killed' }); $($pass.Count) PASS, $($fail.Count) FAIL, $($skip.Count) SKIP")
   foreach ($f in $fail) { Say "      $f" }
-  Check "$name has no FAIL and finished" ($done -and $fail.Count -eq 0) ''
+  Check "$name ran its checks, has no FAIL and finished" ($done -and $fail.Count -eq 0 -and $pass.Count -gt 0) ''
 }
 
 # the failing package is built beside the newer one by tools\sandbox\make-test-packages.ps1
@@ -38,4 +39,5 @@ if (Wanted 'e2e-installer-allusers') { Run-Script 'e2e-installer-allusers' @('-M
 if (Wanted 'e2e-user-ops') { Run-Script 'e2e-user-ops' @('-Cli', $cli) 15 }
 if (Wanted 'e2e-admin-ops') { Run-Script 'e2e-admin-ops' @('-Cli', $cli) 30 }
 if (Wanted 'e2e-power-plans') { Run-Script 'e2e-power-plans' @('-Cli', $cli, '-TryImport') 15 }
+if (Wanted 'e2e-advanced-ops') { Run-Script 'e2e-advanced-ops' @('-Cli', $cli) 15 }
 Say "== done $(Get-Date -Format s)"

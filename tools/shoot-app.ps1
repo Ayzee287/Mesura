@@ -12,6 +12,7 @@ param(
   [int]$Settle = 6,
   [int]$Scroll = -1,
   [int]$Wait = 1800,
+  [string]$Rail = '',   # a string key (e.g. Impact.Experimental): on All settings, picks that category in the rail before the shot
   [string]$Hover = ''   # 'x,y' in window pixels: puts the pointer there before each shot (the interactive light follows it)
 )
 $ErrorActionPreference = 'Stop'
@@ -49,26 +50,32 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc(); [MW]::PrintWindow($h, $hdc, 2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose()
     $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
   }
-  $map = @{ Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Profiles = 'Nav.Profiles'; SystemInfo = 'Nav.SystemInfo'
-            Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Configurations'; Activation = 'Nav.Activation' }
+  $map = @{ Welcome = 'Nav.Home'; Setup = 'Nav.Optimize'; Tweaks = 'Nav.Tweaks'; Debloat = 'Nav.Debloat'; Apps = 'Nav.Apps'; Backups = 'Nav.Backups'; Profiles = 'Nav.Backups'; SystemInfo = 'Nav.SystemInfo'
+            Activity = 'Nav.Activity'; Firmware = 'Nav.Firmware'; Settings = 'Nav.Settings'; Configurations = 'Nav.Backups'; Activation = 'Nav.Activation' }
   $i = 0
   foreach ($page in ($Pages -join ',').Split(',')) {
     $i++
     $key = $map[$page]; $label = $strings.$key
     if (-not $label) { Write-Host "skip $page (no string $key)"; continue }
-    $more = $page -in 'Configurations', 'Profiles', 'Settings'
-    if ($more) { $mb = Find-Named $strings.'Nav.More'; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
+    $more = $page -in 'Configurations', 'Profiles', 'Backups', 'Settings'
+    # The More button is the one named "More" that can be toggled: in Russian the start page's "Also" label has the same word, and it cannot.
+    if ($more) { $c = New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $strings.'Nav.More'); $mb = @($root.FindAll($TS::Descendants, $c)) | Where-Object { $_.GetCurrentPropertyValue([System.Windows.Automation.AutomationElement]::IsTogglePatternAvailableProperty) } | Select-Object -First 1; if ($mb) { $mb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 500 } }
     $item = $null
     $deadline = (Get-Date).AddSeconds(5)
+    $kind = if ($page -eq 'Welcome') { $CT::Button } else { $CT::RadioButton }   # the logo (home) is a button, the dock's pages are radio buttons
     while (-not $item -and (Get-Date) -lt $deadline) {
       $c = New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $label)
-      $item = @($root.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $CT::RadioButton } | Select-Object -First 1
-      if (-not $item) { $item = @([System.Windows.Automation.AutomationElement]::RootElement.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $CT::RadioButton } | Select-Object -First 1 }
+      $item = @($root.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $kind } | Select-Object -First 1
+      if (-not $item) { $item = @([System.Windows.Automation.AutomationElement]::RootElement.FindAll($TS::Descendants, $c)) | Where-Object { $_.Current.ControlType -eq $kind } | Select-Object -First 1 }
       if (-not $item) { Start-Sleep -Milliseconds 300 }
     }
     if (-not $item) { Write-Host "skip $page (no nav item '$label')"; continue }
-    $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    if ($page -eq 'Welcome') { $item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    else { $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select() }
     Start-Sleep -Milliseconds $Wait
+    if ($page -eq 'Configurations') { $tab = Find-Named $strings.'Backups.TabSettings'; if ($tab) { $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds $Wait } }
+    elseif ($page -in 'Backups', 'Profiles') { $tab = Find-Named $strings.'Backups.TabSetup'; if ($tab) { $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds $Wait } }
+    if ($Rail -and $page -eq 'Tweaks') { $rl = @($root.FindAll($TS::Descendants, (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, $strings.$Rail)))) | Where-Object { $_.Current.ControlType -eq $CT::RadioButton } | Select-Object -First 1; if ($rl) { $rl.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds $Wait } else { Write-Host "no rail item '$($strings.$Rail)'" } }
     if ($Scroll -ge 0) {
       # Scrolls the page's own scroll viewer (the first visible one that scrolls vertically) to a percentage, to see below the fold.
       $c = New-Object System.Windows.Automation.PropertyCondition($A::IsScrollPatternAvailableProperty, $true)

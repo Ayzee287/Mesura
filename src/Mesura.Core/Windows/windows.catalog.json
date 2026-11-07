@@ -3874,6 +3874,165 @@
           "value": "disabled"
         }
       ]
+    },
+
+    // ---- Advanced (0.7.0): settings earlier research held back for risk. Every one is individually selectable, none is in a profile,
+    // each states what it costs. Registry-only except the hypervisor boot option and the two services.
+    {
+      "id": "security.memory-integrity-off", "name": "Turn off memory integrity (HVCI)", "category": "Security",
+      "impact": "performance", "summary": "Switches off the kernel code-integrity check that runs inside the hypervisor.",
+      "description": "Sets Memory integrity (hypervisor-protected code integrity, HVCI) to off. With it on, Windows checks every kernel driver in an isolated virtual environment, which costs some performance in games. Independent measurements put the cost at roughly 0 to 8 percent depending on the game and CPU (third-party tests, see the sources); Microsoft publishes no figure. Takes effect after a restart.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Removes a kernel exploit mitigation: a malicious or vulnerable driver is no longer blocked from running in the kernel. Some games' anti-cheat (Riot Vanguard, FACEIT) can require it, check yours first. If the feature was locked on with a UEFI variable (a Group Policy 'Enabled with UEFI lock'), the registry value cannot turn it off. Windows can switch it back on after a feature update. Mesura confirms the value is stored; it cannot see the restart's result until Windows is running again. Windows default: on for new Windows 11 installs, off on upgrades.",
+      "source": "Microsoft Learn 'Enable virtualization-based protection of code integrity': HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity, Enabled 0 = off, restart required. Measurements by third parties: Tom's Hardware (windows-11-gaming-benchmarks-performance-vbs-hvci-security), ComputerBase 24H2 results reported by Neowin.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/security/hardware-security/enable-virtualization-based-protection-of-code-integrity", "https://www.tomshardware.com/news/windows-11-gaming-benchmarks-performance-vbs-hvci-security/" ],
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Enabled", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "security.vbs-off", "name": "Turn off virtualization-based security (VBS)", "category": "Security",
+      "impact": "performance", "summary": "Switches off the isolated environment behind Credential Guard and memory integrity.",
+      "description": "Sets virtualization-based security to off and turns memory integrity off with it, so Windows stops running parts of itself inside the hypervisor. Same measured cost as memory integrity (roughly 0 to 8 percent in games, third-party tests); the two are one switch in practice, because memory integrity cannot run without VBS. Takes effect after a restart.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Credential Guard, memory integrity and System Guard lose their isolation. Does not remove Hyper-V, WSL 2 or Windows Sandbox (those use the hypervisor, which stays; 'Don't start the hypervisor' is a separate setting). Anti-cheat that asks for memory integrity may refuse to start. A Group Policy can keep VBS on. Windows can switch it back on after a feature update.",
+      "source": "Microsoft Learn 'Enable virtualization-based protection of code integrity' and the Device Guard keys: HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard, EnableVirtualizationBasedSecurity 0 = off; the HVCI scenario key is the one in that article. Third-party measurements: see 'Turn off memory integrity'.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/security/hardware-security/enable-virtualization-based-protection-of-code-integrity", "https://www.tomshardware.com/news/windows-11-gaming-benchmarks-performance-vbs-hvci-security/" ],
+      "registry": [
+        { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard", "name": "EnableVirtualizationBasedSecurity", "type": "dword", "value": "0" },
+        { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity", "name": "Enabled", "type": "dword", "value": "0" }
+      ]
+    },
+    {
+      "id": "security.cpu-mitigations-off", "name": "Turn off Spectre and Meltdown mitigations", "category": "Security",
+      "impact": "performance", "summary": "Windows stops applying its fixes for the Spectre and Meltdown CPU flaws.",
+      "description": "Sets the documented FeatureSettingsOverride and FeatureSettingsOverrideMask to 3, which tells the kernel not to use the mitigations for CVE-2017-5715 (Spectre variant 2, branch target injection) and CVE-2017-5754 (Meltdown). Their cost is large on older Intel CPUs (system calls and context switches slow down) and small on recent ones; Meltdown does not affect AMD CPUs and recent Intel ones, where Windows does not use that mitigation anyway. Takes effect after a restart.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Leaves this PC open to the CPU flaws the mitigations close: code running on it, including a web page's script, could read memory it should not. A PC that only runs software you trust is the usual reason to accept that. The gain depends on the CPU generation and is not measured here.",
+      "source": "Microsoft Support KB4073119 'Windows client guidance for IT Pros to protect against speculative execution side-channel vulnerabilities': to disable the mitigations for CVE-2017-5715 and CVE-2017-5754, set FeatureSettingsOverride to 3 and FeatureSettingsOverrideMask to 3 under HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management, and restart.",
+      "sources": [ "https://support.microsoft.com/help/4073119" ],
+      "registry": [
+        { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management", "name": "FeatureSettingsOverride", "type": "dword", "value": "3" },
+        { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management", "name": "FeatureSettingsOverrideMask", "type": "dword", "value": "3" }
+      ]
+    },
+    {
+      "id": "security.hypervisor-off", "name": "Don't start the hypervisor", "category": "Security",
+      "impact": "performance", "summary": "Windows starts without its hypervisor.",
+      "description": "Sets the boot option hypervisorlaunchtype to off, so Windows runs directly on the hardware instead of on top of the Hyper-V hypervisor. Games then run without the virtualization layer that VBS, Hyper-V and WSL 2 put under Windows. Takes effect after a restart.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Hyper-V virtual machines, WSL 2, Windows Sandbox, Docker's WSL backend and Android subsystems stop working until the setting is undone and Windows restarted, and virtualization-based security cannot run. Undo (or the Windows default) is 'auto'. No gain is claimed: Mesura has no measurement for a PC without VBS enabled, where this changes little.",
+      "source": "Microsoft Learn 'BCDEdit /set': hypervisorlaunchtype [Off|Auto]; '/deletevalue' returns an option to its default.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/bcdedit--set" ],
+      "system": [ { "kind": "bcd", "name": "hypervisorlaunchtype", "value": "off" } ]
+    },
+    {
+      "id": "security.smartscreen-off", "name": "Turn off SmartScreen (policy)", "category": "Security",
+      "impact": "convenience", "summary": "Windows stops checking downloaded programs and files against Microsoft's reputation list.",
+      "description": "Sets the 'Configure Windows Defender SmartScreen' policy to disabled, so Windows no longer asks for a confirmation ('Windows protected your PC') before it runs an unrecognised download and no longer sends file and site information to Microsoft for that check. A convenience choice with a security cost; it does not make anything faster.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "preference", "valueBasis": "documented", "activation": "immediate", "requires": [ "proEdition" ],
+      "limitations": "An unrecognised or malicious download runs without Windows warning about it. Microsoft lists the policy for Pro, Enterprise and Education; Home ignores it. Edge's own SmartScreen and Store app checks are separate settings. The Settings page shows the choice as managed by your organisation.",
+      "source": "Group Policy 'Configure Windows Defender SmartScreen' (SmartScreen.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\System\\EnableSmartScreen, 0 = disabled, 1 = enabled (Policy CSP SmartScreen/EnableSmartScreenInShell).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-smartscreen" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System", "name": "EnableSmartScreen", "type": "dword", "value": "0" } ]
+    },
+    {
+      "id": "security.mark-of-the-web-off", "name": "Don't mark downloads as from the internet", "category": "Security",
+      "impact": "convenience", "summary": "Downloads stop carrying the from-the-internet mark that triggers unblock prompts.",
+      "description": "Sets the 'Do not preserve zone information in file attachments' policy for the current user. Windows then stops writing the Mark of the Web to files you download or save from mail, so 'This file came from another computer' warnings, the 'Open File - Security Warning' dialog and Protected View in Office no longer appear for them. A convenience choice with a security cost.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "preference", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Applies to files saved from now on, not to ones already marked, and only for the user it is applied to. Several protections (SmartScreen, Office Protected View, script and macro blocking) key off this mark, so with it missing they do not engage for new downloads.",
+      "source": "Group Policy 'Do not preserve zone information in file attachments' (AttachmentManager.admx): HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Attachments\\SaveZoneInformation, 1 = do not preserve, 2 = preserve (default). ",
+      
+      "registry": [ { "hive": "HKCU", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Attachments", "name": "SaveZoneInformation", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "privacy.no-background-apps", "name": "Don't let Store apps run in the background (policy)", "category": "Privacy",
+      "impact": "privacy", "summary": "Store apps are not allowed to run in the background for any user.",
+      "description": "Sets the documented policy 'Let Windows apps run in the background' to 'Force Deny' for every user of this PC. Store apps then do not run, update their tiles or fetch notifications while closed. The saving in memory and background CPU is small and has not been measured.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "unverified", "valueBasis": "documented", "activation": "signOut", "requires": [ "proEdition" ],
+      "limitations": "Mail, Calendar, messaging and similar Store apps stop notifying you while closed. Desktop programs (Discord, Steam, Brave and so on) are not Store apps and are not affected. A policy value: the Settings page shows it as managed by your organisation. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Let Windows apps run in the background' (AppPrivacy.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\AppPrivacy\\LetAppsRunInBackground, 0 = user in control, 1 = force allow, 2 = force deny (Policy CSP Privacy/LetAppsRunInBackground).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsRunInBackground", "type": "dword", "value": "2" } ]
+    },
+    {
+      "id": "privacy.no-app-diagnostics", "name": "Don't let apps read other apps' diagnostics (policy)", "category": "Privacy",
+      "impact": "privacy", "summary": "Apps are denied access to diagnostic information about your other apps.",
+      "description": "Sets the documented policy 'Let Windows apps access diagnostic information about other apps' to 'Force Deny' for every user, so no Store app can read which other apps are running and how they behave. A privacy choice, not a speed-up.",
+      "risk": "systemConfiguration", "level": "safe", "benefit": "preference", "valueBasis": "documented", "activation": "signOut", "requires": [ "proEdition" ],
+      "limitations": "A few Store apps that show running apps (task and system tools from the Store) stop doing so. A policy value: Settings shows it as managed by your organisation. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Let Windows apps access diagnostic information about other apps' (AppPrivacy.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\AppPrivacy\\LetAppsGetDiagnosticInfo, 2 = force deny (Policy CSP Privacy/LetAppsGetDiagnosticInfo).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy", "name": "LetAppsGetDiagnosticInfo", "type": "dword", "value": "2" } ]
+    },
+    {
+      "id": "privacy.location-policy-off", "name": "Turn off location for the whole PC (policy)", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows and its apps get no location, for every user.",
+      "description": "Sets the documented policy 'Turn off location', which switches the location service off machine-wide and blocks every app from asking for it. A privacy choice, not a speed-up.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "preference", "valueBasis": "documented", "activation": "immediate", "requires": [ "proEdition" ],
+      "limitations": "Automatic time zone, Find my device, weather and maps, and any app or website that asks for your location stop working with it. Settings greys the toggle out. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Turn off location' (Sensors.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\LocationAndSensors\\DisableLocation, 1 = location off (Policy CSP System/AllowLocation).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-system" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\LocationAndSensors", "name": "DisableLocation", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "updates.store-auto-download-off", "name": "Don't update Store apps automatically (policy)", "category": "Windows Update",
+      "impact": "maintenance", "summary": "The Microsoft Store stops downloading app updates by itself.",
+      "description": "Sets the documented policy 'Turn off Automatic Download and Install of updates' for the Microsoft Store to 'always off'. Store apps keep the version they have until you update them from the Store's Library page. Saves background downloads; nothing faster is claimed.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "immediate", "requires": [ "proEdition" ],
+      "limitations": "Store apps stay on old versions, including versions with known security flaws, until you update them by hand. Does not affect Windows Update or apps installed outside the Store. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Turn off Automatic Download and Install of updates' (WindowsStore.admx): HKLM\\Software\\Policies\\Microsoft\\WindowsStore\\AutoDownload, 2 = always off, 4 = always on (Policy CSP ApplicationManagement/AllowAppStoreAutoUpdate).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\WindowsStore", "name": "AutoDownload", "type": "dword", "value": "2" } ]
+    },
+    {
+      "id": "updates.driver-search-off", "name": "Don't search Windows Update for drivers or device info (policy)", "category": "Windows Update",
+      "impact": "maintenance", "summary": "Windows stops searching Windows Update for drivers and fetching device details.",
+      "description": "Sets the documented 'Specify search order for device driver source locations' policy to never search Windows Update, and stops Windows downloading device metadata from the network. Together with 'Don't deliver driver updates through Windows Update' it keeps a driver you installed yourself (a GPU driver) from being replaced when a device is plugged in.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "unverified", "valueBasis": "documented", "activation": "immediate", "requires": [ "proEdition" ],
+      "limitations": "A newly plugged-in device gets only the drivers already in Windows or the ones you install; nothing is downloaded for it, and devices show generic names and icons. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Specify search order for device driver source locations' (DeviceSetup.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\DriverSearching\\SearchOrderConfig, 0 = do not search Windows Update, 1 = always, 2 = only if needed; 'Prevent device metadata retrieval from the Internet': HKLM\\Software\\Policies\\Microsoft\\Windows\\Device Metadata\\PreventDeviceMetadataFromNetwork = 1.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-deviceinstallation" ],
+      "registry": [
+        { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DriverSearching", "name": "SearchOrderConfig", "type": "dword", "value": "0" },
+        { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Device Metadata", "name": "PreventDeviceMetadataFromNetwork", "type": "dword", "value": "1" }
+      ]
+    },
+    {
+      "id": "system.onedrive-sync-off", "name": "Turn off OneDrive file sync (policy)", "category": "System",
+      "impact": "maintenance", "summary": "OneDrive stops syncing files for every user of this PC.",
+      "description": "Sets the documented policy 'Prevent the usage of OneDrive for file storage', which stops OneDrive from syncing files and hides it in File Explorer. It frees the memory and background traffic OneDrive uses. Different from Mesura's 'no OneDrive prompts', which only hides suggestions.",
+      "risk": "systemConfiguration", "level": "high", "benefit": "unverified", "valueBasis": "documented", "activation": "signOut", "requires": [ "proEdition" ],
+      "limitations": "Files in OneDrive folders stop syncing in both directions, and nothing backs them up to the cloud: a file changed here is no longer copied to OneDrive. Files already downloaded stay where they are; files that exist only online stay online. Pro, Enterprise and Education only.",
+      "source": "Group Policy 'Prevent the usage of OneDrive for file storage' (SkyDrive.admx): HKLM\\Software\\Policies\\Microsoft\\Windows\\OneDrive\\DisableFileSyncNGSC, 1 = prevent.",
+      "sources": [ "https://learn.microsoft.com/en-us/sharepoint/use-group-policy" ],
+      "registry": [ { "hive": "HKLM", "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\OneDrive", "name": "DisableFileSyncNGSC", "type": "dword", "value": "1" } ]
+    },
+    {
+      "id": "appearance.menu-show-delay-off", "name": "Show menus without the delay", "category": "Appearance",
+      "impact": "convenience", "summary": "Submenus open at once when you point at them.",
+      "description": "Sets MenuShowDelay to 0 for the current user, so cascading menus (Start menu folders in classic apps, context-menu submenus) open immediately instead of after Windows' default 400 milliseconds.",
+      "risk": "userPreference", "level": "safe", "benefit": "preference", "valueBasis": "community", "activation": "signOut",
+      "limitations": "A cosmetic preference with no measured effect. The value is not a documented Microsoft setting; Windows feature updates may reset it. Applies to the current user only.",
+      "source": "HKCU\\Control Panel\\Desktop\\MenuShowDelay (string, milliseconds; Windows default 400), the value behind the long-standing 'menu show delay' tweak; widely documented by tweak guides, not by Microsoft.",
+      "registry": [ { "hive": "HKCU", "path": "Control Panel\\Desktop", "name": "MenuShowDelay", "type": "string", "value": "0" } ]
+    },
+    {
+      "id": "services.diagnostic-tracking-off", "name": "Turn off the Connected User Experiences and Telemetry service", "category": "Services",
+      "impact": "privacy", "summary": "Stops the service that collects and uploads Windows diagnostic data.",
+      "description": "Sets the Connected User Experiences and Telemetry service (DiagTrack) to disabled. It is the service that gathers and uploads Windows diagnostic data. Mesura's policies already limit what it sends; this stops the service itself.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "preference", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Windows' own diagnostics and the Feedback Hub stop reporting; some Windows troubleshooting and Insider features depend on the service. A feature update can set it back to automatic. Takes effect at the next start of Windows.",
+      "source": "services.msc (DiagTrack: Automatic by default); Microsoft Learn 'Configure Windows diagnostic data in your organization' lists the service as the diagnostic data client.",
+      "services": [ { "name": "DiagTrack", "start": "disabled" } ]
+    },
+    {
+      "id": "services.print-spooler-off", "name": "Disable printing", "category": "Services",
+      "impact": "maintenance", "summary": "Turns off the Print Spooler and printer notifications.",
+      "description": "Sets the Print Spooler and Printer Extensions and Notifications services to disabled. On a PC with no printer it frees the memory they use and removes a service that has had serious security flaws; nothing faster is claimed.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "No printing, including 'Print to PDF' from apps that go through the spooler, until it is turned on again. Can't run together with 'Turn printing back on'. Takes effect at the next start of Windows.",
+      "source": "services.msc (Spooler and PrintNotify: Automatic and Manual by default).",
+      "services": [ { "name": "Spooler", "start": "disabled" }, { "name": "PrintNotify", "start": "disabled" } ]
     }
   ],
   "presets": [
@@ -3964,6 +4123,18 @@
       "operations": [ "cpu.core-parking-off", "power.nvme-stay-active-ac", "power.cpu-epp-performance-ac", "power.cpu-ramp-up-fast-ac", "power.power-throttling-off",
                       "cpu.hybrid-prefer-performance-cores", "power.sata-link-power-off-ac", "memory.keep-kernel-in-ram", "memory.compression-off",
                       "system.ntfs-8dot3-off", "gpu.hardware-scheduling-on" ]
+    },
+    {
+      "id": "advanced-security", "name": "Security protections off (advanced)", "tier": "collection",
+      "summary": "Memory integrity, VBS, CPU-flaw mitigations, the hypervisor, SmartScreen and download marks: performance and convenience bought with protection.",
+      "description": "Settings that trade protection for speed or fewer prompts. Memory integrity, virtualization-based security and the Spectre and Meltdown mitigations each cost a measurable share of game performance on some PCs (third-party tests show roughly 0 to 8 percent for the first two; the third depends on the CPU generation). Not starting the hypervisor ends Hyper-V, WSL 2 and Windows Sandbox until it is undone. SmartScreen and the download mark remove the warnings before unknown downloads. Nothing here is in a profile; choose each one knowing its cost. Anti-cheat may refuse to run with memory integrity or the hypervisor off.",
+      "operations": [ "security.memory-integrity-off", "security.vbs-off", "security.cpu-mitigations-off", "security.hypervisor-off", "security.smartscreen-off", "security.mark-of-the-web-off" ]
+    },
+    {
+      "id": "advanced-background", "name": "Less in the background (advanced)", "tier": "collection",
+      "summary": "Store apps in the background, app diagnostics, location, Store and driver updates, OneDrive sync, telemetry and print services.",
+      "description": "Switches off background work and online lookups that most gaming PCs do not need: Store apps running while closed, app diagnostic access, location, automatic Store app updates, driver search on Windows Update, OneDrive file sync, the telemetry service and the print services, plus the menu delay. Each has a cost named in its description (no cloud backup of OneDrive folders, Store apps left on old versions, no printing, no automatic time zone). Nothing here is in a profile.",
+      "operations": [ "privacy.no-background-apps", "privacy.no-app-diagnostics", "privacy.location-policy-off", "updates.store-auto-download-off", "updates.driver-search-off", "system.onedrive-sync-off", "services.diagnostic-tracking-off", "services.print-spooler-off", "appearance.menu-show-delay-off" ]
     },
     {
       "id": "network-adapter", "name": "Network adapter tuning (advanced)", "tier": "collection",

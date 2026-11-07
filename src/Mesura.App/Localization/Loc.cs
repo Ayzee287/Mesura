@@ -178,6 +178,11 @@ public sealed class Loc : INotifyPropertyChanged
             return Format(unread ? "Plan.Reason.hardware-unread" : "Plan.Reason.hardware", Get($"Plan.Hw.{field}"));
         }
 
+        if (PlanReason.AdapterReasonKey(code) is { } adapterKey)
+        {
+            return Get(adapterKey);
+        }
+
         return Get(code switch
         {
             PlanReason.Build => "Reason.Build",

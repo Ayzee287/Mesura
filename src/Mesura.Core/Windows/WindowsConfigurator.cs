@@ -11,6 +11,10 @@ public interface IWindowsWriter
 
     void DeleteRegistry(string hive, string path, string name);
 
+    /// <summary>Sets a REG_EXPAND_SZ value (a path that may hold <c>%SystemRoot%</c>); only the cursor bonus needs it, the catalog writes plain strings.</summary>
+    void SetRegistryExpandString(string hive, string path, string name, string value) =>
+        throw new NotSupportedException("This writer can't set an expandable string.");
+
     /// <summary>Removes a key if it holds no values and no subkeys; does nothing otherwise.</summary>
     void DeleteRegistryKeyIfEmpty(string hive, string path);
 

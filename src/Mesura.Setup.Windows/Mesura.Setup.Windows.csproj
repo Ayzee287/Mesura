@@ -30,4 +30,10 @@
     <PackageReference Include="System.Management" Version="10.0.12" />
   </ItemGroup>
 
+
+  <!-- The bonus cursor pack (W11 Cursors Light Free v2.2 by Jepri Creations, attribution in THIRD-PARTY-NOTICES.md): 17 small files carried inside the assembly. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Bonus\Cursors\*" LogicalName="Mesura.Setup.Bonus.Cursors.%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
 </Project>
