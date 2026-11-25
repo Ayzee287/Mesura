@@ -114,7 +114,24 @@ public sealed class WindowsConfigurator
     public IReadOnlyList<OperationEvaluation> Preview(IEnumerable<WindowsOperation> operations) =>
         [.. operations.DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase).Select(o => WindowsEvaluator.Evaluate(o, _reader))];
 
-    public IReadOnlyList<WindowsOpOutcome> Apply(IEnumerable<WindowsOperation> operations, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Applies operations, keeping each change's before-image in <paramref name="journal"/> before the change is made (0.8), so a run that never ends
+    /// (a crash, a power cut, a killed process) can still be found and undone. The only overload production code may call.
+    /// </summary>
+    public IReadOnlyList<WindowsOpOutcome> Apply(IEnumerable<WindowsOperation> operations, CancellationToken cancellationToken, IChangeJournal journal)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        return ApplyCore(operations, cancellationToken, journal);
+    }
+
+    /// <summary>
+    /// The same without a journal, for tests that check only the engine's logic. <b>Banned in production code</b> (<c>BannedSymbols.txt</c>, RS0030): a
+    /// run that changes a real PC must pass its journal.
+    /// </summary>
+    public IReadOnlyList<WindowsOpOutcome> Apply(IEnumerable<WindowsOperation> operations, CancellationToken cancellationToken = default) =>
+        ApplyCore(operations, cancellationToken, null);
+
+    private IReadOnlyList<WindowsOpOutcome> ApplyCore(IEnumerable<WindowsOperation> operations, CancellationToken cancellationToken, IChangeJournal? journal)
     {
         ArgumentNullException.ThrowIfNull(operations);
         var outcomes = new List<WindowsOpOutcome>();
@@ -133,7 +150,7 @@ public sealed class WindowsConfigurator
             // applied: neither runs, and the user picks one.
             outcomes.Add(conflicts.TryGetValue(op.Id, out var why)
                 ? new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Failed, "Not applied: " + why, op.Activation, [])
-                : ApplyOne(op));
+                : ApplyOne(op, journal));
         }
 
         return outcomes;
@@ -219,7 +236,7 @@ public sealed class WindowsConfigurator
         return result;
     }
 
-    private WindowsOpOutcome ApplyOne(WindowsOperation op)
+    private WindowsOpOutcome ApplyOne(WindowsOperation op, IChangeJournal? journal)
     {
         WindowsOpOutcome Outcome(WindowsOpStatus status, string detail, IReadOnlyList<RecordedChange>? changes = null) =>
             new(op.Id, op.Name, status, detail, op.Activation, changes ?? []);
@@ -249,7 +266,7 @@ public sealed class WindowsConfigurator
             return Outcome(WindowsOpStatus.NeedsElevation, "Changes machine-wide settings, which needs administrator rights; nothing was changed.");
         }
 
-        var done = new List<RecordedChange>();
+        var done = new ChangeList(journal, op);
         var restartNeeded = false;
         try
         {
@@ -479,7 +496,58 @@ public sealed class WindowsConfigurator
             Activation.Reboot => "Applied; takes effect after Windows restarts.",
             _ => "Applied.",
         };
-        return new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, detail + AbsentNote(evaluation), activation, done);
+        return new WindowsOpOutcome(op.Id, op.Name, WindowsOpStatus.Applied, detail + AbsentNote(evaluation), activation, [.. done]);
+    }
+
+    /// <summary>
+    /// An operation's changes so far, in order. Adding one first hands it to the run's journal, which must keep it before it returns: so every
+    /// change is on disk before the write it describes, and a journal that can't keep it stops the change from being made (the operation fails and
+    /// what it already changed is put back).
+    /// </summary>
+    private sealed class ChangeList(IChangeJournal? journal, WindowsOperation op) : System.Collections.ObjectModel.Collection<RecordedChange>
+    {
+        protected override void InsertItem(int index, RecordedChange item)
+        {
+            if (journal is not null)
+            {
+                Keep(journal, op.Id, op.Name, op.Activation, item);
+            }
+
+            base.InsertItem(index, item);
+        }
+    }
+
+    /// <summary>Hands a change to the journal before it is made; a failure becomes an <see cref="IOException"/> the operation reports, never a silent write.</summary>
+    private static void Keep(IChangeJournal journal, string operationId, string operationName, Activation activation, RecordedChange change)
+    {
+        try
+        {
+            journal.Record(operationId, operationName, activation, change);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException or ArgumentException)
+        {
+            throw new IOException($"Mesura couldn't save the undo information for {change.Target} before changing it ({e.Message}), so it didn't change it.", e);
+        }
+    }
+
+    /// <summary>
+    /// Where a recorded change stands now (0.8, recovering an interrupted run): in place (the setting holds what the run wrote), not made (it holds its
+    /// before-image), or neither (changed since, or unreadable). A reading that fails counts as neither, so a change is never dropped on a failed read.
+    /// </summary>
+    public ChangeState Check(RecordedChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        try
+        {
+            return StillAsWritten(change) ? ChangeState.InPlace
+                : AtBefore(change) ? ChangeState.NotMade
+                : ChangeState.Other;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException
+            or System.Security.SecurityException or ArgumentException or FormatException)
+        {
+            return ChangeState.Other;
+        }
     }
 
     /// <summary>
@@ -488,7 +556,7 @@ public sealed class WindowsConfigurator
     /// per-value before-image: undoing the run activates the previous scheme and deletes the copy. A copy that already exists (a re-run
     /// after the plan was edited in Windows) records each value it changes. Everything is read back from the scheme.
     /// </summary>
-    private bool ApplyMesuraPlan(PowerPlanSetting plan, List<RecordedChange> done)
+    private bool ApplyMesuraPlan(PowerPlanSetting plan, ChangeList done)
     {
         var power = _reader.ReadPower();
         var baseGuid = plan.BasedOn!;
@@ -563,7 +631,7 @@ public sealed class WindowsConfigurator
     /// before-image first, then the write (the adapter restarts), then an independent read of what the driver now reports and a check that the adapter is
     /// up again. A driver that doesn't keep the value, or an adapter that doesn't come back, fails the operation and what was changed is put back.
     /// </summary>
-    private void ApplyAdapters(WindowsOperation op, List<RecordedChange> done)
+    private void ApplyAdapters(WindowsOperation op, ChangeList done)
     {
         var adapters = _reader.ReadAdapters() ?? throw new InvalidOperationException("The network adapters couldn't be read, so nothing was changed.");
         foreach (var adapter in adapters)
@@ -599,7 +667,7 @@ public sealed class WindowsConfigurator
     /// records its own before-image, writes and has the result read by an independent session; then this engine reads the switch itself and fails the operation, putting the change back, unless
     /// the requested state is in place with the original Anti-Lag level.
     /// </summary>
-    private void ApplyGpu(WindowsOperation op, List<RecordedChange> done)
+    private void ApplyGpu(WindowsOperation op, ChangeList done)
     {
         foreach (var setting in op.GpuSettings)
         {
@@ -679,7 +747,7 @@ public sealed class WindowsConfigurator
     }
 
     /// <summary>Puts back changes made so far in a failed operation; returns the ones it couldn't put back.</summary>
-    private List<RecordedChange> Undo(List<RecordedChange> done)
+    private List<RecordedChange> Undo(ChangeList done)
     {
         var stuck = new List<RecordedChange>();
         foreach (var change in Enumerable.Reverse(done))
@@ -698,8 +766,25 @@ public sealed class WindowsConfigurator
         return stuck;
     }
 
-    /// <summary>Reverts the changes a run recorded, newest first, where each setting still holds what the run wrote.</summary>
-    public IReadOnlyList<WindowsOpOutcome> Revert(IEnumerable<WindowsOpOutcome> recorded)
+    /// <summary>Reverts the changes a run recorded, newest first, where each setting still holds what the run wrote. The only overload production code may call.</summary>
+    /// <param name="journal">
+    /// Where each restore is kept before it is made, recorded the other way round as the undo run records it (0.8), so an undo that is interrupted
+    /// leaves a trace too. The original record is untouched either way, so an interrupted undo can always be run again: what it already put back is
+    /// no longer at the value the run wrote and is skipped.
+    /// </param>
+    public IReadOnlyList<WindowsOpOutcome> Revert(IEnumerable<WindowsOpOutcome> recorded, IChangeJournal journal)
+    {
+        ArgumentNullException.ThrowIfNull(journal);
+        return RevertCore(recorded, journal);
+    }
+
+    /// <summary>
+    /// The same without a journal, for tests that check only the engine's logic. <b>Banned in production code</b> (<c>BannedSymbols.txt</c>, RS0030): an
+    /// undo that changes a real PC must pass its journal.
+    /// </summary>
+    public IReadOnlyList<WindowsOpOutcome> Revert(IEnumerable<WindowsOpOutcome> recorded) => RevertCore(recorded, null);
+
+    private IReadOnlyList<WindowsOpOutcome> RevertCore(IEnumerable<WindowsOpOutcome> recorded, IChangeJournal? journal)
     {
         ArgumentNullException.ThrowIfNull(recorded);
         var outcomes = new List<WindowsOpOutcome>();
@@ -748,16 +833,22 @@ public sealed class WindowsConfigurator
 
                 try
                 {
-                    Restore(change);
                     // Recorded the other way round, so reverting this revert run restores the run's values again.
-                    reverted.Add(change with
+                    var restore = change with
                     {
                         Before = change.After,
                         After = change.Before,
                         RegistryKind = change.WrittenKind ?? change.RegistryKind,
                         WrittenKind = change.RegistryKind,
                         KeyCreated = false,
-                    });
+                    };
+                    if (journal is not null)
+                    {
+                        Keep(journal, step.OperationId, step.Name, step.Activation, restore);
+                    }
+
+                    Restore(change);
+                    reverted.Add(restore);
                 }
                 catch (Exception e) when (e is UnauthorizedAccessException or IOException or InvalidOperationException
                     or System.Security.SecurityException or ArgumentException)

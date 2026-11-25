@@ -283,6 +283,7 @@ internal static class WindowsCli
             return Ok;
         }
 
+        RecoveryCli.Run(reader);
         if (!options.ContainsKey("--no-restore-point") && reader.IsElevated && operations.Any(o => o.Applicable && o.MachineWide && o.NeedsElevation)
             && preview.Any(p => p.State is OperationState.NotApplied or OperationState.Partial))
         {
@@ -292,9 +293,11 @@ internal static class WindowsCli
         }
 
         var started = DateTimeOffset.UtcNow;
-        // Ctrl+C stops after the current operation, so what was applied is still recorded and revertible.
-        var outcomes = SetupOutput.WithCancel((_, token) => configurator.Apply(operations, token));
         var runId = SetupRun.NewId(started, "windows-apply");
+        // Ctrl+C stops after the current operation, so what was applied is still recorded and revertible; a crash or a closed console leaves the
+        // run's journal, which the next start turns into a record (0.8).
+        var journal = new RunJournalFile(new SetupStore(), runId, "windows-apply", started);
+        var outcomes = SetupOutput.WithCancel((_, token) => configurator.Apply(operations, token, journal));
         var run = SetupRun.Create(runId, "windows-apply", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), [], [], outcomes);
         if (outcomes.Any(o => o.Changes.Count > 0 || !o.Ok))
         {
@@ -348,6 +351,7 @@ internal static class WindowsCli
     private static int Revert(SystemStateReader reader, string runId, bool apply)
     {
         var store = new SetupStore();
+        RecoveryCli.Run(reader, store); // so a run recovered from a crash can be named here
         SetupRun recorded;
         try
         {
@@ -385,8 +389,10 @@ internal static class WindowsCli
         }
 
         var started = DateTimeOffset.UtcNow;
+        var newId = SetupRun.NewId(started, "windows-revert");
         _ = TryLoadCatalog(out var trusted, out _);
-        var outcomes = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools), trusted).Revert(steps);
+        var outcomes = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools), trusted)
+            .Revert(steps, new RunJournalFile(store, newId, "windows-revert", started));
         if (outcomes.All(o => o.Status == WindowsOpStatus.RevertSkipped))
         {
             // The same rule as the app: nothing was put back, so no empty revert is recorded.
@@ -394,7 +400,6 @@ internal static class WindowsCli
             return Ok;
         }
 
-        var newId = SetupRun.NewId(started, "windows-revert");
         var run = SetupRun.Create(newId, "windows-revert", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), [], [], outcomes);
         store.WriteRunRecord(newId, run.ToJson());
         Console.WriteLine("Result:");

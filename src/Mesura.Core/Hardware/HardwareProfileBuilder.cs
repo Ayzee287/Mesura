@@ -26,6 +26,9 @@ public sealed record HardwareExtras
 
     public bool? HybridCpu { get; init; }
 
+    /// <summary>The processor's caches as Windows reports them (0.8), for the cache-layout facts; <c>null</c> when they couldn't be read.</summary>
+    public IReadOnlyList<CacheGroup>? Caches { get; init; }
+
     public string? CpuName { get; init; }
 
     public string? CpuVendorId { get; init; }
@@ -83,7 +86,8 @@ public static class HardwareProfileBuilder
             maker,
             Sum(sockets, p => p.CoresEnabled.IsKnown && p.CoresEnabled.Value > 0 ? p.CoresEnabled : p.CoreCount),
             Sum(sockets, p => p.ThreadCount),
-            extras.HybridCpu);
+            extras.HybridCpu,
+            CpuTopology.L3(extras.Caches));
     }
 
     /// <summary>Cores and threads of every populated socket, or <c>null</c> when any socket doesn't say.</summary>

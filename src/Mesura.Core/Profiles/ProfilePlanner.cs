@@ -182,7 +182,8 @@ public static class ProfilePlanner
             entries.Add(planned with { Included = planned.Selectable && groupOn && wanted });
         }
 
-        entries = Cover(entries, reader);
+        entries = Cover(entries, reader, e => !choices.GroupsOff.Contains(e.GroupId)
+            && (choices.Entries.TryGetValue(e.OperationId, out var chosen) ? chosen : e.Role == EntryRole.Default));
         return new ProfilePlan(profile, [.. profile.Groups.Select(g => new PlanGroup(g, [.. entries.Where(e => e.Entry.GroupId.Equals(g.Id, StringComparison.OrdinalIgnoreCase))], !choices.GroupsOff.Contains(g.Id)))]);
     }
 
@@ -247,8 +248,14 @@ public static class ProfilePlanner
     /// <summary>
     /// Entries that only set power values the profile's own plan, once it is applied, already writes with the same value: they become "covered" and are no
     /// longer applied (nothing would change). Only a plan that is itself going to be applied covers anything: if the user unticks it, the entries are theirs again.
+    /// <para>
+    /// The other way round too (0.8): a power entry is read against the plan that is active <b>now</b>, but the run first switches to the profile's own plan, which
+    /// starts from Balanced (or from the copy made earlier). An entry already set in the plan in use now and not kept by the plan switched to (core parking at
+    /// 100 % in High performance, at Balanced's default in the copy) would be skipped as "already set" and missing afterwards; it is applied after the switch.
+    /// </para>
     /// </summary>
-    private static List<PlanEntry> Cover(List<PlanEntry> entries, ISystemReader reader)
+    /// <param name="wanted">Whether the user's choices (group on, entry ticked or default) include an entry that turns out to need applying.</param>
+    private static List<PlanEntry> Cover(List<PlanEntry> entries, ISystemReader reader, Func<ProfileEntry, bool> wanted)
     {
         var plan = entries.FirstOrDefault(e => e is { Included: true, Operation.PowerPlan: { IsMesuraPlan: true } });
         if (plan is null)
@@ -270,10 +277,26 @@ public static class ProfilePlanner
         bool Covers(PowerSetting s) => written.TryGetValue((s.Subgroup.ToLowerInvariant(), s.Setting.ToLowerInvariant()), out var v) && v == s.AcValue;
         bool Registered(PowerSetting s) => reader.ReadPowerSetting(scheme, s.Subgroup, s.Setting) is not null;
 
+        // What each setting holds once the run has switched plans: the plan's own value, else what the scheme it switches to holds (an existing copy is kept
+        // and only the plan's values are written into it; a new copy starts as Balanced).
+        var target = reader.ReadPower().Schemes.Contains(plan.Operation.PowerPlan.SchemeGuid) ? plan.Operation.PowerPlan.SchemeGuid : scheme;
+        uint? AfterSwitch(PowerSetting s) => written.TryGetValue((s.Subgroup.ToLowerInvariant(), s.Setting.ToLowerInvariant()), out var v)
+            ? v
+            : reader.ReadPowerSetting(target, s.Subgroup, s.Setting);
+
         return [.. entries.Select(e => e.State == EntryState.ToApply && e.Operation is { } op && OnlyPowerSettings(op)
             && op.PowerSettings.Any(Registered) && op.PowerSettings.Where(Registered).All(Covers)
                 ? e with { State = EntryState.Covered, Reason = PlanReason.Covered, Detail = $"The {plan.OperationId} plan already writes this value.", Included = false, CoveredBy = plan.OperationId }
-                : e)];
+            : e.State == EntryState.Applied && e.Operation is { } applied && OnlyPowerSettings(applied)
+                && applied.PowerSettings.Where(Registered).Any(s => AfterSwitch(s) is { } after && after != s.AcValue)
+                ? e with
+                {
+                    State = EntryState.ToApply,
+                    Reason = null,
+                    Detail = $"Set in the power plan in use now, but the {plan.OperationId} plan this profile switches to doesn't keep it, so it is applied after the switch.",
+                    Included = wanted(e.Entry),
+                }
+            : e)];
     }
 
     private static bool OnlyPowerSettings(WindowsOperation op) =>

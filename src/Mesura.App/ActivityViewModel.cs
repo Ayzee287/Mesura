@@ -123,11 +123,12 @@ public sealed class ActivityItem : Observable
     public RunStatus Status => RunFollowUp.Status(Run);
 
     /// <summary>How it went, in a word or two; a run that went well but takes effect only after a restart or a sign-out says so.</summary>
-    public string StatusText => Status == RunStatus.Succeeded && RunActions.FinishKey(Run) is { } finish
+    public string StatusText => Run.WasInterrupted ? Loc.Get("Activity.Status.Interrupted")
+        : Status == RunStatus.Succeeded && RunActions.FinishKey(Run) is { } finish
         ? Loc.Get(finish)
         : Loc.Get($"Activity.Status.{Status}");
 
-    public string StatusTone => Status switch
+    public string StatusTone => Run.WasInterrupted ? Tone.Warn : Status switch
     {
         RunStatus.Succeeded => RunActions.FinishKey(Run) is null ? Tone.Ok : Tone.Info,
         RunStatus.Incomplete => Tone.Warn,
@@ -150,6 +151,11 @@ public sealed class ActivityItem : Observable
         get
         {
             var lines = new List<StepLine>();
+            if (Run.WasInterrupted)
+            {
+                lines.Add(new StepLine(Tone.Warn, Loc.Get("Activity.InterruptedLine")));
+            }
+
             lines.AddRange(Run.Apps.Select(a => new StepLine(Tone.Of(StepWords.Install(a.Status)),
                 $"{RunActions.AppName(_services, a.AppId)} · {Loc.Get($"{Run.Operation switch { "apps-update" => "Update", "apps-uninstall" => "Uninstall", _ => "Install" }}.{a.Status}")}",
                 a.Status is InstallStatus.Failed or InstallStatus.WingetUnavailable ? a.Detail : null, a.AppId, RunActions.AppName(_services, a.AppId))));

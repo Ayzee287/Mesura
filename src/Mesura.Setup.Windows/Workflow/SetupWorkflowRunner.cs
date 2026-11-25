@@ -97,7 +97,7 @@ public static class SetupWorkflowRunner
                 {
                     StepKind.Runtimes => Runtimes(step, context, installs, onProgress, cancellationToken),
                     StepKind.Apps => Apps(step, setup.RunId, context, installs, config, kept, onProgress, cancellationToken),
-                    StepKind.Windows => Windows(step, context, windows, cancellationToken),
+                    StepKind.Windows => Windows(step, setup.RunId, context, windows, cancellationToken),
                     StepKind.NvidiaBackup => Backup(setup.RunId, context, installs, onProgress, cancellationToken),
                     StepKind.NvidiaDriver => Driver(setup, context, installs, onProgress, cancellationToken),
                     StepKind.NvidiaRestore => Restore(setup, context, cancellationToken),
@@ -302,7 +302,7 @@ public static class SetupWorkflowRunner
             : (state, detail, value);
     }
 
-    private static (StepState, string, string?) Windows(SetupStep step, SetupContext context, List<WindowsOpOutcome> windows, CancellationToken cancellationToken)
+    private static (StepState, string, string?) Windows(SetupStep step, string runId, SetupContext context, List<WindowsOpOutcome> windows, CancellationToken cancellationToken)
     {
         if (context.Windows is null)
         {
@@ -311,7 +311,8 @@ public static class SetupWorkflowRunner
 
         var ops = step.Items.Select(context.WindowsCatalog.ById).OfType<WindowsOperation>().ToList();
         context.RefreshReader?.Invoke();
-        var outcomes = context.Windows.Apply(ops, cancellationToken);
+        // The setup's journal: each change is on disk before it is made, and the setup's record, written after this step, replaces it (0.8).
+        var outcomes = context.Windows.Apply(ops, cancellationToken, new RunJournalFile(context.Store, runId, "setup", context.Clock()));
         windows.AddRange(outcomes);
         var applied = outcomes.Count(o => o.Status == WindowsOpStatus.Applied);
         return outcomes.All(o => o.Ok)

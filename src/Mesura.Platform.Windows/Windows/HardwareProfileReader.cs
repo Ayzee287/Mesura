@@ -2,6 +2,8 @@ using Mesura.Core.Hardware;
 using Mesura.Core.Normalize;
 using Mesura.Core.Raw;
 using Mesura.Core.Windows;
+using Windows.Win32;
+using Windows.Win32.System.SystemInformation;
 
 namespace Mesura.Platform.Windows.Windows;
 
@@ -30,11 +32,44 @@ public static class HardwareProfileReader
             ModernStandby = reader.ModernStandby,
             MemoryBytes = reader.PhysicalMemoryBytes,
             HybridCpu = reader.HybridCpu,
+            Caches = ReadCaches(),
             CpuName = Text(reader, "ProcessorNameString"),
             CpuVendorId = Text(reader, "VendorIdentifier"),
             SystemDriveLetter = Path.GetPathRoot(Environment.SystemDirectory)?.TrimEnd('\\', ':'),
             Adapters = reader.ReadAdapters(),
         });
+    }
+
+    /// <summary>
+    /// The processor's caches (0.8): <c>GetLogicalProcessorInformationEx(RelationCache)</c>, parsed by <see cref="CpuTopology.ParseCaches"/>; <c>null</c>
+    /// when Windows doesn't answer. Read-only, no administrator rights.
+    /// </summary>
+    private static unsafe IReadOnlyList<CacheGroup>? ReadCaches()
+    {
+        try
+        {
+            uint length = 0;
+            PInvoke.GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationCache, null, ref length);
+            if (length == 0)
+            {
+                return null;
+            }
+
+            var buffer = new byte[length];
+            fixed (byte* p = buffer)
+            {
+                if (!PInvoke.GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP.RelationCache, new Span<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(p, 1), ref length))
+                {
+                    return null;
+                }
+            }
+
+            return CpuTopology.ParseCaches(buffer.AsSpan(0, (int)length));
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static string? Text(ISystemReader reader, string name) =>

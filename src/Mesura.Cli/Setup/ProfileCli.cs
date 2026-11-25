@@ -171,6 +171,7 @@ internal static class ProfileCli
             return plan.BundleError is null && conflicts.Count == 0 ? Ok : Failed;
         }
 
+        RecoveryCli.Run(reader);
         Console.WriteLine("Running.");
         SetupOutput.WritePlan(plan.Apps, skipInstalled: true, plan.InstalledEarlier);
         var run = SetupOutput.WithCancel((progress, token) =>
@@ -237,6 +238,11 @@ internal static class ProfileCli
     public static int RunHistory(string[] args)
     {
         var store = new SetupStore();
+        if (args is ["list"] or ["show", ..])
+        {
+            RecoveryCli.Run(new SystemStateReader(new SystemTools()), store); // an unfinished run becomes a record before the history is shown
+        }
+
         switch (args)
         {
             case ["list"]:

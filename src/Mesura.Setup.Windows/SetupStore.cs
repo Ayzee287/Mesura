@@ -92,15 +92,18 @@ public sealed partial class SetupStore
         return backup;
     }
 
-    /// <summary>Writes (or replaces) a run's history record, <c>history\&lt;runId&gt;\run.json</c>.</summary>
+    /// <summary>
+    /// Writes (or replaces) a run's history record, <c>history\&lt;runId&gt;\run.json</c>, durably: a temporary file, flushed, then moved over the old
+    /// one, so a power cut leaves the old record or the new one, never half of one (a setup rewrites its record after every step). The record now holds
+    /// what the run's journal held, so the journal is removed after it.
+    /// </summary>
     /// <returns>The full path written.</returns>
     public string WriteRunRecord(string runId, string json)
     {
         ArgumentNullException.ThrowIfNull(json);
         var path = Path.Combine(RunFolder(runId), "run.json");
-#pragma warning disable RS0030 // The setup component's one file writer: its own run history (class remarks).
-        File.WriteAllBytes(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
-#pragma warning restore RS0030
+        WriteDurably(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
+        DeleteJournal(runId);
         return path;
     }
 
@@ -192,12 +195,10 @@ public sealed partial class SetupStore
     {
         ArgumentNullException.ThrowIfNull(json);
         var path = Path.Combine(Root, PendingSetupFile);
-        var temp = path + TempSuffix;
 #pragma warning disable RS0030 // The setup component's one file writer: its own unfinished-setup record (class remarks).
         Directory.CreateDirectory(Root);
-        File.WriteAllBytes(temp, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
-        File.Move(temp, path, overwrite: true);
 #pragma warning restore RS0030
+        WriteDurably(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
     }
 
     /// <summary>Removes the unfinished-setup record once every step is finished, or when the user discards the rest.</summary>
@@ -218,9 +219,7 @@ public sealed partial class SetupStore
     {
         ArgumentNullException.ThrowIfNull(content);
         var path = Path.Combine(RunFolder(runId, "files"), PlainName(name));
-#pragma warning disable RS0030 // The setup component's one file writer: a file its own run produced (class remarks).
-        File.WriteAllBytes(path, content);
-#pragma warning restore RS0030
+        WriteDurably(path, content);
         return path;
     }
 

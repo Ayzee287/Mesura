@@ -178,7 +178,7 @@ public sealed class FirmwareViewModel : Observable, IPageState
     public string MenuNote => FirmwareKnowledge.Default.Note.In(Loc.Instance.Language);
 
     /// <summary>The line in the command dock: how many settings are worth a look.</summary>
-    public string DockSummary => _report is null ? Loc.Get("Firmware.Reading") : _report.ReviewCount == 0 ? Loc.Get("Firmware.DockNone") : Loc.Plural("Firmware.DockReview", _report.ReviewCount);
+    public string DockSummary => _report is null ? Loc.Get(_timedOut ? "Firmware.TimedOut" : "Firmware.Reading") : _report.ReviewCount == 0 ? Loc.Get("Firmware.DockNone") : Loc.Plural("Firmware.DockReview", _report.ReviewCount);
 
     public void Enter()
     {
@@ -190,6 +190,13 @@ public sealed class FirmwareViewModel : Observable, IPageState
 
     public void Leave() => Result.Hide();
 
+    /// <summary>
+    /// A reading of this PC that hasn't answered yet (0.8): after a time-out it goes on in the background, and the next Recheck, or its own end,
+    /// picks it up rather than starting a second one beside it.
+    /// </summary>
+    private Task<FirmwareReport>? _reading;
+    private bool _timedOut;
+
     private async Task LoadAsync()
     {
         Loading = true;
@@ -197,7 +204,7 @@ public sealed class FirmwareViewModel : Observable, IPageState
         try
         {
             var version = Branding.ShortVersion;
-            var report = await Task.Run(() =>
+            var reading = _reading ??= Task.Run(() =>
             {
 #if DEBUG
                 // A Debug build started with MESURA_PREVIEW_FIRMWARE=1 shows a stand-in desktop (named as one), for screenshots on a PC that has nothing to review.
@@ -209,6 +216,27 @@ public sealed class FirmwareViewModel : Observable, IPageState
                 var system = SystemInfoReader.Read(version);
                 return FirmwareAnalyzer.Analyze(FirmwareFacts.From(system, FirmwareReader.Read()));
             });
+            var (done, answer) = await Mesura.Core.Support.Deadline.Within(reading, Mesura.Core.Support.Deadline.Reading);
+            if (!done)
+            {
+                // Windows hasn't answered (a busy or stuck system query): say so instead of "reading" for ever, and show the result if it comes.
+                _timedOut = true;
+                Raise(nameof(DockSummary));
+                _services.Log($"BIOS & Firmware: Windows didn't answer within {Mesura.Core.Support.Deadline.Reading.TotalSeconds:0} s; the reading goes on in the background.");
+                Result.Show(Tone.Warn, Loc.Get("Firmware.TimedOut"), Loc.Get("Firmware.TimedOutHint"));
+                _ = reading.ContinueWith(_ => System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    if (!_loaded && !_loading)
+                    {
+                        Refresh.Execute(null); // the answer is in: picked up at once
+                    }
+                }), TaskScheduler.Default);
+                return;
+            }
+
+            _reading = null;
+            _timedOut = false;
+            var report = answer!;
             _report = report;
             _loaded = true;
             if (!Preview)
@@ -218,6 +246,12 @@ public sealed class FirmwareViewModel : Observable, IPageState
 
             Build();
             _services.Log($"BIOS & Firmware read: {report.Findings.Count} settings, {report.ReviewCount} worth a look, vendor {report.Vendor}.");
+        }
+        catch
+        {
+            _reading = null; // a reading that failed is read again on Recheck
+            _timedOut = false;
+            throw;
         }
         finally
         {

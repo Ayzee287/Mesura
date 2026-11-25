@@ -80,7 +80,18 @@ public sealed record WindowsPlatform(int Build, string? Edition, string? Version
 public sealed record PowerPlatform(bool? HasBattery, bool? ModernStandby, bool? OnMains);
 
 /// <param name="Hybrid">Cores of more than one efficiency class (Intel hybrid, AMD heterogeneous); <c>null</c> when it couldn't be read.</param>
-public sealed record CpuProfile(string? Name, CpuMaker Maker, int? Cores, int? Threads, bool? Hybrid);
+/// <param name="L3Caches">The L3 caches Windows reports (0.8), each with its size and how many logical processors share it; <c>null</c> when unread.</param>
+public sealed record CpuProfile(string? Name, CpuMaker Maker, int? Cores, int? Threads, bool? Hybrid, IReadOnlyList<CacheGroup>? L3Caches = null)
+{
+    /// <summary>
+    /// Whether this is a Ryzen X3D with two core dies of which one carries the stacked cache (0.8, <see cref="CpuTopology"/>): told from the L3 layout,
+    /// the brand string only when that can't be read; <c>null</c> when it can't be told.
+    /// </summary>
+    public bool? DualCcdX3d => DualCcdX3dFact.Value;
+
+    /// <summary>The same with what it was told from, for the command line and the plan's details.</summary>
+    public CpuFact DualCcdX3dFact => CpuTopology.DualCcdX3d(Maker, Name, Cores, Threads, L3Caches);
+}
 
 /// <param name="VendorId">The PCI vendor id (0x10DE NVIDIA, 0x1002 AMD, 0x8086 Intel).</param>
 /// <param name="Integrated">The platform's own integrated-graphics flag; never inferred from a vendor or a name.</param>

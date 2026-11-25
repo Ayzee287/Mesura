@@ -9,18 +9,19 @@ public sealed partial class SetupStore
 {
     public string GpuFolder => Path.Combine(Root, "gpu");
 
-    /// <summary>Writes (or replaces) a GPU change record, <c>gpu\&lt;id&gt;.json</c>, atomically (a temporary file, then a move).</summary>
+    /// <summary>
+    /// Writes (or replaces) a GPU change record, <c>gpu\&lt;id&gt;.json</c>, atomically and durably (a temporary file flushed to the disk, then a move; 0.8):
+    /// the record written before the driver is touched is what undoes the change after a crash, so it must survive a power cut too.
+    /// </summary>
     /// <returns>The full path written.</returns>
     public string WriteGpuChange(string id, string json)
     {
         ArgumentNullException.ThrowIfNull(json);
         var path = GpuPath(id);
-        var temp = path + TempSuffix;
 #pragma warning disable RS0030 // The setup component's one file writer: its own GPU change records (class remarks).
         Directory.CreateDirectory(GpuFolder);
-        File.WriteAllBytes(temp, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
-        File.Move(temp, path, overwrite: true);
 #pragma warning restore RS0030
+        WriteDurably(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json));
         return path;
     }
 

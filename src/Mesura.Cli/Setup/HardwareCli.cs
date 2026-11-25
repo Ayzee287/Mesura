@@ -41,6 +41,15 @@ internal static class HardwareCli
         Console.WriteLine(profile.Cpu is { } cpu
             ? $"  CPU      : {cpu.Name ?? "unknown"} ({cpu.Maker}), {cpu.Cores?.ToString() ?? "?"} cores / {cpu.Threads?.ToString() ?? "?"} threads, hybrid {Show(cpu.Hybrid, "yes", "no")}"
             : "  CPU      : unknown");
+        if (profile.Cpu is { } read)
+        {
+            var l3 = read.L3Caches is { Count: > 0 } caches
+                ? string.Join(" + ", caches.Select(c => $"{c.SizeBytes / (1024 * 1024)} MB ({c.LogicalProcessors} threads)"))
+                : "unknown";
+            var x3d = read.DualCcdX3dFact;
+            Console.WriteLine($"  L3 cache : {l3}");
+            Console.WriteLine($"  X3D      : dual-CCD X3D {Show(x3d.Value, "yes", "no")} ({x3d.Basis})");
+        }
         Console.WriteLine($"  Memory   : {(profile.MemoryGb is { } gb ? gb + " GB" : "unknown")}");
         foreach (var gpu in profile.Gpus)
         {

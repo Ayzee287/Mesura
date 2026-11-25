@@ -236,3 +236,8 @@ M:System.IO.StreamWriter.#ctor(System.String,System.Text.Encoding,System.IO.File
 // raw interface method can't be, because the generated wrapper itself calls it, so a call through
 // raw pointers is left to review.
 M:Windows.Win32.Graphics_DXCore_IDXCoreAdapter_Extensions.SetState(Windows.Win32.Graphics.DXCore.IDXCoreAdapter,Windows.Win32.Graphics.DXCore.DXCoreAdapterState,System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte});DXCore adapter state changes the system (architecture §2.3)
+
+// Crash-safe runs (0.8): a run that changes the PC passes its journal, so its before-images are on disk before each write. The journal-less overloads
+// exist only for the engine's tests (the test projects don't load this list).
+M:Mesura.Core.Windows.WindowsConfigurator.Apply(System.Collections.Generic.IEnumerable{Mesura.Core.Windows.WindowsOperation},System.Threading.CancellationToken);Production runs pass their journal: WindowsConfigurator.Apply(operations, cancellationToken, journal) (crash-safe runs, 0.8)
+M:Mesura.Core.Windows.WindowsConfigurator.Revert(System.Collections.Generic.IEnumerable{Mesura.Core.Windows.WindowsOpOutcome});Production undos pass their journal: WindowsConfigurator.Revert(recorded, journal) (crash-safe runs, 0.8)

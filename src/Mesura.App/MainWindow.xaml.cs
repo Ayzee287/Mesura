@@ -112,6 +112,55 @@ public partial class MainWindow : Window
         Loc.Instance.LanguageChanged += () => Language = System.Windows.Markup.XmlLanguage.GetLanguage(Loc.Instance.Culture.IetfLanguageTag);
         _ = _windows.RefreshAsync();
         Loaded += (_, _) => _update.Begin();
+        Loaded += async (_, _) => await RecoverAsync();
+    }
+
+    private bool _recoveryDone;
+
+    /// <summary>
+    /// Once per start (0.8): runs that never finished become interrupted records, and when one left changes in place Activity opens on it and says
+    /// so, with Undo beside it. Nothing else changes the PC while this reads it.
+    /// </summary>
+    private async System.Threading.Tasks.Task RecoverAsync()
+    {
+        if (_recoveryDone)
+        {
+            return;
+        }
+
+        _recoveryDone = true;
+        Mesura.Setup.Windows.RecoveryReport report;
+        using (_services.BeginChange())
+        {
+            try
+            {
+                report = await System.Threading.Tasks.Task.Run(_services.RecoverInterrupted);
+            }
+            catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            {
+                _services.Log($"Unfinished runs couldn't be checked: {e.Message}");
+                _activity.Result.Show(Tone.Warn, Loc.Get("Recovery.CheckFailed"), Loc.Get("Recovery.CheckFailedHint"), technical: e.Message);
+                return;
+            }
+        }
+
+        if (report.Recovered.Count == 0 && report.Problems.Count == 0)
+        {
+            return;
+        }
+
+        _activity.Load();
+        var technical = report.Problems.Count > 0 ? string.Join("\n", report.Problems) : null;
+        if (report.WithChanges is [var first, ..])
+        {
+            OpenActivity(first.Record!.Id);
+            var found = report.WithChanges.Sum(r => r.Findings.InPlace + r.Findings.Other);
+            _activity.Result.Show(Tone.Warn, Loc.Get("Recovery.Title"), Loc.Plural("Recovery.Found", found), technical: technical);
+        }
+        else if (report.Problems.Count > 0)
+        {
+            _activity.Result.Show(Tone.Warn, Loc.Get("Recovery.CheckFailed"), Loc.Get("Recovery.CheckFailedHint"), technical: technical);
+        }
     }
 
     /// <summary>

@@ -255,6 +255,31 @@ public sealed class Services
     /// </summary>
     public event Action<string>? RunRecorded;
 
+    /// <summary>
+    /// Finds runs that started changing the PC and never finished (0.8: a crash, a power cut, a killed process) and turns what they left in place into
+    /// history records marked interrupted, after reading the PC as it is now. Nothing is changed on the PC; the user decides in Activity whether to undo.
+    /// Run in the background, while no other run is going.
+    /// </summary>
+    public RecoveryReport RecoverInterrupted()
+    {
+        Reader.Refresh(); // the PC as it is now, not as a reading from before the crash
+        var report = RunRecovery.Recover(Store, Windows.Check, RunRecovery.ProcessIsAlive, () => DateTimeOffset.UtcNow);
+        foreach (var run in report.Recovered)
+        {
+            var f = run.Findings;
+            Log($"Unfinished run {run.RunId} ({run.Operation}): {f.InPlace} change(s) in place, {f.Other} can't be told, {f.NotMade} never made, {f.AlreadyRecorded} already recorded"
+                + (run.Torn ? "; the journal's last line was cut off" : "")
+                + (run.Record is { } record ? $"; recorded as {record.Id}." : "; nothing to undo."));
+        }
+
+        foreach (var problem in report.Problems)
+        {
+            Log(problem);
+        }
+
+        return report;
+    }
+
     /// <summary>Tells the pages about a run that was just written to the history.</summary>
     public void Recorded(SetupRun run)
     {

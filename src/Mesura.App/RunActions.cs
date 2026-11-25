@@ -5,6 +5,7 @@ using Mesura.Core.Apps;
 using Mesura.Core.Config;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
+using Mesura.Setup.Windows;
 using Mesura.Setup.Windows.Config;
 
 namespace Mesura.App;
@@ -158,6 +159,9 @@ public static class RunActions
         services.RestoreNote = "";
         services.RestoreTechnical = "";
         var wantsPoint = services.Settings.RestorePointBeforeChanges && services.Reader.IsElevated && ops.Any(o => o.Applicable && o.MachineWide && o.NeedsElevation);
+        var id = SetupRun.NewId(started, "windows-apply");
+        // Each change is in the run's journal before it is made, so a crash mid-run still leaves it undoable (0.8); the record replaces the journal.
+        var journal = new RunJournalFile(services.Store, id, "windows-apply", started);
         var outcomes = await Task.Run(() =>
         {
             if (wantsPoint && services.RestorePoints.TryCreate(Loc.Format("Restore.Description", ops.Count)) is { Made: false } point)
@@ -167,9 +171,8 @@ public static class RunActions
             }
 
             services.Reader.Refresh(); // before-images from the system as it is now
-            return services.Windows.Apply(ops, CancellationToken.None);
+            return services.Windows.Apply(ops, CancellationToken.None, journal);
         });
-        var id = SetupRun.NewId(started, "windows-apply");
         var run = SetupRun.Create(id, "windows-apply", null, SetupRun.Stamp(started), SetupRun.Stamp(DateTimeOffset.UtcNow), [], [], outcomes);
         var recorded = outcomes.Any(o => o.Changes.Count > 0 || !o.Ok);
         var error = recorded ? Dialogs.TryRecord(services, run) : null;
@@ -208,10 +211,11 @@ public static class RunActions
         var config = run.Config.Where(c => c.Written.Count > 0).ToList();
         var operation = steps.Count > 0 && config.Count > 0 ? "undo" : steps.Count > 0 ? "windows-revert" : "config-restore";
         var id = SetupRun.NewId(started, operation);
+        var journal = new RunJournalFile(services.Store, id, operation, started);
         var (windows, restored) = await Task.Run(() =>
         {
             services.Reader.Refresh(); // compare against the system as it is now
-            var w = steps.Count > 0 ? services.Windows.Revert(steps) : [];
+            var w = steps.Count > 0 ? services.Windows.Revert(steps, journal) : [];
             var r = config.Select(c => ConfigCatalog.ById(c.PortId) is { } port
                     ? ConfigService.RestoreBackups(port, run.Id, c.Written, services.Store, id)
                     : new ConfigImportOutcome(c.PortId, c.AppName, ConfigImportStatus.Failed, [], [], [], [], "This app has no configuration support in this build."))

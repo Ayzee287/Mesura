@@ -1,6 +1,22 @@
 {
   // "What's new" for the running version, written by hand for each release in both languages and keyed by major.minor (0.7.1 shows the 0.7 notes).
   // Read by ReleaseNotes (Core). Keep each note to one sentence a user would say aloud.
+  "0.8": {
+    "en": [
+      "If Mesura stops in the middle of a run (a crash, a power cut, a closed window), it finds what that run had changed when it next starts and lists it in Activity with Undo; nothing is undone without you.",
+      "Mesura saves each setting's previous value before it changes the setting, and writes its history so that a power cut can't leave half a record.",
+      "Mesura recognises Ryzen X3D processors with two core dies from the processor's cache layout; mesura hardware shows it, and no profile uses it yet.",
+      "Fixed: Maximum performance could leave core parking at Balanced's value when the PC had been on the High performance plan.",
+      "BIOS & Firmware and Optimization no longer wait for ever when Windows doesn't answer: they say so and show the answer when it comes."
+    ],
+    "ru": [
+      "Если Mesura остановится посреди выполнения (сбой, отключение питания, закрытое окно), при следующем запуске она найдёт, что успела изменить, и покажет это в «Журнале» с кнопкой «Отменить»; без вас ничего не отменяется.",
+      "Mesura сохраняет прежнее значение каждой настройки до того, как изменить её, и записывает журнал так, что отключение питания не оставит запись наполовину.",
+      "Mesura распознаёт процессоры Ryzen X3D с двумя кристаллами ядер по устройству кэша; это показывает mesura hardware, профили пока этим не пользуются.",
+      "Исправлено: «Максимальная производительность» могла оставить парковку ядер на значении схемы «Сбалансированная», если до этого была включена схема «Высокая производительность».",
+      "«BIOS и прошивка» и «Оптимизация» больше не ждут бесконечно, если Windows не отвечает: они говорят об этом и показывают ответ, когда он приходит."
+    ]
+  },
   "0.7": {
     "en": [
       "Backups: PC setups and app settings are one section with two tabs, and Mesura recognises which kind of file you open.",

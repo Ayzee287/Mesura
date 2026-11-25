@@ -314,4 +314,69 @@ public sealed class ProfilePlannerTests
         Assert.Equal(Balanced, pc.Active);
         Assert.Equal(before.OrderBy(p => p.Key), pc.Registry.OrderBy(p => p.Key));
     }
+
+    private const string HighPerformance = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+    private const string CoreParkingMinCores = "0cc5b647-c1df-4637-891a-dec35c318583";
+
+    /// <summary>The PC of the 2026-11-25 audit (PR-05): High performance active with core parking already off (100 %), while Balanced, which the Maximum plan copies, has 7.</summary>
+    private static FakeWindows OnHighPerformanceWithParkingOff()
+    {
+        var pc = Pc(hybrid: true);
+        pc.Schemes.Add(HighPerformance);
+        foreach (var (key, value) in pc.PowerSettings.Where(p => p.Key.StartsWith(Balanced + "|", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            pc.PowerSettings[HighPerformance + key[Balanced.Length..]] = value;
+        }
+
+        pc.PowerSettings[$"{HighPerformance}|{CoreParkingMinCores}"] = 100;
+        pc.Active = HighPerformance;
+        return pc;
+    }
+
+    [Fact]
+    public void A_power_entry_already_set_in_the_plan_in_use_is_applied_again_when_the_profiles_plan_would_not_keep_it()
+    {
+        var pc = OnHighPerformanceWithParkingOff();
+        Assert.Equal(OperationState.Applied, WindowsEvaluator.Evaluate(Catalog.ById("cpu.core-parking-off")!, pc).State); // as read against High performance
+
+        var plan = Plan(Maximum, pc, Hardware());
+
+        var parking = plan.Entry("cpu.core-parking-off")!;
+        Assert.Equal(EntryState.ToApply, parking.State);
+        Assert.True(parking.Included);
+        Assert.Contains("doesn't keep it", parking.Detail, StringComparison.Ordinal);
+
+        // Through the real engine: after the switch to the Maximum plan, core parking is still off.
+        var ops = plan.OperationIds.Select(id => Catalog.ById(id)!).ToList();
+        var outcomes = new WindowsConfigurator(pc, pc).Apply(ops, TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(outcomes, o => !o.Ok);
+        Assert.Equal("76d36892-93d0-4c33-9e09-c2e1fb87cf49", pc.Active);
+        Assert.Equal(100u, pc.ReadPowerSetting(pc.Active!, "", CoreParkingMinCores));
+        Assert.Equal(EntryState.Applied, Plan(Maximum, pc, Hardware()).Entry("cpu.core-parking-off")!.State);
+    }
+
+    [Fact]
+    public void A_power_entry_the_profiles_plan_keeps_anyway_stays_applied_and_one_unticked_by_the_user_stays_unticked()
+    {
+        // Balanced already has core parking off: the switch keeps it, so there is nothing to apply again.
+        var pc = OnHighPerformanceWithParkingOff();
+        pc.PowerSettings[$"{Balanced}|{CoreParkingMinCores}"] = 100;
+        Assert.Equal(EntryState.Applied, Plan(Maximum, pc, Hardware()).Entry("cpu.core-parking-off")!.State);
+
+        // The user unticked it: it needs applying again, but isn't included.
+        var unticked = new ProfileChoices(new HashSet<string>(), new Dictionary<string, bool> { ["cpu.core-parking-off"] = false });
+        var entry = Plan(Maximum, OnHighPerformanceWithParkingOff(), Hardware(), unticked).Entry("cpu.core-parking-off")!;
+        Assert.Equal(EntryState.ToApply, entry.State);
+        Assert.False(entry.Included);
+    }
+
+    [Fact]
+    public void Without_the_profiles_plan_a_power_entry_set_in_the_plan_in_use_stays_applied()
+    {
+        var noPlan = new ProfileChoices(new HashSet<string>(), new Dictionary<string, bool> { ["power.mesura-maximum-plan"] = false });
+
+        var plan = Plan(Maximum, OnHighPerformanceWithParkingOff(), Hardware(), noPlan);
+
+        Assert.Equal(EntryState.Applied, plan.Entry("cpu.core-parking-off")!.State); // nothing switches plans, so the setting in use stays
+    }
 }

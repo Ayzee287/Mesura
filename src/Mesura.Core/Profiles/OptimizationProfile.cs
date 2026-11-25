@@ -46,13 +46,16 @@ public sealed record OptimizationProfile(string Id, IReadOnlyList<ProfileGroup> 
 /// unknown, not no, so the entry is left alone rather than applied or hidden on a guess.
 /// </summary>
 /// <param name="Form">Any of the listed forms (<see cref="DeviceForm"/> names, lower case).</param>
-/// <param name="Cpu"><c>intel</c>, <c>amd</c> or <c>hybrid</c>.</param>
+/// <param name="Cpu">
+/// <c>intel</c>, <c>amd</c>, <c>hybrid</c>, or (0.8) <c>x3d-dual-ccd</c> / <c>not-x3d-dual-ccd</c>: a Ryzen X3D with two core dies, or any other processor
+/// (<see cref="CpuProfile.DualCcdX3d"/>); the second lets an entry stay off where AMD's driver parks a die for games.
+/// </param>
 /// <param name="Gpu"><c>any</c> (a hardware adapter), <c>discrete</c>, <c>nvidia</c>, <c>amd</c> or <c>intel</c>.</param>
 /// <param name="Disk"><c>nvme</c>, <c>sata</c>, <c>ssd</c> or <c>hdd</c>: some drive of that kind is installed.</param>
 /// <param name="Network"><c>wifi</c> or <c>ethernet</c>: a physical adapter of that kind.</param>
 public sealed record HardwareCondition(IReadOnlyList<string>? Form = null, string? Cpu = null, string? Gpu = null, string? Disk = null, string? Network = null)
 {
-    public static readonly IReadOnlySet<string> CpuValues = new HashSet<string> { "intel", "amd", "hybrid" };
+    public static readonly IReadOnlySet<string> CpuValues = new HashSet<string> { "intel", "amd", "hybrid", "x3d-dual-ccd", "not-x3d-dual-ccd" };
     public static readonly IReadOnlySet<string> GpuValues = new HashSet<string> { "any", "discrete", "nvidia", "amd", "intel" };
     public static readonly IReadOnlySet<string> DiskValues = new HashSet<string> { "nvme", "sata", "ssd", "hdd" };
     public static readonly IReadOnlySet<string> NetworkValues = new HashSet<string> { "wifi", "ethernet" };
@@ -102,6 +105,8 @@ public sealed record HardwareCondition(IReadOnlyList<string>? Form = null, strin
             {
                 "intel" => hardware.Cpu is null || hardware.Cpu.Maker == CpuMaker.Unknown ? null : hardware.Cpu.Maker == CpuMaker.Intel,
                 "amd" => hardware.Cpu is null || hardware.Cpu.Maker == CpuMaker.Unknown ? null : hardware.Cpu.Maker == CpuMaker.Amd,
+                "x3d-dual-ccd" => hardware.Cpu?.DualCcdX3d,
+                "not-x3d-dual-ccd" => !hardware.Cpu?.DualCcdX3d,
                 _ => hardware.Cpu?.Hybrid,
             });
         }

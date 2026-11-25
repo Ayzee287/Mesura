@@ -76,8 +76,16 @@ public sealed record SetupRun(
     IReadOnlyList<AppRunEntry> Apps,
     IReadOnlyList<ConfigImportOutcome> Config,
     IReadOnlyList<WindowsOpOutcome>? Windows = null,
-    IReadOnlyList<SetupStepOutcome>? Steps = null)
+    IReadOnlyList<SetupStepOutcome>? Steps = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Interrupted = null)
 {
+    /// <summary>
+    /// Whether this record was rebuilt from the journal of a run that never finished (0.8): Mesura stopped (a crash, a power cut, a killed process)
+    /// after it had started changing the PC. It holds the changes that were found still in place when Mesura next started, so they can be undone.
+    /// </summary>
+    [JsonIgnore]
+    public bool WasInterrupted => Interrupted == true;
+
     /// <summary>The Windows configuration steps; records written before that layer existed have none.</summary>
     [JsonIgnore]
     public IReadOnlyList<WindowsOpOutcome> WindowsSteps => Windows ?? [];

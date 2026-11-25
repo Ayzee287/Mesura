@@ -3,6 +3,9 @@ using Mesura.Core.Windows;
 
 namespace Mesura.Core.Tests.Windows;
 
+/// <summary>The process "died" at this write (0.8 crash tests): nothing in the engine catches it.</summary>
+internal sealed class SimulatedCrash(int write) : Exception($"simulated crash at write {write}");
+
 /// <summary>An in-memory Windows: registry values, service start types, features and power schemes, read and written.</summary>
 internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 {
@@ -13,6 +16,24 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
     public string? Active { get; set; } = "381b4222-f694-41f0-9685-ff5bb260df2e";
     public HashSet<string> Protected { get; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Writes { get; } = [];
+
+    /// <summary>
+    /// Simulates the process dying (0.8 crash tests): the write with this number (1 = the first write call of any kind) throws
+    /// <see cref="SimulatedCrash"/> before it takes effect, an exception no engine code catches, as a killed process never returns.
+    /// </summary>
+    public int? CrashAtWrite { get; set; }
+
+    /// <summary>How many write calls were made (of any kind).</summary>
+    public int WriteCalls { get; private set; }
+
+    private void Tick()
+    {
+        WriteCalls++;
+        if (WriteCalls == CrashAtWrite)
+        {
+            throw new SimulatedCrash(WriteCalls);
+        }
+    }
 
     public int Build { get; set; } = 26100;
     public bool IsElevated { get; set; } = true;
@@ -55,6 +76,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetTaskEnabled(string path, bool enabled)
     {
+        Tick();
         Writes.Add("task " + path);
         Tasks[path] = enabled ? FeatureState.Enabled : FeatureState.Disabled;
     }
@@ -68,6 +90,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetTcpGlobal(string name, string value)
     {
+        Tick();
         if (!TcpGlobalSetting.IsAllowed(name, value))
         {
             throw new ArgumentException($"not allowed: {name}={value}");
@@ -90,6 +113,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetPowerSetting(string scheme, string subgroup, string setting, uint acValue)
     {
+        Tick();
         Writes.Add($"power {setting}={acValue}");
         PowerSettings[$"{scheme}|{setting}"] = acValue;
     }
@@ -110,6 +134,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void DuplicatePowerScheme(string sourceGuid, string newGuid, string name, string description)
     {
+        Tick();
         Writes.Add($"duplicate {sourceGuid} -> {newGuid} '{name}'");
         Schemes.Add(newGuid);
         foreach (var (key, value) in PowerSettings.Where(p => p.Key.StartsWith(sourceGuid + "|", StringComparison.OrdinalIgnoreCase)).ToList())
@@ -125,6 +150,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetSchemeValue(string scheme, string subgroup, string setting, uint value, bool dc)
     {
+        Tick();
         if (string.Equals(FailSchemeValue, setting, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("powercfg refused");
@@ -194,6 +220,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetAdapterProperty(string interfaceGuid, string keyword, string registryValue)
     {
+        Tick();
         if (string.Equals(FailAdapterKey, keyword, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Windows couldn't change the adapter");
@@ -208,6 +235,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetAdapterBinding(string interfaceGuid, string componentId, bool enabled)
     {
+        Tick();
         Writes.Add($"adapter {interfaceGuid} {componentId}={enabled}");
         ChangeAdapter(interfaceGuid, a => a with
         {
@@ -217,6 +245,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetAdapterPower(string interfaceGuid, bool allowTurnOff)
     {
+        Tick();
         Writes.Add($"adapter {interfaceGuid} power={allowTurnOff}");
         ChangeAdapter(interfaceGuid, a => a with { AllowTurnOff = allowTurnOff });
     }
@@ -236,6 +265,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetRegistry(string hive, string path, string name, RegistryKind kind, string value)
     {
+        Tick();
         var key = Key(hive, path, name);
         if (RefuseWrite.Contains(key))
         {
@@ -261,6 +291,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void DeleteRegistry(string hive, string path, string name)
     {
+        Tick();
         Writes.Add("delete " + Key(hive, path, name));
         Registry.Remove(Key(hive, path, name));
         ExpandKeys.Remove(Key(hive, path, name));
@@ -268,12 +299,14 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetServiceStart(string name, int start)
     {
+        Tick();
         Writes.Add("service " + name);
         Services[name] = start;
     }
 
     public bool SetFeature(string name, bool enabled)
     {
+        Tick();
         Writes.Add("feature " + name);
         Features[name] = enabled ? FeatureState.Enabled : FeatureState.Disabled;
         return true;
@@ -281,18 +314,21 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void CreatePowerScheme(string schemeGuid)
     {
+        Tick();
         Writes.Add("create " + schemeGuid);
         Schemes.Add(schemeGuid);
     }
 
     public void ActivatePowerScheme(string schemeGuid)
     {
+        Tick();
         Writes.Add("activate " + schemeGuid);
         Active = schemeGuid;
     }
 
     public void DeletePowerScheme(string schemeGuid)
     {
+        Tick();
         Writes.Add("delete scheme " + schemeGuid);
         Schemes.Remove(schemeGuid);
     }
@@ -314,6 +350,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void SetSystemSetting(string kind, string name, string value)
     {
+        Tick();
         if (!SystemSetting.IsAllowed(kind, name, value))
         {
             throw new ArgumentException($"not allowed: {kind}:{name}={value}");
@@ -333,6 +370,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void RemoveAppx(string packageFullName)
     {
+        Tick();
         Writes.Add("remove " + packageFullName);
         Apps.Remove(packageFullName);
         StagedFamilies.Add(AppxSetting.FamilyOf(packageFullName)!);
@@ -340,6 +378,7 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public void RestoreAppx(string packageFamilyName)
     {
+        Tick();
         Writes.Add("restore " + packageFamilyName);
         if (!StagedFamilies.Contains(packageFamilyName))
         {

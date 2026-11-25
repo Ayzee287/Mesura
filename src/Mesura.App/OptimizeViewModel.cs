@@ -8,6 +8,7 @@ using Mesura.Core.Hardware;
 using Mesura.Core.Nvidia;
 using Mesura.Core.Profiles;
 using Mesura.Core.Setup;
+using Mesura.Core.Support;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows.Windows;
 using Mesura.Setup.Windows.Apps;
@@ -803,9 +804,23 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     private async Task LoadAsync()
     {
+        // Neither reading may keep the page "checking" for ever (0.8): after the time limit the page goes on without it, and takes it when it comes.
+        var summary = _services.Summary();
         try
         {
-            _summary = await _services.Summary();
+            var (done, value) = await Deadline.Within(summary, Deadline.Reading);
+            _summary = done ? value : null;
+            if (!done)
+            {
+                _services.Log($"The system summary took longer than {Deadline.Reading.TotalSeconds:0} s; the page goes on without it.");
+                _ = summary.ContinueWith(t => Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    _summary = t.Result;
+                    BuildComponents();
+                    Raise(nameof(Facts));
+                    Rebuild();
+                }), CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+            }
         }
         catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
@@ -817,7 +832,21 @@ public sealed class OptimizeViewModel : Observable, IPageState
         Raise(nameof(Facts));
             Raise(nameof(ShowRuntimes));
         Rebuild();
-        _hardware = await _services.Hardware();
+        var hardware = _services.Hardware();
+        var (read, profile) = await Deadline.Within(hardware, Deadline.Reading);
+        _hardware = profile;
+        if (!read)
+        {
+            // Entries that depend on hardware stay "can't tell" meanwhile, which applies nothing on a guess.
+            _services.Log($"The hardware profile took longer than {Deadline.Reading.TotalSeconds:0} s; entries that depend on hardware wait for it.");
+            _ = hardware.ContinueWith(t => Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                _hardware = t.Result;
+                Raise(nameof(Facts));
+                Rebuild();
+            }), CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+        }
+
         Raise(nameof(Facts));
         Rebuild();
         await Task.WhenAll(ReadRuntimesAsync(), ReadNvidiaToolsAsync(), LookUpDriverAsync());

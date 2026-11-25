@@ -206,7 +206,7 @@ public static class ProfileRunner
             : ConfigService.Import(plan.Bundle, plan.Ports, store, id, locate, isRunning);
         var windowsSteps = windows is null || plan.Windows.Count == 0 || cancellationToken.IsCancellationRequested
             ? []
-            : windows.Apply(plan.Windows, cancellationToken);
+            : windows.Apply(plan.Windows, cancellationToken, new RunJournalFile(store, id, "profile", started));
 
         var run = SetupRun.Create(id, "profile", plan.Profile.Name, SetupRun.Stamp(started), SetupRun.Stamp(clock()), installs, config, windowsSteps);
         if (record && !run.ChangedNothing)
