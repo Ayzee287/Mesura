@@ -323,26 +323,6 @@
       "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power", "name": "HiberbootEnabled", "type": "dword", "value": "0" } ]
     },
     {
-      "id": "power.high-performance", "name": "High performance power plan", "category": "Power",
-      "impact": "power", "summary": "High performance plan: full processor speed, more power and heat.",
-      "description": "Makes the built-in High performance plan active. On current Windows its defaults keep the processor at 100% minimum state with a maximum-performance energy preference and turn PCI Express link power saving off. No reputable measurement shows a frame-rate gain on current processors.",
-      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
-      "requires": [ "noBattery", "noModernStandby" ],
-      "limitations": "Desktops only: a plan also sets battery behaviour, so Mesura doesn't offer it on PCs with a battery, nor on Modern Standby PCs, where Windows offers only Balanced (use Settings > Power mode there). Higher idle power and heat. The Power mode slider disappears while it is active. Game Mode and vendor power profiles can still override parts of the processor policy.",
-      "source": "powercfg built-in scheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c; scheme defaults read from DefaultPowerSchemeValues on PC-000; Microsoft Learn 'Customize the Windows performance power slider'.",
-      "powerPlan": { "scheme": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", "name": "High performance", "createIfMissing": false }
-    },
-    {
-      "id": "power.ultimate-performance", "name": "Ultimate Performance power plan", "category": "Power",
-      "impact": "power", "summary": "Ultimate Performance plan, meant for workstations.",
-      "description": "Makes the Ultimate Performance plan active, installing it from Windows' template first if Windows doesn't list it. Meant for workstations; no measured gaming gain.",
-      "risk": "systemConfiguration", "activation": "immediate",
-      "requires": [ "noBattery", "noModernStandby" ],
-      "limitations": "Desktops only, as High performance, and with drives that never power down. The install keeps the template's GUID, which hasn't been tried on a stock desktop. Reverting reactivates the previous plan and removes the Ultimate Performance plan if this operation installed it.",
-      "source": "powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 (Windows' template; Microsoft Learn powercfg command-line options). No Microsoft Learn page describes the plan itself.",
-      "powerPlan": { "scheme": "e9a42b02-d5df-448d-aa00-03f14749eb61", "name": "Ultimate Performance", "createIfMissing": true }
-    },
-    {
       "id": "power.balanced", "name": "Balanced power plan", "category": "Power",
       "impact": "power", "summary": "Balanced plan, Windows' default.",
       "description": "Makes Windows' default Balanced plan active again, with its Power mode slider (the supported way to favour performance on AC).",
@@ -706,7 +686,7 @@
       "id": "features.legacy-media-off", "name": "Remove legacy Windows Media Player", "category": "Optional features",
       "impact": "components", "summary": "Removes the legacy Windows Media Player.",
       "description": "Turns off the legacy Windows Media Player optional feature (the modern Media Player app is separate). Cleanup; no performance effect.",
-      "risk": "systemConfiguration", "activation": "reboot",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
       "limitations": "Apps that embed the legacy player control lose it. Mesura keeps the feature's files, so turning it back on works unless the image already removed them.",
       "source": "Windows Features (optionalfeatures.exe); DISM feature WindowsMediaPlayer",
       "features": [ { "name": "WindowsMediaPlayer", "enabled": false } ]
@@ -715,7 +695,7 @@
       "id": "features.xps-off", "name": "Remove XPS printing services", "category": "Optional features",
       "impact": "components", "summary": "Removes XPS printing services.",
       "description": "Turns off the XPS document printing feature.",
-      "risk": "systemConfiguration", "activation": "reboot",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
       "limitations": "No XPS printing (the Microsoft XPS Document Writer). Turning it back on needs the feature payload.",
       "source": "Windows Features; DISM feature Printing-XPSServices-Features",
       "features": [ { "name": "Printing-XPSServices-Features", "enabled": false } ]
@@ -724,7 +704,7 @@
       "id": "features.recall-off", "name": "Remove Recall", "category": "AI features",
       "impact": "components", "summary": "Removes Recall, which saves snapshots of your screen.",
       "description": "Turns off the Recall optional feature on Copilot+ PCs.",
-      "risk": "systemConfiguration", "activation": "reboot", "minBuild": 26100,
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot", "minBuild": 26100,
       "limitations": "Only Copilot+ PCs carry it; elsewhere this reports not applicable.",
       "source": "Windows Features; DISM feature Recall",
       "features": [ { "name": "Recall", "enabled": false } ]
@@ -733,7 +713,7 @@
       "id": "features.powershell-v2-off", "name": "Remove the Windows PowerShell 2.0 engine", "category": "Optional features",
       "impact": "components", "summary": "Removes the old PowerShell 2.0 engine.",
       "description": "Removes the legacy PowerShell 2.0 engine. PowerShell 5.1 and 7 are unaffected; the old engine is a known downgrade target and almost nothing needs it.",
-      "risk": "systemConfiguration", "activation": "reboot",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "reboot",
       "limitations": "A rare old script that explicitly requests -Version 2 would stop working. Windows 11 24H2 and later no longer include the engine (Microsoft removed it in 2025), so it doesn't apply there.",
       "source": "Windows Features; DISM features MicrosoftWindowsPowerShellV2 (the engine) and MicrosoftWindowsPowerShellV2Root, the engine first so a revert turns both back on; KB5065506 (removal from Windows 11 24H2).",
       "features": [
@@ -997,6 +977,7 @@
       "description": "Removes the MSN news feed app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "The News app and its Start/taskbar links go; the news widget is separate. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1019,6 +1000,7 @@
       "description": "Removes the Weather app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "The Weather app goes; the taskbar weather comes from the Widgets and is separate. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1041,6 +1023,7 @@
       "description": "Removes the Bing search app used by Windows 11 search for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Nothing you rely on; Windows search keeps working. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1063,9 +1046,10 @@
       "description": "Removes the Get Help support app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
-      "limitations": "Windows' built-in troubleshooters stay; only the support app goes. Windows can bring some in-box apps back for new user accounts or after a feature update.",
+      "limitations": "Microsoft is moving Windows 11's built-in troubleshooters (Settings > System > Troubleshoot) to the Get Help app and retiring the old ones, so troubleshooters that run through it stop working until the app is back; contacting Microsoft support from it goes too. Windows can bring some in-box apps back for new user accounts or after a feature update.",
       "source": "Get-AppxPackage / Remove-AppxPackage (Microsoft Learn); the package names are listed by Get-AppxPackage on a stock Windows 11 image.",
       "sources": [
         "https://learn.microsoft.com/powershell/module/appx/remove-appxpackage"
@@ -1085,6 +1069,7 @@
       "description": "Removes the Tips app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Only the Tips app goes. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1107,6 +1092,7 @@
       "description": "Removes the Microsoft 365 / Office promotion hub for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Installed Office apps are not touched; only the hub that advertises Microsoft 365 goes. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1129,6 +1115,7 @@
       "description": "Removes the Solitaire card games with ads for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "The games and their saved progress go. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1173,6 +1160,7 @@
       "description": "Removes the People contacts app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "The People app goes; contacts in your account stay. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1195,6 +1183,7 @@
       "description": "Removes the Power Automate desktop automation app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Flows you created in it are removed with the app. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1239,6 +1228,7 @@
       "description": "Removes the Feedback Hub for sending feedback to Microsoft for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "You can no longer send feedback or join Insider surveys from this app. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1261,6 +1251,7 @@
       "description": "Removes the Windows Maps app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Offline maps you downloaded are removed with it. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1283,6 +1274,7 @@
       "description": "Removes Phone Link, which connects an Android phone or iPhone to the PC for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "moderate",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Messages, calls and notifications from your phone on the PC stop until you reinstall it. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1346,9 +1338,10 @@
       "category": "Bundled apps",
       "impact": "components",
       "summary": "Removes Microsoft Teams (chat) for your account.",
-      "description": "Removes the Microsoft Teams chat app that Windows installs for your account for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
+      "description": "Removes the Microsoft Teams chat app that Windows installs for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Teams for work or school, installed separately, is not touched; the chat app and its taskbar button go. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1374,6 +1367,7 @@
       "description": "Removes the Clipchamp video editor for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Your projects stored in Clipchamp's cloud stay there; local drafts go with the app. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1396,6 +1390,7 @@
       "description": "Removes the Cortana app (discontinued on Windows) for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Nothing you rely on: Microsoft ended Cortana on Windows. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1418,6 +1413,7 @@
       "description": "Removes the Skype app that ships with Windows for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Skype installed from skype.com is not touched. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1440,6 +1436,7 @@
       "description": "Removes the Windows Mixed Reality headset app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Needed only with a Windows Mixed Reality headset. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1462,6 +1459,7 @@
       "description": "Removes the 3D model viewer and the 3D print app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "You can't open 3D models in them any more. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1487,6 +1485,7 @@
       "description": "Removes the Mobile Plans app for cellular data plans for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Only matters on a PC with a cellular modem. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1553,6 +1552,7 @@
       "description": "Removes the Copilot app for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Only the app goes; the policies that turn Copilot off are separate settings. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1575,6 +1575,7 @@
       "description": "Removes the Dev Home developer dashboard for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Only matters if you develop on this PC. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1619,6 +1620,7 @@
       "description": "Removes the Xbox app (Game Pass, the Microsoft Store game launcher) for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "moderate",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Game Pass PC games are installed and launched from this app; remove it only if you don't use Game Pass. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1641,6 +1643,7 @@
       "description": "Removes the Game Bar overlay (Win+G) and its helpers for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "moderate",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Win+G, screen capture through Game Bar and the performance overlay stop working. Games don't need it. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1713,6 +1716,7 @@
       "description": "Removes the in-game browser overlay Edge installs for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
       "limitations": "Only the in-game browser overlay goes; Edge itself stays. Windows can bring some in-box apps back for new user accounts or after a feature update.",
@@ -1735,9 +1739,10 @@
       "description": "Removes the games Windows installs as promotion for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
-      "limitations": "Progress in these games, if you played them, is lost unless you signed in to King. Windows can bring some in-box apps back for new user accounts or after a feature update.",
+      "limitations": "Progress in these games, if you played them, is lost unless you signed in to King. Windows can bring some in-box apps back for new user accounts or after a feature update. Mesura can't tell a copy Windows installed from one you installed from the Store and use: yours is removed too, and Undo brings it back only through the Store.",
       "source": "Get-AppxPackage / Remove-AppxPackage (Microsoft Learn); the package names are listed by Get-AppxPackage on a stock Windows 11 image.",
       "sources": [
         "https://learn.microsoft.com/powershell/module/appx/remove-appxpackage"
@@ -1766,9 +1771,10 @@
       "description": "Removes streaming apps some PCs ship with or Windows promotes for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
-      "limitations": "Your accounts are unaffected; downloads for offline viewing go with the apps. Windows can bring some in-box apps back for new user accounts or after a feature update.",
+      "limitations": "Your accounts are unaffected; downloads for offline viewing go with the apps. Windows can bring some in-box apps back for new user accounts or after a feature update. Mesura can't tell a copy Windows installed from one you installed from the Store and use: yours is removed too, and Undo brings it back only through the Store.",
       "source": "Get-AppxPackage / Remove-AppxPackage (Microsoft Learn); the package names are listed by Get-AppxPackage on a stock Windows 11 image.",
       "sources": [
         "https://learn.microsoft.com/powershell/module/appx/remove-appxpackage"
@@ -1797,9 +1803,10 @@
       "description": "Removes social apps some PCs ship with or Windows promotes for your account. Windows keeps its own copy of in-box apps, so Mesura can register the app again when you undo the change; apps from the Microsoft Store can be installed again from there.",
       "risk": "userPreference",
       "level": "safe",
+      "valueBasis": "documented",
       "benefit": "preference",
       "activation": "immediate",
-      "limitations": "Your accounts are unaffected; the websites keep working in a browser. Windows can bring some in-box apps back for new user accounts or after a feature update.",
+      "limitations": "Your accounts are unaffected; the websites keep working in a browser. Windows can bring some in-box apps back for new user accounts or after a feature update. Mesura can't tell a copy Windows installed from one you installed from the Store and use: yours is removed too, and Undo brings it back only through the Store.",
       "source": "Get-AppxPackage / Remove-AppxPackage (Microsoft Learn); the package names are listed by Get-AppxPackage on a stock Windows 11 image.",
       "sources": [
         "https://learn.microsoft.com/powershell/module/appx/remove-appxpackage"
@@ -3830,31 +3837,6 @@
       ]
     },
     {
-      "id": "network.adapter-ipv6-binding-off",
-      "name": "Unbind Internet Protocol Version 6 (TCP/IPv6) on the adapter",
-      "category": "Network",
-      "impact": "experimental",
-      "summary": "The component is unbound from every physical adapter that has it.",
-      "description": "Unbinds IPv6 from the adapter. Microsoft recommends leaving IPv6 on; some games, Xbox features and providers use it, and a provider that is IPv6-only stops working. Turn it off only if you know your connection is IPv4. Applied to every physical Ethernet and Wi-Fi adapter that has the component; virtual and VPN adapters are never touched. Undo binds it again.",
-      "risk": "systemConfiguration",
-      "activation": "immediate",
-      "level": "moderate",
-      "benefit": "unverified",
-      "valueBasis": "documented",
-      "limitations": "Per adapter, never blind: only on a physical adapter whose driver declares the keyword and lists the value as valid, so a card without it is left alone and shown as not available. Effect not measured; the cost is stated in the description.",
-      "source": "Microsoft Learn Disable-NetAdapterBinding / Get-NetAdapterBinding (component ids ms_lldp, ms_lltdio, ms_rspndr, ms_implat, ms_tcpip6, ms_server, ms_msclient)",
-      "adapter": [
-        {
-          "binding": "ms_tcpip6",
-          "enabled": false,
-          "kinds": [
-            "ethernet",
-            "wifi"
-          ]
-        }
-      ]
-    },
-    {
       "id": "network.tcp-heuristics-off",
       "name": "Turn off TCP window scaling heuristics",
       "category": "Network",
@@ -4021,7 +4003,7 @@
       "impact": "privacy", "summary": "Stops the service that collects and uploads Windows diagnostic data.",
       "description": "Sets the Connected User Experiences and Telemetry service (DiagTrack) to disabled. It is the service that gathers and uploads Windows diagnostic data. Mesura's policies already limit what it sends; this stops the service itself.",
       "risk": "systemConfiguration", "level": "moderate", "benefit": "preference", "valueBasis": "documented", "activation": "reboot",
-      "limitations": "Windows' own diagnostics and the Feedback Hub stop reporting; some Windows troubleshooting and Insider features depend on the service. A feature update can set it back to automatic. Takes effect at the next start of Windows.",
+      "limitations": "Windows' own diagnostics and the Feedback Hub stop reporting; some Windows troubleshooting and Insider features depend on the service. It is one service, not all of Windows' telemetry: Windows Error Reporting, the telemetry tasks and policies (separate entries), and programs that report on their own, such as Microsoft Edge and Office, are separate and keep doing what they are set to do. A feature update can set it back to automatic. Takes effect at the next start of Windows; Undo puts back the start type it had.",
       "source": "services.msc (DiagTrack: Automatic by default); Microsoft Learn 'Configure Windows diagnostic data in your organization' lists the service as the diagnostic data client.",
       "services": [ { "name": "DiagTrack", "start": "disabled" } ]
     },
@@ -4033,36 +4015,97 @@
       "limitations": "No printing, including 'Print to PDF' from apps that go through the spooler, until it is turned on again. Can't run together with 'Turn printing back on'. Takes effect at the next start of Windows.",
       "source": "services.msc (Spooler and PrintNotify: Automatic and Manual by default).",
       "services": [ { "name": "Spooler", "start": "disabled" }, { "name": "PrintNotify", "start": "disabled" } ]
+    },
+    // 0.9 Phase 3 (vault D057): background work and network preference, each reviewed on its own (docs/catalog-0.9.md). In no profile.
+    {
+      "id": "tasks.ceip-off", "name": "Turn off the Customer Experience Improvement Program tasks", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows' two CEIP scheduled tasks no longer run.",
+      "description": "Disables Windows' own scheduled tasks Consolidator and UsbCeip (Customer Experience Improvement Program). Microsoft describes Consolidator as collecting and sending usage data to Microsoft if the user consented to the program; UsbCeip collects USB statistics for Microsoft and, by its own description, does nothing without that consent. Less background work; a privacy choice, not a speed-up.",
+      "risk": "systemConfiguration", "level": "safe", "benefit": "unverified", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "On a PC that never joined the program both tasks already do nothing, so nothing visible changes. Mesura's CEIP policy entry is the documented opt-out; this stops the tasks themselves. A task that is already running finishes its current run. A task this Windows doesn't have is left alone, and if it has neither the entry doesn't apply. A feature update can turn the tasks back on (the entry then shows as not applied).",
+      "source": "Microsoft Learn 'Optimizing Windows configuration for VDI desktops' (scheduled tasks: Consolidator, 'If the user consents to participate in the Windows Customer Experience Improvement Program, this job collects and sends usage data to Microsoft'); task descriptions read with Get-ScheduledTask on Windows 11 build 26200 (UsbCeip: 'If the user has not consented to participate in Windows CEIP, this task does not do anything'); enabled state changed with schtasks /Change, read back through the Task Scheduler.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remote-desktop-services-vdi-optimize-configuration" ],
+      "tasks": [
+        { "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip", "enabled": false }
+      ]
+    },
+    {
+      "id": "tasks.feedback-off", "name": "Turn off the feedback question update tasks", "category": "Privacy",
+      "impact": "privacy", "summary": "Windows stops updating the texts of the feedback questions it asks.",
+      "description": "Disables Windows' own scheduled tasks DmClient and DmClientOnScenarioDownload under Feedback\\Siuf. Their only description, Windows' own, is 'Update SIUF strings': the texts of the feedback questions Windows shows (System Initiated User Feedback). Less background work; a privacy choice, not a speed-up.",
+      "risk": "systemConfiguration", "level": "safe", "benefit": "unverified", "valueBasis": "documented", "activation": "immediate",
+      "limitations": "Microsoft documents nothing more about these tasks, so nothing beyond their description is claimed. Mesura's 'No Windows feedback prompts' entry is the documented way to stop the questions themselves. A task that is already running finishes its current run. A task this Windows doesn't have is left alone. A feature update can turn the tasks back on (the entry then shows as not applied).",
+      "source": "Task descriptions read with Get-ScheduledTask on Windows 11 build 26200 (DmClient and DmClientOnScenarioDownload: 'Update SIUF strings'); enabled state changed with schtasks /Change, read back through the Task Scheduler. Not on Microsoft's VDI task list.",
+      "tasks": [
+        { "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClient", "enabled": false },
+        { "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload", "enabled": false }
+      ]
+    },
+    {
+      "id": "services.windows-search-off", "name": "Turn off the Windows Search indexer", "category": "Services",
+      "impact": "maintenance", "summary": "No background indexing of files and e-mail; searches get slower.",
+      "description": "Sets the Windows Search service (WSearch) to disabled. Microsoft describes it as providing content indexing, property caching and search results for files, e-mail and other content; without it Windows no longer reads new and changed files in the background to keep the index current. Less background disk and processor work after files change; nothing faster is claimed for games.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Microsoft: 'Disabling this service prevents indexing of e-mail and other things.' Searches in Start, File Explorer and in programs that use the Windows index (such as classic Outlook) become slow or return fewer results. The service is not stopped now: it takes effect at the next start of Windows. Undo sets back the start type it had, delayed start included. A PC whose image removed the service reports not applicable. A feature update can set it back to automatic.",
+      "source": "Microsoft Learn 'Optimizing Windows configuration for VDI desktops' (services: Windows Search, WSearch, 'Provides content indexing, property caching, and search results for files, e-mail, and other content'; 'Disabling this service prevents indexing of e-mail and other things. Test before disabling this service.'); services.msc (Automatic (Delayed Start) by default). Retired in 0.4 as services.search-indexing-off; reintroduced under a new id (the old record still undoes).",
+      "sources": [ "https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remote-desktop-services-vdi-optimize-configuration" ],
+      "services": [ { "name": "WSearch", "start": "disabled" } ]
+    },
+    {
+      "id": "features.virtual-machine-platform-off", "name": "Turn off Virtual Machine Platform", "category": "Optional features",
+      "impact": "components", "summary": "Turns off the Windows feature that WSL 2 runs on.",
+      "description": "Turns off the Virtual Machine Platform optional feature. Microsoft documents it as the feature WSL 2 needs ('Before installing WSL 2, you must enable the Virtual Machine Platform optional feature'). Off, Windows no longer starts it; other features that use Windows' hypervisor, such as memory integrity, Hyper-V or Windows Sandbox, are separate and keep using it, so Mesura doesn't claim the hypervisor stops. No gain is claimed.",
+      "risk": "systemConfiguration", "level": "moderate", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "WSL 2 Linux distributions stop starting until the feature is on again, and other programs that run virtual machines through it may stop too; Mesura doesn't check whether any are installed, so check first. Microsoft's requirements for Windows Sandbox don't list this feature (Sandbox is its own feature) and Mesura hasn't checked Sandbox without it. Needs a restart. Mesura keeps the feature's files, so Undo turns it on again (with another restart). A Windows that doesn't carry the feature reports not applicable.",
+      "source": "Microsoft Learn 'Manual installation steps for older versions of WSL' (Virtual Machine Platform required for WSL 2; dism.exe /online /enable-feature /featurename:VirtualMachinePlatform); Microsoft Learn 'Install Windows Sandbox' (prerequisites list no Virtual Machine Platform; Sandbox is Containers-DisposableClientVM). DISM feature VirtualMachinePlatform.",
+      "sources": [ "https://learn.microsoft.com/en-us/windows/wsl/install-manual", "https://learn.microsoft.com/en-us/windows/security/application-security/application-isolation/windows-sandbox/windows-sandbox-install" ],
+      "features": [ { "name": "VirtualMachinePlatform", "enabled": false } ]
+    },
+    {
+      "id": "network.prefer-ipv4", "name": "Prefer IPv4 over IPv6", "category": "Network",
+      "impact": "experimental", "summary": "Windows tries IPv4 before IPv6 when both work; IPv6 stays on.",
+      "description": "Sets the 'Prefer IPv4 over IPv6' bit (0x20) of Windows' DisabledComponents value, the setting Microsoft recommends instead of disabling or unbinding IPv6. IPv6 stays on and keeps working; only the order Windows tries addresses in changes, so a connection that has both uses IPv4 first. Every other bit of the value is kept as it is. No gain is claimed.",
+      "risk": "systemConfiguration", "level": "safe", "benefit": "unverified", "valueBasis": "documented", "activation": "reboot",
+      "limitations": "Needs a restart. A service that answers better over IPv6 is then reached over IPv4 first. If a tweak tool already set other bits of the value, Mesura keeps them; Microsoft says values other than 0 or 32 make the Routing and Remote Access service fail ('Turn IPv6 back on' clears those bits and keeps this one). Undo puts the value back exactly as it was, or removes it if it wasn't there.",
+      "source": "Microsoft Learn 'Configure IPv6 in Windows for advanced users' (KB 929852): HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\DisabledComponents, REG_DWORD; 'Prefer IPv4 over IPv6': decimal 32, 0x20, 'Recommended instead of disabling IPv6'; 'You must restart your computer for these changes to take effect.'",
+      "sources": [ "https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/configure-ipv6-in-windows" ],
+      "registry": [ { "hive": "HKLM", "path": "SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters", "name": "DisabledComponents", "type": "dword", "value": "32", "setBits": 32 } ]
     }
   ],
   "presets": [
     {
       "id": "recommended-gaming", "name": "Mesura Reference", "tier": "primary",
       "summary": "Telemetry off, fewer promotions, Game Mode and the Balanced Mesura power plan.",
-      "description": "Mesura's everyday baseline, in groups you can switch off one by one. Telemetry (in every profile): Windows sends the required diagnostic data only and the Customer Experience Improvement, application-telemetry and inventory programs are off. Privacy and promotions: no advertising ID, tailored experiences or language list for websites, and no tips, suggestions, setup prompts or lock-screen and Start ads. Windows: the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them. Gaming: Game Mode on and the accessibility shortcuts that interrupt a game off. Power: the Balanced Mesura plan (Balanced without its brakes on mains power; battery behaviour is Windows' own). Network: for each network adapter found, the per-maker adapter preset that matches its maker and kind (Realtek, Intel or Killer Ethernet; Intel, Killer or Realtek Wi-Fi), which turns off interrupt moderation, Energy-Efficient Ethernet and the maker's own power saving only where that adapter's driver lists each setting; an adapter no preset is for is left alone and the app says why, and the adapter restarts for a few seconds when a value is written. Nothing here touches services or security or installs a driver, and none of it claims a frame-rate or latency gain. Machine policies need Windows Pro; on Home they are skipped and the app says so.",
-      "optional": [ "telemetry.onesettings-downloads-off" ],
-      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
-                        "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts",
-                        "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications",
-                        "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "power.mesura-balanced-plan",
-                        "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
+      "description": "Mesura's everyday baseline, in groups you can switch off one by one. Telemetry (in every profile): Windows sends the required diagnostic data only and the Customer Experience Improvement, application-telemetry and inventory programs are off. Privacy and promotions: no advertising ID, tailored experiences or language list for websites, and no tips, suggestions, setup prompts or lock-screen and Start ads. Windows: the connectivity check and threaded DPCs put back to Windows' defaults if a tweak tool changed them. Gaming: Game Mode on and the accessibility shortcuts that interrupt a game off. Power: the Balanced Mesura plan (Balanced without its brakes on mains power; battery behaviour is Windows' own). Network: for each network adapter found, the per-maker adapter preset that matches its maker and kind (Realtek, Intel or Killer Ethernet; Intel, Killer or Realtek Wi-Fi), which turns off interrupt moderation, Energy-Efficient Ethernet and the maker's own power saving only where that adapter's driver lists each setting; an adapter no preset is for is left alone and the app says why, and the adapter restarts for a few seconds when a value is written. Bundled apps, offered unticked: removing the promotional games, streaming and social apps Windows installs, for your account, because Mesura can't tell them from a copy you installed from the Store and use (Undo registers an in-box copy again; a copy from the Store comes back only from the Store). Windows' Customer Experience Improvement and feedback-question tasks stop running. Nothing here touches services or security or installs a driver, and none of it claims a frame-rate or latency gain. Machine policies need Windows Pro; on Home they are skipped and the app says so.",
+      "optional": [ "telemetry.onesettings-downloads-off", "apps.remove-promoted-games", "apps.remove-promoted-streaming", "apps.remove-promoted-social" ],
+      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection",
+                        "tasks.ceip-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions",
+                        "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
+                        "tasks.feedback-off", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                        "power.mesura-balanced-plan", "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
                         "gaming.game-mode-on", "input.accessibility-shortcuts-off" ]
     },
     {
       "id": "maximum-performance", "name": "Maximum performance", "tier": "primary",
       "summary": "Everything that applies to this PC and is meant to make it faster, with heat, noise and idle power accepted; the costs are named.",
-      "description": "Everything in Mesura Reference, plus every performance setting that applies to this PC, chosen by its hardware, with more heat, fan noise and idle power accepted as the price. The Maximum Performance Mesura plan keeps the processor asking for full speed on mains power with every power-saving state off (battery values stay Balanced's). Processor: cores kept unparked, the energy hint set to speed, the fastest ramp-up, performance cores preferred on a hybrid processor, power throttling off. Memory: compression off and the kernel kept in RAM (16 GB or more). Graphics: the original Radeon Anti-Lag (level 0) on a Radeon that offers it, the driver turning Radeon Chill off while it is on; hardware-accelerated GPU scheduling is offered unticked because independent tests show no gain on average. Storage: NTFS last-access and 8.3 names off, NVMe and SATA drives kept out of low-power idle where they exist. Power: USB, drives and PCI Express links kept awake on mains power. Windows and gaming: Widgets, Edge's startup boost and background mode, update sharing, window animations, Game Bar recording and mouse acceleration off. A setting that cannot apply here is skipped and says why; one with a cost shows it beside the entry. Offered unticked: transparency off, hardware-accelerated GPU scheduling, background recording off and the controller's Game Bar button, whose stored values are known from community sources only, and the OneSettings download policy. No reliable measurement of a frame-rate gain from these settings on current hardware exists, and none is claimed. Each value is documented by Microsoft, checked on a real Windows build, or confirmed in effect by Windows itself after it is written; Undo in Activity puts every one back.",
-      "optional": [ "telemetry.onesettings-downloads-off", "visual.transparency-off", "gpu.hardware-scheduling-on", "gaming.background-recording-off", "gaming.controller-game-bar-off" ],
-      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
-                        "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts",
-                        "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications",
-                        "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc", "taskbar.widgets-policy-off",
-                        "edge.no-startup-boost", "edge.no-background-mode", "dwm.window-animations-off", "power.mesura-maximum-plan", "power.usb-keep-awake", "power.disk-never-off",
-                        "power.pcie-aspm-off", "cpu.core-parking-off", "power.cpu-epp-performance-ac", "power.cpu-ramp-up-fast-ac", "cpu.hybrid-prefer-performance-cores", "power.power-throttling-off",
-                        "memory.compression-off", "memory.keep-kernel-in-ram", "gpu.amd-anti-lag-on", "system.ntfs-last-access-off", "system.ntfs-8dot3-off", "power.nvme-stay-active-ac",
-                        "power.sata-link-power-off-ac", "updates.no-p2p-delivery", "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
-                        "gaming.game-mode-on", "input.accessibility-shortcuts-off", "gaming.game-recording-policy-off",
-                        "input.pointer-precision-off" ]
+      "description": "Everything in Mesura Reference, plus every performance setting that applies to this PC, chosen by its hardware, with more heat, fan noise and idle power accepted as the price. The Maximum Performance Mesura plan keeps the processor asking for full speed on mains power with every power-saving state off (battery values stay Balanced's). Processor: cores kept unparked, the energy hint set to speed, the fastest ramp-up, performance cores preferred on a hybrid processor, power throttling off. Memory: compression off and the kernel kept in RAM (16 GB or more). Graphics: the original Radeon Anti-Lag (level 0) on a Radeon that offers it, the driver turning Radeon Chill off while it is on; hardware-accelerated GPU scheduling is offered unticked because independent tests show no gain on average. Storage: NTFS last-access and 8.3 names off, NVMe and SATA drives kept out of low-power idle where they exist. Power: USB, drives and PCI Express links kept awake on mains power. Windows and gaming: Widgets, Edge's startup boost and background mode, update sharing, window animations, Game Bar recording and mouse acceleration off. On a Ryzen X3D with two core dies, Balanced Mesura takes the Maximum plan's place and core parking and Game Bar recording are left as Windows has them, because AMD's driver needs them to keep games on the cache die; a processor whose kind can't be read gets neither plan. A setting that cannot apply here is skipped and says why; one with a cost shows it beside the entry. Bundled apps: the single-purpose in-box apps (News, Weather, Bing Search, Tips, the Microsoft 365 hub, Solitaire, People, Power Automate, Feedback Hub, Maps, Clipchamp, Cortana, Skype, Mixed Reality Portal, 3D Viewer, Mobile Plans, Dev Home, the Copilot app) removed for your account, each with what goes named. Windows components: the legacy Media Player, XPS printing and the PowerShell 2.0 engine turned off. Offered unticked: transparency off, hardware-accelerated GPU scheduling, background recording off and the controller's Game Bar button, whose stored values are known from community sources only, and the OneSettings download policy; and, each because it gives up something people use, removing the promotional games, streaming and social apps (Mesura can't tell them from a copy you installed from the Store), Get Help (Windows 11's troubleshooters run through it), the Xbox app (Game Pass), Game Bar (never on a two-die Ryzen X3D), Edge Game Assist, Phone Link and Teams, the Windows Search indexer, the telemetry service DiagTrack (one telemetry path, not all of them), SMB 1.0, Recall, Virtual Machine Platform (WSL 2), Prefer IPv4, and SmartScreen off (a security protection given up). No reliable measurement of a frame-rate gain from these settings on current hardware exists, and none is claimed. Each value is documented by Microsoft, checked on a real Windows build, or confirmed in effect by Windows itself after it is written; Undo in Activity puts every one back.",
+      "optional": [ "telemetry.onesettings-downloads-off", "apps.remove-promoted-games", "apps.remove-promoted-streaming", "apps.remove-promoted-social", "apps.remove-get-help", "apps.remove-xbox-app", "apps.remove-game-bar", "apps.remove-edge-game-assist", "apps.remove-phone-link",
+                    "apps.remove-teams", "visual.transparency-off", "services.windows-search-off", "services.diagnostic-tracking-off", "network.smb1-off", "features.recall-off", "features.virtual-machine-platform-off",
+                    "gpu.hardware-scheduling-on", "network.prefer-ipv4", "gaming.background-recording-off", "gaming.controller-game-bar-off", "security.smartscreen-off" ],
+      "operations": [ "privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection",
+                        "tasks.ceip-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions",
+                        "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
+                        "tasks.feedback-off", "apps.remove-bing-news", "apps.remove-bing-weather",
+                        "apps.remove-bing-search", "apps.remove-tips", "apps.remove-office-hub", "apps.remove-solitaire", "apps.remove-people", "apps.remove-power-automate",
+                        "apps.remove-feedback-hub", "apps.remove-maps", "apps.remove-clipchamp", "apps.remove-cortana", "apps.remove-skype", "apps.remove-mixed-reality",
+                        "apps.remove-3d-viewer", "apps.remove-mobile-plans", "apps.remove-dev-home", "apps.remove-copilot-app", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                        "taskbar.widgets-policy-off", "edge.no-startup-boost", "edge.no-background-mode", "dwm.window-animations-off", "features.legacy-media-off", "features.xps-off",
+                        "features.powershell-v2-off", "power.mesura-maximum-plan", "power.mesura-balanced-plan", "power.usb-keep-awake", "power.disk-never-off", "power.pcie-aspm-off",
+                        "cpu.core-parking-off", "power.cpu-epp-performance-ac", "power.cpu-ramp-up-fast-ac", "cpu.hybrid-prefer-performance-cores", "power.power-throttling-off", "memory.compression-off",
+                        "memory.keep-kernel-in-ram", "gpu.amd-anti-lag-on", "system.ntfs-last-access-off", "system.ntfs-8dot3-off", "power.nvme-stay-active-ac", "power.sata-link-power-off-ac",
+                        "updates.no-p2p-delivery", "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",
+                        "gaming.game-mode-on", "input.accessibility-shortcuts-off", "gaming.game-recording-policy-off", "input.pointer-precision-off" ]
     },
     {
       "id": "gaming", "name": "Gaming preferences", "tier": "collection",
@@ -4104,17 +4147,18 @@
     {
       "id": "reference-privacy", "name": "Privacy basics", "tier": "collection",
       "summary": "No advertising profile, required diagnostic data only.",
-      "description": "The privacy part of Mesura Reference: no advertising ID, tailored experiences or language list sent to websites, required diagnostic data only, and no Customer Experience, application-telemetry or inventory programs, extra diagnostic logs or large error dumps. A privacy choice, not a speed-up. Windows keeps sending the diagnostic data it requires.",
+      "description": "The privacy part of Mesura Reference: no advertising ID, tailored experiences or language list sent to websites, required diagnostic data only, and no Customer Experience, application-telemetry or inventory programs, extra diagnostic logs or large error dumps, and Windows' CEIP and feedback-question tasks stopped. A privacy choice, not a speed-up. Windows keeps sending the diagnostic data it requires.",
       "operations": [ "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.diagnostic-data-required",
                       "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off", "telemetry.limit-diagnostic-logs",
-                      "telemetry.limit-dump-collection" ]
+                      "telemetry.limit-dump-collection", "tasks.ceip-off", "tasks.feedback-off" ]
     },
     {
       "id": "reference-convenience", "name": "Fewer promotions", "tier": "collection",
       "summary": "No tips, suggestions, setup prompts or ads in Windows.",
-      "description": "The convenience part of Mesura Reference: no feedback requests, tips and suggestions, 'finish setting up your device' screens, lock-screen ads, Start recommendations or account prompts, no third-party suggestions and no search highlights. Changes what Windows shows, nothing else.",
+      "description": "The convenience part of Mesura Reference: no feedback requests, tips and suggestions, 'finish setting up your device' screens, lock-screen ads, Start recommendations or account prompts, no third-party suggestions and no search highlights. Picked as this collection, it also removes the promotional games, streaming and social apps Windows installs, for your account; Mesura can't tell them from a copy you installed from the Store, which would then come back only from the Store (Undo registers an in-box copy again). In Mesura Reference and Maximum performance those three are offered unticked.",
       "operations": [ "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads",
-                      "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy" ]
+                      "start.no-recommendations", "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy",
+                      "apps.remove-promoted-games", "apps.remove-promoted-streaming", "apps.remove-promoted-social" ]
     },
     {
       "id": "desktop-performance", "name": "Hardware-dependent tuning (desktop)", "tier": "collection",
@@ -4133,7 +4177,7 @@
     {
       "id": "advanced-background", "name": "Less in the background (advanced)", "tier": "collection",
       "summary": "Store apps in the background, app diagnostics, location, Store and driver updates, OneDrive sync, telemetry and print services.",
-      "description": "Switches off background work and online lookups that most gaming PCs do not need: Store apps running while closed, app diagnostic access, location, automatic Store app updates, driver search on Windows Update, OneDrive file sync, the telemetry service and the print services, plus the menu delay. Each has a cost named in its description (no cloud backup of OneDrive folders, Store apps left on old versions, no printing, no automatic time zone). Nothing here is in a profile.",
+      "description": "Switches off background work and online lookups that most gaming PCs do not need: Store apps running while closed, app diagnostic access, location, automatic Store app updates, driver search on Windows Update, OneDrive file sync, the telemetry service and the print services, plus the menu delay. Each has a cost named in its description (no cloud backup of OneDrive folders, Store apps left on old versions, no printing, no automatic time zone). Only the telemetry service is in a profile, offered unticked in Maximum performance.",
       "operations": [ "privacy.no-background-apps", "privacy.no-app-diagnostics", "privacy.location-policy-off", "updates.store-auto-download-off", "updates.driver-search-off", "system.onedrive-sync-off", "services.diagnostic-tracking-off", "services.print-spooler-off", "appearance.menu-show-delay-off" ]
     },
     {

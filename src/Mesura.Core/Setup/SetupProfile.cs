@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Mesura.Core.Apps;
 using Mesura.Core.Config;
 using Mesura.Core.Nvidia;
+using Mesura.Core.Profiles;
 using Mesura.Core.Support;
 using Mesura.Core.Windows;
 
@@ -38,6 +39,13 @@ public sealed record SetupProfile(
     public const string FileKind = "Mesura.SetupProfile";
     public const int CurrentSchema = 1;
 
+    /// <summary>
+    /// Windows operations the file names that this version retired (0.9): kept out of <see cref="Windows"/>, so they are never applied, and listed so the
+    /// preview can say so. Undo of what an earlier version applied with them still works from History (<see cref="WindowsCatalog.Retired"/>). Not written
+    /// back by <see cref="ToJson"/>.
+    /// </summary>
+    public IReadOnlyList<string> RetiredWindows { get; init; } = [];
+
     /// <summary>Every package the profile installs, bundles first then single apps, each once, in that order.</summary>
     public IReadOnlyList<AppPackage> ResolveApps(AppCatalog catalog)
     {
@@ -53,13 +61,15 @@ public sealed record SetupProfile(
             ? []
             : [.. ConfigCatalog.All.Where(p => ConfigApps.Count == 0 || ConfigApps.Contains(p.Id, StringComparer.OrdinalIgnoreCase))];
 
-    /// <summary>The Windows operations the profile applies: presets first, then single operations, each once.</summary>
-    public IReadOnlyList<WindowsOperation> ResolveWindows(WindowsCatalog catalog)
+    /// <summary>
+    /// What the profile's Windows part applies on this PC (0.9, through <see cref="LevelPlanning.Resolve"/>): a level it names is planned for this PC with the
+    /// level's defaults (Maximum when it names both levels); its single operations follow, each obeying the hardware condition a level puts on it. The
+    /// operations' order is presets first, then single operations, each once. Retired operations are never in it (<see cref="RetiredWindows"/>).
+    /// </summary>
+    public WindowsResolution ResolveWindows(PlanningContext context)
     {
-        ArgumentNullException.ThrowIfNull(catalog);
-        return [.. WindowsPresets.SelectMany(p => catalog.Resolve(catalog.PresetById(p)!))
-            .Concat(Windows.Select(id => catalog.ById(id)!))
-            .DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)];
+        ArgumentNullException.ThrowIfNull(context);
+        return LevelPlanning.Resolve(WindowsPresets, Windows, context, ExplicitOperations.LevelConditions);
     }
 
     /// <summary>
@@ -68,7 +78,8 @@ public sealed record SetupProfile(
     /// </summary>
     /// <param name="configBundle">The bundle's file name next to the profile, or <c>null</c> when no settings were exported.</param>
     /// <param name="presets">
-    /// Presets to record by name (the outcome the user chose); their operations aren't listed again one by one.
+    /// Presets to record by name (the outcome the user chose, when it is in place: <see cref="LevelPlanning.InPlace"/>); their operations aren't listed
+    /// again one by one.
     /// </param>
     public static SetupProfile FromMachine(
         string name, string description, IEnumerable<AppPlanItem> apps, IEnumerable<OperationEvaluation> windows, string? configBundle,
@@ -108,22 +119,6 @@ public sealed record SetupProfile(
         return op.Registry.Count > 0 && op.Services.Count == 0 && op.Features.Count == 0 && op.Tasks.Count == 0
             && op.PowerPlan is null && op.PowerSettings.Count == 0
             && op.Registry.All(r => r.AbsentMatches && evaluation.Items.Any(i => i.Target == r.Target && i.Current == WindowsEvaluator.NotSet));
-    }
-
-    /// <summary>
-    /// Whether a preset is in place on this PC: each of its operations is applied or doesn't apply here (a desktop power
-    /// setting on a laptop), and at least one is applied.
-    /// </summary>
-    public static bool PresetSatisfied(WindowsPreset preset, IEnumerable<OperationEvaluation> windows)
-    {
-        ArgumentNullException.ThrowIfNull(preset);
-        ArgumentNullException.ThrowIfNull(windows);
-        var states = windows.GroupBy(w => w.Operation.Id, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().State, StringComparer.OrdinalIgnoreCase);
-        OperationState? State(string id) => states.TryGetValue(id, out var s) ? s : null;
-        return preset.OperationIds.Count > 0
-            && preset.OperationIds.All(id => State(id) is OperationState.Applied or OperationState.Inapplicable)
-            && preset.OperationIds.Any(id => State(id) is OperationState.Applied);
     }
 
     /// <summary>The profile as a hand-editable file, which <see cref="Parse"/> reads back.</summary>
@@ -178,8 +173,13 @@ public sealed record SetupProfile(
         var apps = file.Apps ?? [];
         var bundles = file.Bundles ?? [];
         var configApps = file.ConfigApps ?? [];
-        var windows = file.Windows ?? [];
+        var named = file.Windows ?? [];
         var windowsPresets = file.WindowsPresets ?? [];
+        // An operation this version retired (0.9) doesn't stop an older file from opening: it is set aside, never applied, and named in the preview. An id
+        // that is neither in the catalog nor retired is still an error (a typo, or a file from a newer or edited version).
+        var retired = named.Where(w => windowsCatalog.ById(w) is null && WindowsCatalog.Retired.ById(w) is not null)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var windows = named.Where(w => !retired.Contains(w, StringComparer.OrdinalIgnoreCase)).ToList();
         if (windows.FirstOrDefault(w => windowsCatalog.ById(w) is null) is { } badOp)
         {
             throw new FormatException($"The profile names Windows operation '{badOp}', which is not in the Windows catalog.");
@@ -213,12 +213,13 @@ public sealed record SetupProfile(
         }
 
         var nvidia = ReadNvidia(file.Nvidia);
-        if (apps.Count == 0 && bundles.Count == 0 && bundlePath is null && windows.Count == 0 && windowsPresets.Count == 0 && nvidia is null)
+        // A file whose only Windows operations are retired still opens, so the preview can say what became of them.
+        if (apps.Count == 0 && bundles.Count == 0 && bundlePath is null && named.Count == 0 && windowsPresets.Count == 0 && nvidia is null)
         {
             throw new FormatException("The profile selects nothing: give it 'apps', 'bundles', a 'configBundle', 'windows', 'windowsPresets' or 'nvidia'.");
         }
 
-        return new SetupProfile(file.Name, file.Description ?? "", apps, bundles, bundlePath, configApps, windows, windowsPresets, nvidia);
+        return new SetupProfile(file.Name, file.Description ?? "", apps, bundles, bundlePath, configApps, windows, windowsPresets, nvidia) { RetiredWindows = retired };
     }
 
     /// <summary>

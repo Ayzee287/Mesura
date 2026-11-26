@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.9.0 (candidate, not released)
+
+Reference and Maximum expansion: one planner for every place a level is applied, a policy for two-die Ryzen X3D processors, new catalog settings and retirements, and recomposed levels (owner's decisions of 2026-11-25 and 2026-11-26, vault D054 to D059).
+
+- **A level is planned for your PC wherever it is applied.** Optimization always planned Mesura Reference and Maximum performance for the PC's hardware; the command line's `windows apply --preset`, a saved PC setup (on Backups and with `profile run`), the check that the chosen level is in place when a setup is saved, and the tray's status took the level's whole list. They now all use the one planner, with the level's defaults: an entry for hardware this PC doesn't have, or whose hardware couldn't be read, is left out and listed with its reason. A setup that names both levels applies Maximum performance, which holds everything Reference does except its power plan, so two power plans never run together. This replaces the decision of 2026-11-03 that a preset id applies its whole list.
+- **Settings a saved setup names one by one follow the level's hardware conditions.** A setup saved on a Radeon PC that lists AMD Anti-Lag no longer applies it on an NVIDIA PC; it is listed as not for this PC. `windows apply --id` on the command line is still an explicit choice, applied as named (each setting still checked on the PC).
+- **Older setups that name a retired setting still open.** The setting is named in the preview as retired, never applied, and what an earlier version did with it can still be undone in Activity. An id Mesura never had is still an error.
+- **Built-in apps are removed and put back only as the signed-in user.** When Mesura runs as another account (a standard user elevated with an administrator's password), Windows would remove or register the app for that other account while Mesura checks the signed-in user's apps. Such a removal, and its Undo, is now blocked with that reason. The undo of a removal also refuses a different signed-in user. Registry settings for the signed-in user are unaffected.
+- **Fixed: two settings that set different bits of one value were called a conflict.** Bit-field writes are now compared by their bits: setting and clearing the same bit conflict, different bits don't.
+- **Ryzen X3D with two core dies (Phase 2).** On a 7900X3D, 7950X3D, 9900X3D or 9950X3D, AMD's driver parks the die without the extra cache for games and needs core parking and Game Bar to do it. Maximum performance there uses the Balanced Mesura plan (it changes no core-parking or plan-type value) instead of the Maximum plan, and leaves out "keep cores unparked", the Game Bar recording policy, Game Bar removal and Windows' High performance and Ultimate plans, also when a saved setup names them. The rest of Maximum applies as everywhere. A processor whose kind can't be read gets neither Mesura plan and none of those settings. Single-die X3D (9800X3D) and Intel processors are not affected. **Not checked on a real dual-CCD X3D processor.** `docs/x3d-policy-0.9.md`.
+- **New settings in All settings (Phase 3; in no profile).**
+  - Turn off the Customer Experience Improvement Program tasks.
+  - Turn off the feedback question update tasks.
+  - Turn off the Windows Search indexer (searches get slower; takes effect at the next start).
+  - Turn off Virtual Machine Platform (WSL 2 stops working; needs a restart).
+  - Prefer IPv4 over IPv6, Microsoft's recommended alternative to turning IPv6 off: IPv6 stays on, other bits of the value are kept, and it needs a restart.
+  - Each one's Undo puts back exactly what it found. `docs/catalog-0.9.md`.
+- **Retired:** Windows' High performance and Ultimate Performance plans (the Mesura plans replace them) and "Unbind IPv6", which Microsoft recommends against. Undo of what an earlier version did with them still works, and a saved setup naming them still opens and says they are retired; they are never applied. The Compatibility Appraiser tasks were reviewed and left out: what turning them off does to feature updates isn't documented.
+- **Mesura Reference and Maximum performance, recomposed (Phase 4, `docs/plan-0.9-phase4.md`).**
+  - **Reference** keeps everything it had and stops the CEIP and feedback-question tasks. Still no service, component or security change.
+  - **Both levels offer, unticked,** removing the promotional games, streaming and social apps Windows installs. They are offered rather than applied because Mesura can't tell a copy Windows put there from one you installed from the Store and use; such a copy would be removed too and come back only from the Store.
+  - **Maximum performance, ticked:**
+    - the single-purpose in-box apps (News, Weather, Bing Search, Tips, the Microsoft 365 hub, Solitaire, People, Power Automate, Feedback Hub, Maps, Clipchamp, Cortana, Skype, Mixed Reality Portal, 3D Viewer, Mobile Plans, Dev Home, the Copilot app);
+    - the legacy Media Player, XPS printing and PowerShell 2.0.
+  - **Maximum performance, offered unticked,** each with what it costs:
+    - removing Get Help (Windows 11's troubleshooters run through it), the Xbox app, Game Bar (never on a two-die Ryzen X3D), Edge Game Assist, Phone Link and Teams;
+    - the Windows Search indexer, SMB 1.0, Recall and Virtual Machine Platform;
+    - Prefer IPv4;
+    - SmartScreen off, the one security trade-off any profile offers;
+    - the telemetry service DiagTrack (one telemetry path; Windows Error Reporting and apps' own reporting are separate).
+  - Print services are not touched by either level. OneDrive is left alone: removing its client was reviewed and withheld, because Undo couldn't put back what was removed.
+  - Photos, Media Player, Movies & TV, Sticky Notes, To Do, OneNote, Family, Quick Assist and the new Outlook are in no profile.
+  - Every app removal is for your account. Undo registers the app again; a copy installed from the Store comes back from the Store.
+- **Fixed:** Get Help's description said Windows' troubleshooters stay without it; Microsoft is moving them into Get Help, and the text now says so.
+- **Fixed:** after a crash at the moment Mesura turned a Windows feature on or off, the change it never made is now recognised as not made.
+- **Internal:** a profile's entries may now set one setting two ways when their hardware conditions keep them apart (no PC meets both). The check that refuses a conflicting profile knows this. Taking a preset's whole list by hand no longer compiles in Mesura's own programs (one planner, `LevelPlanning`).
+
+Known limits in 0.9.0:
+- **Two-die Ryzen X3D: checked on synthetic processors only.** The policy is tested against modelled 7950X3D, 9800X3D, Intel and hybrid-laptop layouts, not on a real dual-CCD X3D processor. The fallback the owner named for a failed hardware check (leave Windows' Balanced plan untouched) is not built.
+- **App removals can't tell a promoted stub from your own copy.** That is why the promotional games, streaming and social groups are unticked in both levels. If you tick one and installed Spotify, Netflix, Facebook or another listed app from the Store, it is removed too, and Undo brings it back only through the Store. A removal is blocked when Mesura runs as an account other than the signed-in user.
+- **Virtual Machine Platform:** Mesura can't read whether WSL 2 or another virtual machine is in use, which is why it is offered unticked.
+- **Recall:** whether saved snapshots survive turning Recall off and on again has not been checked.
+- **XPS printing:** turning it back on may need Windows to fetch the feature's files.
+- **Feature updates** can turn the CEIP and feedback tasks or the Windows Search indexer back on; Mesura then shows them as not applied.
+- **DiagTrack** is one telemetry service. Turning it off does not stop Windows Error Reporting, the telemetry tasks and policies, or apps that report on their own (Edge, Office).
+
 ## 0.8.0 (2026-11-25)
 
 Reliability and hardware awareness. No new settings, no change to what Mesura Reference or Maximum performance apply, nothing new in the catalog.

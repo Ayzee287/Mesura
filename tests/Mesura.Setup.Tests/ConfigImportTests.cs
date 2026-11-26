@@ -202,7 +202,7 @@ public sealed class ProfileRunnerTests : IDisposable
         var installer = new AppInstallService(winget);
         var store = new SetupStore(_dir);
 
-        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer);
+        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer, TestPlanning.Empty);
         var run = ProfileRunner.Run(plan, installer, store, () => new DateTimeOffset(2026, 10, 18, 9, 0, 0, TimeSpan.Zero), null, CancellationToken.None);
 
         Assert.Equal(["spotify", "vlc", "obs"], plan.Apps.Select(a => a.Package.Id)); // bundle order, Spotify once
@@ -219,7 +219,7 @@ public sealed class ProfileRunnerTests : IDisposable
             { "kind": "Mesura.SetupProfile", "schemaVersion": 1, "name": "Test", "configBundle": "missing.json" }
             """, AppCatalog.Default);
 
-        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, new AppInstallService(new FakeWinget()));
+        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, new AppInstallService(new FakeWinget()), TestPlanning.Empty);
 
         Assert.NotNull(plan.BundleError);
         Assert.Null(plan.Bundle);

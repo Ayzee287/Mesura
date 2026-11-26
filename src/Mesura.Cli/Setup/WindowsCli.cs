@@ -1,3 +1,4 @@
+using Mesura.Core.Profiles;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows.Windows;
@@ -33,9 +34,10 @@ internal static class WindowsCli
                          already set, what the profile's power plan covers, and what is not for this PC, with the reason. Read-only.
         windows show     Shows one operation: what it changes and why, its limitations, its current and
                          target values, and for a manual one the steps. Read-only.
-        windows apply    Previews the chosen operations, presets and --profile levels (a level planned for this PC, as 'windows plan' shows it; a --preset applies the
-                         preset's whole list whatever the hardware, each operation still checked on this PC and skipped where it doesn't apply): what would change, what is already
-                         done or not applicable, and what needs an elevated terminal. With --apply it
+        windows apply    Previews the chosen operations, presets and --profile levels: a level, whether named with --profile or --preset, is planned for this PC
+                         as 'windows plan' shows it (with --preset, the level's defaults; Maximum when both levels are named), and what it leaves out here is
+                         listed with the reason; other presets give their lists; --id operations are applied as named. Each operation is still checked on this
+                         PC: what would change, what is already done or not applicable, and what needs an elevated terminal. With --apply it
                          changes only the settings that differ, reads each back, and records the run
                          with every previous value. A failed operation puts back what it changed.
         windows revert   Previews restoring a recorded run's previous values; with --apply restores those
@@ -118,34 +120,34 @@ internal static class WindowsCli
         return true;
     }
 
-    /// <summary>Resolves operation ids and preset ids to operations, in the order given, each once.</summary>
-    public static IReadOnlyList<WindowsOperation>? Resolve(WindowsCatalog catalog, IEnumerable<string> ids, IEnumerable<string> presets, out string? error)
+    /// <summary>
+    /// Resolves preset ids and operation ids to operations, presets first, each once (0.9, <see cref="LevelPlanning.Resolve"/>): a preset that is a level
+    /// (Mesura Reference, Maximum performance) is planned for this PC with the level's defaults, exactly as <c>windows plan --profile</c> plans it without
+    /// choices, and Maximum supersedes Reference when both are named; other presets give their lists; operations named with <c>--id</c> are applied as named.
+    /// The hardware is read only when a level is named. <c>null</c> with the reason in <paramref name="error"/> for an unknown id.
+    /// </summary>
+    public static WindowsResolution? Resolve(WindowsCatalog catalog, SystemStateReader reader, IReadOnlyList<string> ids, IReadOnlyList<string> presets, out string? error)
     {
         error = null;
-        var result = new List<WindowsOperation>();
-        foreach (var p in presets)
+        if (presets.FirstOrDefault(p => catalog.PresetById(p) is null) is { } badPreset)
         {
-            if (catalog.PresetById(p) is not { } preset)
-            {
-                error = $"Unknown preset '{p}' (see 'windows presets').";
-                return null;
-            }
-
-            result.AddRange(catalog.Resolve(preset));
+            error = $"Unknown preset '{badPreset}' (see 'windows presets').";
+            return null;
         }
 
-        foreach (var id in ids)
+        if (ids.FirstOrDefault(id => catalog.ById(id) is null) is { } badId)
         {
-            if (catalog.ById(id) is not { } op)
-            {
-                error = $"Unknown operation '{id}' (see 'windows list').";
-                return null;
-            }
-
-            result.Add(op);
+            // A retired operation (0.9: Windows' High performance and Ultimate plans, the IPv6 unbinding) is never applied; what an earlier version applied with
+            // it still undoes from history.
+            error = WindowsCatalog.Retired.ById(badId) is not null
+                ? $"'{badId}' was retired from Mesura and is no longer applied; a run an earlier version recorded with it can still be undone ('history list', 'windows revert')."
+                : $"Unknown operation '{badId}' (see 'windows list').";
+            return null;
         }
 
-        return [.. result.DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)];
+        var levels = presets.Any(p => LevelPlanning.IsLevel(catalog.PresetById(p)!, OptimizationProfiles.Default));
+        var hardware = levels ? ProfilePlanCli.ReadHardware(reader) : null;
+        return LevelPlanning.Resolve(presets, ids, PlanningContext.Reading(catalog, hardware, reader), ExplicitOperations.AsNamed);
     }
 
     private static int List(WindowsCatalog catalog, SystemStateReader reader, string? category)
@@ -247,17 +249,38 @@ internal static class WindowsCli
 
     private static int Apply(WindowsCatalog catalog, SystemStateReader reader, Dictionary<string, List<string>> options, bool apply)
     {
-        var operations = Resolve(catalog, options.GetValueOrDefault("--id") ?? [], options.GetValueOrDefault("--preset") ?? [], out var error);
+        // A level named by --profile too is planned once, with the command line's choices, not again with its defaults.
+        var profileId = options.GetValueOrDefault("--profile") is { Count: > 0 } named ? named[0] : null;
+        var presets = (options.GetValueOrDefault("--preset") ?? []).Where(p => !p.Equals(profileId, StringComparison.OrdinalIgnoreCase)).ToList();
+        var resolution = Resolve(catalog, reader, options.GetValueOrDefault("--id") ?? [], presets, out var error);
+        IReadOnlyList<WindowsOperation>? operations = resolution?.Operations;
+        if (resolution is not null)
+        {
+            // A --preset that names a level was planned for this PC with the level's defaults (0.9): say what it leaves out here, and why.
+            ProfilePlanCli.WriteNotHere(resolution.NotHere, "Not applied on this PC (planned for its hardware):");
+            foreach (var id in resolution.SetAside)
+            {
+                Console.WriteLine($"  '{id}' is set aside: Maximum performance, named too, holds everything it applies except its power plan.");
+            }
+        }
+
         if (operations is not null && options.ContainsKey("--profile"))
         {
             // A level planned for this PC, as the app plans it (hardware, what is already set, what the level's power plan covers, group and entry choices): exactly the operations
-            // 'windows plan' lists. --preset applies a preset's whole list whatever the hardware.
+            // 'windows plan' lists. A --preset that names a level is planned the same way, with the level's defaults.
             if (ProfilePlanCli.Build("windows apply", catalog, reader, options, out _, out error) is not { } plan)
             {
                 return Bad(error!);
             }
 
             operations = [.. plan.OperationIds.Select(catalog.ById).OfType<WindowsOperation>().Concat(operations).DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)];
+        }
+
+        if (operations is { Count: 0 } && (resolution is { Levels.Count: > 0 } || profileId is not null))
+        {
+            // A level that is already in place, or plans nothing for this PC: nothing to change, as a preview of an applied list says.
+            Console.WriteLine("Nothing to change: on this PC the level plans no operation that isn't already applied (see 'windows plan').");
+            return Ok;
         }
 
         if (operations is null || operations.Count == 0)

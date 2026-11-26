@@ -124,7 +124,7 @@ public sealed class ProfileRetryTests : IDisposable
     private SetupRun RunOnce(SetupProfile profile, AppInstallService installer, SetupStore store, FakeRegistry pc, SetupStore? history = null)
     {
         _now = _now.AddMinutes(5); // each run gets its own id
-        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer, WindowsCatalog.Default, history);
+        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer, TestPlanning.For(pc), history);
         return ProfileRunner.Run(plan, installer, store, () => _now, null, CancellationToken.None,
             new WindowsConfigurator(pc, pc), Locate, _ => false);
     }
@@ -199,7 +199,7 @@ public sealed class ProfileRetryTests : IDisposable
         Assert.Equal(["Vendicated.Vencord"], winget.Ran);           // winget can't list it, so the first run installs it
         Assert.Equal(InstallStatus.Succeeded, first.Apps.Single().Status);
 
-        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer, WindowsCatalog.Default, store);
+        var plan = ProfileRunner.Plan(profile, _dir, AppCatalog.Default, installer, TestPlanning.Empty, store);
         Assert.Contains("vencord", plan.InstalledEarlier);
         var second = RunOnce(profile, installer, store, pc, history: store);
 

@@ -188,6 +188,22 @@ public static class WindowsEvaluator
 {
     public const string NotSet = "(not set)";
 
+    /// <summary>
+    /// The reason code of a built-in app that is neither removed nor put back because Mesura runs as another account than the signed-in user (0.9): Windows
+    /// removes and registers an app for the account that asks, while Mesura reads and checks the signed-in user's apps, so the change would land on the
+    /// wrong account and its check and undo would be wrong.
+    /// </summary>
+    public const string OtherAccountCode = "other-account";
+
+    /// <summary>The English sentence for <see cref="OtherAccountCode"/>.</summary>
+    public static string OtherAccountReason(UserContext user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return user.Resolved
+            ? $"Blocked: Mesura runs as another account than {user.Account}, the signed-in user, and Windows removes or puts back a built-in app only for the account that asks. Run Mesura as {user.Account} (elevated with that account's own consent) to change apps."
+            : $"Blocked: {user.Reason} Built-in apps are only removed or put back for the signed-in user.";
+    }
+
     public static OperationEvaluation Evaluate(WindowsOperation op, ISystemReader reader)
     {
         ArgumentNullException.ThrowIfNull(op);
@@ -226,6 +242,11 @@ public static class WindowsEvaluator
         if (op.PerUser && !reader.User.Resolved)
         {
             return new(op, OperationState.Blocked, $"Blocked: {reader.User.Reason} Per-user settings are never written to another account.", []);
+        }
+
+        if (op.AppxSettings.Count > 0 && !reader.User.ProcessIsUser)
+        {
+            return new(op, OperationState.Blocked, OtherAccountReason(reader.User), [], OtherAccountCode);
         }
 
         if (op.Observation is { } observation)

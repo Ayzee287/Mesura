@@ -85,14 +85,23 @@ public sealed class ProfileReviewTests
         var recommended = Catalog.PresetById("recommended-gaming")!;
         var maximum = Catalog.PresetById("maximum-performance")!;
 
-        // Maximum keeps every Recommended entry except the Balanced Mesura plan, which Maximum Performance Mesura replaces (one plan is active at a time).
-        Assert.All(recommended.OperationIds.Where(id => id != "power.mesura-balanced-plan"), id => Assert.Contains(id, maximum.OperationIds));
+        // Maximum keeps every Recommended entry. One plan is active at a time: Maximum Performance Mesura, or (0.9, D054 item 4) on a dual-CCD Ryzen X3D the
+        // Balanced Mesura plan, so the preset lists both and the profile's conditions keep them apart.
+        Assert.All(recommended.OperationIds, id => Assert.Contains(id, maximum.OperationIds));
         Assert.Contains("power.mesura-balanced-plan", recommended.OperationIds);
-        Assert.DoesNotContain("power.mesura-balanced-plan", maximum.OperationIds);
         Assert.Contains("power.mesura-maximum-plan", maximum.OperationIds);
         Assert.Empty(maximum.OptionalIds.Intersect(maximum.OperationIds));
         Assert.Equal(maximum.OperationIds.Count, maximum.OperationIds.Distinct().Count()); // no setting twice
-        Assert.Empty(WindowsConfigurator.Conflicts(Catalog.Resolve(maximum).Concat(maximum.OptionalIds.Select(Op)).ToList()));
+
+        // Conflicts, condition-aware (0.9; before, the preset's flat list with every extra had to be conflict-free, which ignored the hardware conditions):
+        // the flat list's one conflict is the two plans, and only that pair; the profile, with every optional entry ticked, has none on any one PC.
+        var flat = WindowsConfigurator.ConflictGroups(Catalog.Resolve(maximum).Concat(maximum.OptionalIds.Select(Op)).ToList());
+        Assert.Equal(["power.mesura-balanced-plan", "power.mesura-maximum-plan"], Assert.Single(flat).Select(o => o.Id).Order(StringComparer.Ordinal));
+        var profile = Mesura.Core.Profiles.OptimizationProfiles.Default.ById("maximum-performance")!;
+        Assert.Empty(Mesura.Core.Profiles.LevelPlanning.ConditionAwareConflicts(profile, Catalog));
+        var balanced = profile.Entries.Single(e => e.OperationId == "power.mesura-balanced-plan");
+        var max = profile.Entries.Single(e => e.OperationId == "power.mesura-maximum-plan");
+        Assert.True(Mesura.Core.Profiles.HardwareCondition.Disjoint(balanced.Conditions.Select(c => c.When), max.Conditions.Select(c => c.When)));
     }
 
     [Fact]

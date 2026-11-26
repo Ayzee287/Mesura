@@ -1,6 +1,24 @@
 {
   // "What's new" for the running version, written by hand for each release in both languages and keyed by major.minor (0.7.1 shows the 0.7 notes).
   // Read by ReleaseNotes (Core). Keep each note to one sentence a user would say aloud.
+  "0.9": {
+    "en": [
+      "Mesura Reference and Maximum performance are now planned for your PC wherever they apply: Optimization, saved PC setups, the command line and the tray.",
+      "Maximum performance removes single-purpose built-in apps such as News, Tips and Solitaire, and offers more choices unticked, each with what it costs.",
+      "Reference stops the improvement-program and feedback tasks, and both levels offer, unticked, to remove the promotional games, streaming and social apps.",
+      "On a Ryzen X3D with two core dies, Maximum performance uses the Balanced Mesura plan and leaves core parking and Game Bar as AMD's driver needs them.",
+      "New in All settings: turn off the Windows Search indexer or Virtual Machine Platform, and prefer IPv4 over IPv6 without turning IPv6 off.",
+      "Windows' High performance and Ultimate plans and \"Unbind IPv6\" are retired; what an earlier version did with them can still be undone in Activity."
+    ],
+    "ru": [
+      "«Эталон Mesura» и «Максимальная производительность» теперь подбираются под ваш ПК везде, где применяются: в «Оптимизации», копиях ПК, командной строке и в трее.",
+      "«Максимальная производительность» удаляет узкоспециальные встроенные приложения, например «Новости», «Советы» и «Солитер», и предлагает без галочки новые варианты, у каждого названа цена.",
+      "«Эталон» останавливает задачи программы улучшения и обратной связи, а оба уровня предлагают без галочки удалить рекламные игры, стриминговые и социальные приложения.",
+      "На Ryzen X3D с двумя кристаллами ядер «Максимальная производительность» применяет план Balanced Mesura и оставляет парковку ядер и Game Bar такими, какими их ждёт драйвер AMD.",
+      "Новое во «Всех параметрах»: можно выключить индексатор Windows Search или платформу виртуальной машины и предпочитать IPv4, не выключая IPv6.",
+      "Схемы Windows «Высокая производительность» и Ultimate Performance и отвязка IPv6 от адаптеров больше не применяются; то, что сделала с ними прежняя версия, по-прежнему можно отменить в «Журнале»."
+    ]
+  },
   "0.8": {
     "en": [
       "If Mesura stops in the middle of a run (a crash, a power cut, a closed window), it finds what that run had changed when it next starts and lists it in Activity with Undo; nothing is undone without you.",

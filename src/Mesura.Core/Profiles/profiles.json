@@ -7,20 +7,41 @@
   // same operations as the default and optional entries.
   // Maximum performance is "everything that applies to this PC that is meant to make it faster, heat, noise and idle power accepted": an operation that can't
   // apply here is skipped with its reason, and one with a cost says so ("sideEffects") instead of being left out.
-  // "when" is hardware relevance beyond the operation's own requirements: form (desktop, compact, portable), cpu (intel, amd, hybrid), gpu (any, discrete,
-  // nvidia, amd, intel), disk (nvme, sata, ssd, hdd), network (wifi, ethernet). A fact that couldn't be read leaves the entry alone.
+  // "when" is hardware relevance beyond the operation's own requirements: form (desktop, compact, portable), cpu (intel, amd, hybrid, x3d-dual-ccd,
+  // not-x3d-dual-ccd), gpu (any, discrete, nvidia, amd, intel), disk (nvme, sata, ssd, hdd), network (wifi, ethernet). A fact that couldn't be read leaves
+  // the entry alone.
+  // "restrictions" (0.9) are the owner's hardware policies over operations: a listed operation is applied by a level, or from a saved PC setup (one by one
+  // or through a collection), only where "when" holds. They hold for operations no level lists too, and each entry of a listed operation carries them.
   "kind": "Mesura.OptimizationProfiles",
   "schemaVersion": 1,
+  "restrictions": [
+    {
+      // Vault D054 item 4 (owner, 2026-11-25). On a Ryzen X3D with two core dies, AMD's chipset driver parks the die without the stacked cache while a game
+      // runs, and finds the game through Game Bar; forcing cores unparked, a High performance plan personality, the Game Bar recording policy or removing
+      // Game Bar works against that. Windows' own High performance and Ultimate Performance plans are listed with the Maximum Mesura plan: they set the
+      // same High performance personality and keep cores unparked. Both are retired from the built-in catalog since 0.9 Phase 3 (never applied from a saved
+      // setup); they stay listed for an edited catalog that still carries them. A processor whose kind couldn't be read is
+      // left alone (unknown is never taken as "not X3D"). Not checked on real dual-CCD X3D hardware; synthetic tests don't relax it.
+      "id": "dual-ccd-x3d",
+      "when": { "cpu": "not-x3d-dual-ccd" },
+      "ops": [ "cpu.core-parking-off", "power.mesura-maximum-plan", "power.high-performance", "power.ultimate-performance", "gaming.game-recording-policy-off", "apps.remove-game-bar" ],
+      "why": "Left out on a Ryzen X3D with two core dies, where AMD's driver parks one die for games and needs core parking and Game Bar to do it"
+    }
+  ],
   "groups": [
     { "id": "telemetry", "name": "Telemetry", "summary": "Windows diagnostic and usage reporting to Microsoft, off in every profile." },
     { "id": "privacy", "name": "Privacy and promotions", "summary": "Advertising profile, tips, suggestions and promotions in Windows." },
+    { "id": "apps", "name": "Bundled apps", "summary": "Apps Windows installs or promotes, removed for your account; Undo registers them again." },
     { "id": "windows", "name": "Windows", "summary": "Background work and defaults of Windows itself." },
+    { "id": "background", "name": "Background activity", "summary": "Windows services that work in the background, at the cost of what they provide." },
+    { "id": "components", "name": "Windows components", "summary": "Optional Windows features turned off, with what each one provided." },
     { "id": "power", "name": "Power management", "summary": "The power plan and what the PC's devices may power down." },
     { "id": "cpu", "name": "Processor", "summary": "How Windows runs and schedules the processor." },
     { "id": "memory", "name": "Memory", "summary": "How Windows uses installed memory." },
     { "id": "gpu", "name": "Graphics", "summary": "The graphics driver's own switches and graphics scheduling." },
     { "id": "storage", "name": "Storage", "summary": "Drives and the file system." },
     { "id": "network", "name": "Network", "summary": "Network behaviour of Windows and the settings of the network adapter's own driver, chosen by the adapter found." },
+    { "id": "security", "name": "Security trade-offs", "summary": "A protection given up for convenience, offered unticked with its cost." },
     { "id": "gaming", "name": "Gaming and latency", "summary": "Game Mode, game recording and input behaviour." }
   ],
   "profiles": [
@@ -34,6 +55,7 @@
         { "op": "telemetry.limit-diagnostic-logs", "group": "telemetry" },
         { "op": "telemetry.limit-dump-collection", "group": "telemetry", "sideEffects": true },
         { "op": "telemetry.onesettings-downloads-off", "group": "telemetry", "role": "optional", "sideEffects": true },
+        { "op": "tasks.ceip-off", "group": "telemetry" },
 
         { "op": "privacy.no-advertising-id", "group": "privacy" },
         { "op": "privacy.no-tailored-experiences", "group": "privacy" },
@@ -46,6 +68,13 @@
         { "op": "start.no-account-notifications", "group": "privacy" },
         { "op": "suggestions.no-third-party-in-spotlight", "group": "privacy" },
         { "op": "search.no-highlights-policy", "group": "privacy" },
+        { "op": "tasks.feedback-off", "group": "privacy" },
+
+        // 0.9 Phase 4 (D058), corrected by the owner on 2026-11-26 (D061): the three promotional app groups are optional, unticked, in both levels,
+        // because Mesura can't tell a copy Windows installed from one the user installed from the Store and uses.
+        { "op": "apps.remove-promoted-games", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-promoted-streaming", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-promoted-social", "group": "apps", "role": "optional", "sideEffects": true },
 
         { "op": "repair.ncsi-active-probing", "group": "windows" },
         { "op": "repair.threaded-dpc", "group": "windows" },
@@ -71,6 +100,7 @@
         { "op": "telemetry.limit-diagnostic-logs", "group": "telemetry" },
         { "op": "telemetry.limit-dump-collection", "group": "telemetry", "sideEffects": true },
         { "op": "telemetry.onesettings-downloads-off", "group": "telemetry", "role": "optional", "sideEffects": true },
+        { "op": "tasks.ceip-off", "group": "telemetry" },
 
         { "op": "privacy.no-advertising-id", "group": "privacy" },
         { "op": "privacy.no-tailored-experiences", "group": "privacy" },
@@ -83,6 +113,37 @@
         { "op": "start.no-account-notifications", "group": "privacy" },
         { "op": "suggestions.no-third-party-in-spotlight", "group": "privacy" },
         { "op": "search.no-highlights-policy", "group": "privacy" },
+        { "op": "tasks.feedback-off", "group": "privacy" },
+
+        // 0.9 Phase 4 (D058, docs/plan-0.9-phase4.md): the reviewed bundled-app layer. Default: promotional and single-purpose in-box apps; optional: apps
+        // many people use. Photos, Media Player, Movies & TV, Sticky Notes, To Do, OneNote, Family, Quick Assist and the new Outlook stay out (owner).
+        { "op": "apps.remove-promoted-games", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-promoted-streaming", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-promoted-social", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-bing-news", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-bing-weather", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-bing-search", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-tips", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-office-hub", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-solitaire", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-people", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-power-automate", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-feedback-hub", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-maps", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-clipchamp", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-cortana", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-skype", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-mixed-reality", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-3d-viewer", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-mobile-plans", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-dev-home", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-copilot-app", "group": "apps", "sideEffects": true },
+        { "op": "apps.remove-get-help", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-xbox-app", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-game-bar", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-edge-game-assist", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-phone-link", "group": "apps", "role": "optional", "sideEffects": true },
+        { "op": "apps.remove-teams", "group": "apps", "role": "optional", "sideEffects": true },
 
         { "op": "repair.ncsi-active-probing", "group": "windows" },
         { "op": "repair.threaded-dpc", "group": "windows" },
@@ -92,7 +153,22 @@
         { "op": "dwm.window-animations-off", "group": "windows", "sideEffects": true },
         { "op": "visual.transparency-off", "group": "windows", "role": "optional" },
 
+        // Owner's review corrections of 2026-11-26 (D059): DiagTrack joins the allow-list, optional in Maximum only. Print Spooler is not added. OneDrive: the owner
+        // wants the client removed, not sync turned off; the removal is withheld (no documented command, no exact Undo, an uninstaller in a folder the user can
+        // change; docs/plan-0.9-phase4.md), and the sync policy is not used instead.
+        { "op": "services.windows-search-off", "group": "background", "role": "optional", "sideEffects": true },
+        { "op": "services.diagnostic-tracking-off", "group": "background", "role": "optional", "sideEffects": true },
+
+        { "op": "features.legacy-media-off", "group": "components", "sideEffects": true },
+        { "op": "features.xps-off", "group": "components", "sideEffects": true },
+        { "op": "features.powershell-v2-off", "group": "components", "sideEffects": true },
+        { "op": "network.smb1-off", "group": "components", "role": "optional", "sideEffects": true },
+        { "op": "features.recall-off", "group": "components", "role": "optional", "sideEffects": true },
+        { "op": "features.virtual-machine-platform-off", "group": "components", "role": "optional", "sideEffects": true },
+
         { "op": "power.mesura-maximum-plan", "group": "power", "sideEffects": true },
+        // D054 item 4: on a dual-CCD X3D, Maximum's plan is Balanced Mesura (no core-parking or plan-personality values) instead of the Maximum plan.
+        { "op": "power.mesura-balanced-plan", "group": "power", "when": { "cpu": "x3d-dual-ccd" } },
         { "op": "power.usb-keep-awake", "group": "power", "sideEffects": true },
         { "op": "power.disk-never-off", "group": "power", "sideEffects": true },
         { "op": "power.pcie-aspm-off", "group": "power", "sideEffects": true },
@@ -115,6 +191,7 @@
         { "op": "power.sata-link-power-off-ac", "group": "storage", "when": { "disk": "sata" }, "sideEffects": true },
 
         { "op": "updates.no-p2p-delivery", "group": "network" },
+        { "op": "network.prefer-ipv4", "group": "network", "role": "optional", "sideEffects": true },
         { "op": "network.preset-realtek-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
         { "op": "network.preset-intel-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
         { "op": "network.preset-killer-ethernet", "group": "network", "when": { "network": "ethernet" }, "sideEffects": true },
@@ -125,7 +202,10 @@
         { "op": "gaming.game-recording-policy-off", "group": "gaming", "sideEffects": true },
         { "op": "input.pointer-precision-off", "group": "gaming", "sideEffects": true },
         { "op": "gaming.background-recording-off", "group": "gaming", "role": "optional" },
-        { "op": "gaming.controller-game-bar-off", "group": "gaming", "role": "optional" }
+        { "op": "gaming.controller-game-bar-off", "group": "gaming", "role": "optional" },
+
+        // D054 items 1 and 2: the one allow-listed Advanced operation, optional and Maximum-only. Never default, never in Reference.
+        { "op": "security.smartscreen-off", "group": "security", "role": "optional", "sideEffects": true }
       ]
     }
   ],
@@ -157,7 +237,7 @@
     "edge.no-startup-boost": "Edge no longer starts its processes at sign-in, which leaves that memory and CPU time free.",
     "edge.no-background-mode": "Edge exits fully when its last window closes instead of staying resident.",
     "dwm.window-animations-off": "Windows stops animating minimise, maximise and restore, so windows change state at once.",
-    "visual.transparency-off": "Makes the taskbar, Start and other surfaces opaque.",
+    "visual.transparency-off": "Makes the taskbar, Start and other surfaces opaque; offered, not applied, because its stored value is known from community sources only.",
 
     "power.mesura-balanced-plan": "Balanced without the brakes on mains power: boosting is no longer held back and USB devices are not put to sleep; battery behaviour stays Windows'.",
     "power.mesura-maximum-plan": "A copy of Balanced that, on mains power, keeps the processor asking for full speed and every power-saving state off; battery behaviour stays Windows'.",
@@ -194,6 +274,51 @@
     "gaming.game-recording-policy-off": "Blocks Game Bar recording and broadcasting for every user, so nothing records in the background.",
     "input.pointer-precision-off": "Turns off mouse acceleration, so the pointer moves the same distance for the same hand movement.",
     "gaming.background-recording-off": "Game Bar stops recording gameplay in the background; offered, not applied, because its stored value is known from community sources only.",
-    "gaming.controller-game-bar-off": "The controller's Xbox button no longer opens Game Bar; offered, not applied, because its stored value is known from community sources only."
+    "gaming.controller-game-bar-off": "The controller's Xbox button no longer opens Game Bar; offered, not applied, because its stored value is known from community sources only.",
+
+    "tasks.ceip-off": "Windows' two Customer Experience Improvement Program tasks stop running; the program itself is already opted out by policy.",
+    "tasks.feedback-off": "Windows stops downloading new texts for the feedback questions it asks; the questions themselves are already off.",
+
+    "apps.remove-promoted-games": "Removes the games Windows installs as a promotion, such as Candy Crush; offered, not applied, because Mesura can't tell them from a copy you installed from the Store, which would then come back only from the Store.",
+    "apps.remove-promoted-streaming": "Removes the streaming apps Windows installs or promotes, your accounts stay; offered, not applied, because Mesura can't tell them from a copy you installed from the Store, which would then come back only from the Store.",
+    "apps.remove-promoted-social": "Removes the social apps Windows installs or promotes, the websites keep working; offered, not applied, because Mesura can't tell them from a copy you installed from the Store, which would then come back only from the Store.",
+    "apps.remove-bing-news": "Removes the News app; the news in Widgets is separate.",
+    "apps.remove-bing-weather": "Removes the Weather app; the taskbar weather is separate.",
+    "apps.remove-bing-search": "Removes the Bing Search app; Windows search keeps working.",
+    "apps.remove-tips": "Removes the Tips app.",
+    "apps.remove-office-hub": "Removes the hub that advertises Microsoft 365; installed Office apps stay.",
+    "apps.remove-solitaire": "Removes the Solitaire collection, with its saved progress.",
+    "apps.remove-people": "Removes the People app; your contacts stay in your account.",
+    "apps.remove-power-automate": "Removes Power Automate, with any flows made in it.",
+    "apps.remove-feedback-hub": "Removes Feedback Hub; you can no longer send feedback or join Insider surveys from it.",
+    "apps.remove-maps": "Removes the Maps app, with its offline maps.",
+    "apps.remove-clipchamp": "Removes Clipchamp; projects in its cloud stay, local drafts go.",
+    "apps.remove-cortana": "Removes Cortana, which Microsoft has ended on Windows.",
+    "apps.remove-skype": "Removes the Skype app Windows installed; Skype from skype.com is not touched.",
+    "apps.remove-mixed-reality": "Removes the Mixed Reality Portal, needed only with a Windows Mixed Reality headset.",
+    "apps.remove-3d-viewer": "Removes 3D Viewer and Print 3D.",
+    "apps.remove-mobile-plans": "Removes Mobile Plans, which matters only on a PC with a cellular modem.",
+    "apps.remove-dev-home": "Removes Dev Home, which matters only for development on this PC.",
+    "apps.remove-copilot-app": "Removes the Copilot app; the policies that turn Copilot off are separate settings.",
+    "apps.remove-get-help": "Removes Get Help; offered, not applied, because Windows 11 runs its troubleshooters through it.",
+    "apps.remove-xbox-app": "Removes the Xbox app; offered, not applied, because Game Pass PC games are installed and launched from it.",
+    "apps.remove-game-bar": "Removes Xbox Game Bar (Win+G, capture, the overlay); offered, not applied, because it removes a feature people use, and never on a two-die Ryzen X3D.",
+    "apps.remove-edge-game-assist": "Removes Edge Game Assist, the in-game browser overlay; offered, not applied, because some players use it.",
+    "apps.remove-phone-link": "Removes Phone Link; offered, not applied, because phone messages, calls and notifications on the PC stop.",
+    "apps.remove-teams": "Removes the Teams chat app; offered, not applied, because people use it to keep in touch (Teams for work is untouched).",
+
+    "services.windows-search-off": "Windows stops indexing files and e-mail in the background; offered, not applied, because searches get slow or incomplete.",
+    "services.diagnostic-tracking-off": "The service that collects and sends Windows diagnostic data stops; offered, not applied, because Windows' own diagnostics and some troubleshooting depend on it, and it is one telemetry path, not all of them.",
+
+    "features.legacy-media-off": "Turns off the legacy Windows Media Player component; the modern Media Player app is separate.",
+    "features.xps-off": "Turns off XPS printing, which few people use.",
+    "features.powershell-v2-off": "Removes the deprecated PowerShell 2.0 engine; PowerShell 5.1 and 7 stay.",
+    "network.smb1-off": "Turns off the obsolete SMB 1.0 file sharing; offered, not applied, because a PC that still has it has probably used it for an old NAS or printer.",
+    "features.recall-off": "Turns off Recall on a Copilot+ PC; offered, not applied, because it removes a feature its user chose to turn on.",
+    "features.virtual-machine-platform-off": "Turns off Virtual Machine Platform; offered, not applied, because WSL 2 and other virtual machines stop and Mesura can't tell whether they are in use.",
+
+    "network.prefer-ipv4": "Windows tries IPv4 before IPv6 and keeps IPv6 on; offered, not applied, because no gain is measured and it only matters on some networks.",
+
+    "security.smartscreen-off": "Windows no longer warns before an unrecognised download runs; offered, not applied, because it gives up a protection against malicious downloads."
   }
 }

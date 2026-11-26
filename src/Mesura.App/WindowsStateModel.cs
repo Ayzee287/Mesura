@@ -215,7 +215,7 @@ public sealed class SettingRow : Observable
     public string ShortReason => _eval.State switch
     {
         OperationState.Inapplicable => InapplicableReason(),
-        OperationState.Blocked => Loc.Get("Reason.Blocked"),
+        OperationState.Blocked => Loc.Get(_eval.ReasonCode == WindowsEvaluator.OtherAccountCode ? "Reason.OtherAccount" : "Reason.Blocked"),
         OperationState.Unknown when !_checking => Loc.Get("Reason.Unknown"),
         OperationState.Partial => Loc.Get("Reason.Partial"),
         OperationState.PendingRestart => Loc.Get("Reason.PendingRestart"),

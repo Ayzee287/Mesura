@@ -10,7 +10,12 @@ namespace Mesura.Core.Windows;
 /// <param name="Sid">The target user's SID, or <c>null</c> when it couldn't be established.</param>
 /// <param name="Account">The target account for display (<c>DOMAIN\user</c>), or empty.</param>
 /// <param name="Reason">Why there is no target, when <see cref="Sid"/> is <c>null</c>.</param>
-public sealed record UserContext(string? Sid, string Account, string Reason)
+/// <param name="ProcessIsUser">
+/// Whether this process runs as that same signed-in user (0.9). A registry value can be addressed in another user's hive, but Windows removes and
+/// registers a built-in app for the account that asks, so app removal and its undo need this (<see cref="WindowsEvaluator.OtherAccountCode"/>). It defaults
+/// to <c>false</c>, so a context made anywhere but <see cref="Resolve"/> never allows them by accident.
+/// </param>
+public sealed record UserContext(string? Sid, string Account, string Reason, bool ProcessIsUser = false)
 {
     public bool Resolved => Sid is not null;
 
@@ -25,9 +30,10 @@ public sealed record UserContext(string? Sid, string Account, string Reason)
             return new UserContext(null, "", "Couldn't tell which user is signed in to this Windows session (for example a service or remote shell).");
         }
 
-        if (string.Equals(processSid, sessionSid, StringComparison.OrdinalIgnoreCase) || sessionHiveLoaded)
+        var same = string.Equals(processSid, sessionSid, StringComparison.OrdinalIgnoreCase);
+        if (same || sessionHiveLoaded)
         {
-            return new UserContext(sessionSid, sessionAccount, "");
+            return new UserContext(sessionSid, sessionAccount, "", same);
         }
 
         return new UserContext(null, sessionAccount, $"The settings of {sessionAccount}, the signed-in user, aren't reachable from this account.");

@@ -268,7 +268,9 @@ public sealed class QualityPassTests
         // Mesura Reference is exactly its parts: performance, privacy, fewer promotions and (since 2026-11-04) the per-maker network adapter presets; no overlap and nothing left over.
         var parts = new[] { "reference-performance", "reference-privacy", "reference-convenience", "network-adapter-makers" }.SelectMany(id => Catalog.PresetById(id)!.OperationIds).ToList();
         Assert.Equal(parts.Count, parts.Distinct().Count());
-        Assert.Equal(Catalog.PresetById("recommended-gaming")!.OperationIds.Order(), parts.Order());
+        // Since D061 the three promotional app groups are in the Fewer promotions collection but offered unticked by the level itself.
+        var reference = Catalog.PresetById("recommended-gaming")!;
+        Assert.Equal(reference.OperationIds.Concat(reference.OptionalIds.Where(id => id.StartsWith("apps.remove-promoted-", StringComparison.Ordinal))).Order(), parts.Order());
         Assert.Equal(["privacy.diagnostic-data-required", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list", "privacy.no-app-launch-tracking",
             "privacy.no-typing-personalization", "privacy.no-online-speech", "privacy.no-activity-history", "privacy.no-error-reporting", "privacy.no-cross-device-experiences",
             // 0.4: the documented policies of the old privacy-policies collection moved in, and its duplicates and harmful switches were dropped by the audit.
@@ -326,10 +328,12 @@ public sealed class QualityPassTests
         // change to it is a decision, not a side effect.
         // 2026-11-02 (0.6, owner's decision): telemetry is off by default in every profile, as its own group (the inventory collector and the two log and
         // dump limits join the three that were there); the list is the profile definition's default entries (profiles.json), in its order.
+        // 0.9 Phase 4 (owner, D058): the CEIP and feedback-question tasks. The three promotional app groups are optional (owner, D061), so not in this list.
         Assert.Equal(["privacy.diagnostic-data-required", "telemetry.ceip-policy-off", "telemetry.application-telemetry-off", "telemetry.inventory-collector-off",
-                      "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
+                      "telemetry.limit-diagnostic-logs", "telemetry.limit-dump-collection", "tasks.ceip-off", "privacy.no-advertising-id", "privacy.no-tailored-experiences", "privacy.no-language-list",
                       "notifications.no-feedback-prompts", "notifications.no-tips-and-suggestions", "notifications.no-setup-nags", "lockscreen.no-spotlight-ads", "start.no-recommendations",
-                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "repair.ncsi-active-probing", "repair.threaded-dpc",
+                      "start.no-account-notifications", "suggestions.no-third-party-in-spotlight", "search.no-highlights-policy", "tasks.feedback-off",
+                      "repair.ncsi-active-probing", "repair.threaded-dpc",
                       "power.mesura-balanced-plan",
                       // 2026-11-04 (owner's decision): the per-maker network adapter presets are in both profiles; each acts only on an adapter of its own maker and kind.
                       "network.preset-realtek-ethernet", "network.preset-intel-ethernet", "network.preset-killer-ethernet", "network.preset-intel-wifi", "network.preset-realtek-wifi",

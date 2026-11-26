@@ -319,11 +319,13 @@ public sealed class ProfilesViewModel : Observable, IPageState
             // As another account than the signed-in user, the app settings Mesura could read are that account's: the
             // profile is saved without them.
             var withSettings = _services.SameUser;
+            // Whether the chosen level is in place is judged on the level as planned for this hardware (0.9).
+            var hardware = await HardwareAsync();
             var capture = await Task.Run(() =>
             {
                 _services.Reader.Refresh();
                 return ProfileRunner.Capture("my-setup", "my-setup.settings.json", _services.Apps.Catalog!, _services.Installer,
-                    _services.WindowsCatalog.Catalog!, _services.Reader, SetupRun.Stamp(DateTimeOffset.UtcNow), outcome, withSettings,
+                    _services.WindowsCatalog.Catalog!, _services.Reader, hardware, SetupRun.Stamp(DateTimeOffset.UtcNow), outcome, withSettings,
                     _services.Settings.NvidiaConfig);
             });
 
@@ -435,10 +437,11 @@ public sealed class ProfilesViewModel : Observable, IPageState
         {
             var folder = Path.GetDirectoryName(Path.GetFullPath(path))!;
             var sameUser = _services.SameUser;
+            var hardware = await HardwareAsync();
             var (plan, config, windows) = await Task.Run(() =>
             {
                 _services.Reader.Refresh();
-                var p = ProfileRunner.Plan(profile, folder, _services.Apps.Catalog!, _services.Installer, _services.WindowsCatalog.Catalog, _services.Store);
+                var p = ProfileRunner.Plan(profile, folder, _services.Apps.Catalog!, _services.Installer, Planning(hardware), _services.Store);
                 // As another account, the settings step is skipped (it would write that account's files), so it isn't
                 // previewed against them either.
                 return (p, sameUser ? ProfileRunner.PreviewConfig(p) : [], p.Windows.Select(op => WindowsEvaluator.Evaluate(op, _services.Reader)).ToList());
@@ -459,6 +462,25 @@ public sealed class ProfilesViewModel : Observable, IPageState
             Busy = false;
         }
     }
+
+    /// <summary>
+    /// This PC's hardware profile, the reading the window shares (0.9), waited for at most <see cref="Mesura.Core.Support.Deadline.Reading"/>: <c>null</c>
+    /// when it hasn't answered or couldn't be read, which leaves the entries for some hardware alone, with the reason shown.
+    /// </summary>
+    private async Task<Mesura.Core.Hardware.HardwareProfile?> HardwareAsync()
+    {
+        var (read, hardware) = await Mesura.Core.Support.Deadline.Within(_services.Hardware(), Mesura.Core.Support.Deadline.Reading);
+        if (!read)
+        {
+            _services.Log($"The hardware profile took longer than {Mesura.Core.Support.Deadline.Reading.TotalSeconds:0} s; settings for some hardware are left alone in this profile.");
+        }
+
+        return hardware;
+    }
+
+    /// <summary>What a profile's Windows part is planned from here: the catalog in use, the hardware, and the shared reader.</summary>
+    private Mesura.Core.Profiles.PlanningContext Planning(Mesura.Core.Hardware.HardwareProfile? hardware) =>
+        Mesura.Core.Profiles.PlanningContext.Reading(_services.WindowsCatalog.Catalog ?? WindowsCatalog.Default, hardware, _services.Reader);
 
     private void RaiseCapture()
     {
@@ -539,6 +561,15 @@ public sealed class ProfilesViewModel : Observable, IPageState
             _ => new StepLine(Tone.Danger, $"{Loc.Name(w.Operation)} · {Loc.Get($"State.{w.State}")}", w.Reason),
         }).OrderBy(l => l.Tone == Tone.Ok || l.Tone == Tone.Muted).ToList();
         winLines.AddRange(RunActions.ConflictLines(WindowsConfigurator.ConflictGroups(plan.Windows, _services.Reader)).Select(c => new StepLine(Tone.Danger, c)));
+        // 0.9: the level the profile names is planned for this PC. What it leaves out here, Reference set aside for Maximum, and operations this version
+        // retired are said, each in its own words, after what will be done.
+        if (plan.Resolution is { SetAside.Count: > 0 })
+        {
+            winLines.Add(new StepLine(Tone.Info, Loc.Get("Profiles.ReferenceSetAside")));
+        }
+
+        winLines.AddRange(plan.NotHere.Select(e => new StepLine(Tone.Muted, $"{(e.Operation is { } op ? Loc.Name(op) : e.OperationId)} · {Loc.Reason(e)}", e.Detail)));
+        winLines.AddRange(plan.Retired.Select(id => new StepLine(Tone.Muted, Loc.Format("Profiles.Retired", id))));
         var toApply = winLines.Count(l => l.Tone == Tone.Accent);
         var presets = plan.Profile.WindowsPresets.Select(p => _services.WindowsCatalog.Catalog?.PresetById(p) is { } preset ? Loc.Name(preset) : p).ToList();
         Steps.Add(new ProfileStep("3", Loc.Get("Profiles.StepWindows"),
@@ -603,11 +634,12 @@ public sealed class ProfilesViewModel : Observable, IPageState
             var token = _cancel.Token;
             var folder = _folder;
             var settingsSkipped = !_services.SameUser && (plan.Bundle is not null || plan.BundleError is not null);
+            var hardware = await HardwareAsync();
             var result = await Task.Run<(SetupRun Run, ProfilePlan Plan)?>(() =>
             {
                 // Plan again from the PC as it is now, so a second run skips what the first one did.
                 _services.Reader.Refresh();
-                var fresh = ProfileRunner.Plan(plan.Profile, folder, _services.Apps.Catalog!, _services.Installer, _services.WindowsCatalog.Catalog, _services.Store);
+                var fresh = ProfileRunner.Plan(plan.Profile, folder, _services.Apps.Catalog!, _services.Installer, Planning(hardware), _services.Store);
                 if (settingsSkipped)
                 {
                     // App settings live in the process user's profile, which isn't the signed-in user's: leave them out.

@@ -62,6 +62,9 @@ public sealed class TrayIcon : IDisposable
         // Both are raised on the UI thread: keep the tooltip current without polling.
         services.RunRecorded += _ => Refresh();
         services.ChangingChanged += Refresh;
+        // The status plans the outcome for this PC's hardware: read it once again when the shared hardware reading answers.
+        _ = services.Hardware().ContinueWith(_ => System.Windows.Application.Current?.Dispatcher.BeginInvoke(Refresh),
+            CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
         Loc.Instance.LanguageChanged += Refresh;
         Refresh();
     }
@@ -119,9 +122,13 @@ public sealed class TrayIcon : IDisposable
                 return;
             }
 
-            var states = catalog.Resolve(preset).Select(op => WindowsEvaluator.Evaluate(op, reader).State).ToList();
-            var pending = states.Count(s => s is OperationState.NotApplied or OperationState.Partial);
-            var unreadable = states.Count(s => s is OperationState.Blocked or OperationState.Unknown);
+            // The outcome as planned for this PC (0.9): what the level applies with the groups the user switched off on Optimize, never its whole list. The
+            // hardware is the reading the window shares; until it has answered, entries for some hardware are neither pending nor unreadable.
+            var hardware = _services.Hardware() is { IsCompletedSuccessfully: true } read ? read.Result : null;
+            var choices = new Mesura.Core.Profiles.ProfileChoices(
+                new HashSet<string>(_services.Settings.ProfileGroupsOff ?? [], StringComparer.OrdinalIgnoreCase), new Dictionary<string, bool>());
+            var plan = Mesura.Core.Profiles.LevelPlanning.Plan(preset, Mesura.Core.Profiles.PlanningContext.Reading(catalog, hardware, reader), choices);
+            var (pending, unreadable) = Mesura.Core.Profiles.LevelPlanning.Status(plan);
             var summary = unreadable > 0 && pending == 0 ? Loc.Get("Tray.Unavailable")
                 : pending == 0 ? Loc.Get("Optimize.OutcomeDone")
                 : Loc.Plural("Optimize.OutcomePending", pending);

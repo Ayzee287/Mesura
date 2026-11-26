@@ -37,7 +37,8 @@ internal sealed class FakeWindows : ISystemReader, IWindowsWriter
 
     public int Build { get; set; } = 26100;
     public bool IsElevated { get; set; } = true;
-    public UserContext User { get; set; } = new("S-1-5-21-1-1-1-1001", "PC-owner", "");
+    /// <summary>The signed-in user, and this process runs as them (0.9: what app removal needs; a test of another account sets its own).</summary>
+    public UserContext User { get; set; } = new("S-1-5-21-1-1-1-1001", "PC-owner", "", ProcessIsUser: true);
 
     /// <summary>A desktop by default: no battery, not Modern Standby.</summary>
     public bool? HasBattery { get; set; } = false;
@@ -1032,7 +1033,9 @@ public sealed class WindowsConfiguratorTests
             Assert.True(o.Risk is RiskClass.UserPreference or RiskClass.SystemConfiguration, o.Id);
 
             // The one power entry is the Balanced Mesura plan (the owner's decision, 2026-11): mains-only, battery side Balanced's.
-            Assert.True(o.PowerSettings.Count == 0 && o.Services.Count == 0 && o.Features.Count == 0 && o.Tasks.Count == 0, o.Id);
+            // 0.9 Phase 4 (D058): the CEIP and feedback-question tasks are Reference's only scheduled tasks; still no service and no feature.
+            Assert.True(o.PowerSettings.Count == 0 && o.Services.Count == 0 && o.Features.Count == 0, o.Id);
+            Assert.True(o.Tasks.Count == 0 || o.Id is "tasks.ceip-off" or "tasks.feedback-off", o.Id);
             Assert.True(o.PowerPlan is null || o.Id == "power.mesura-balanced-plan", o.Id);
             Assert.DoesNotContain(DeviceRequirement.NoBattery, o.Requirements);
             Assert.DoesNotContain(DeviceRequirement.NoModernStandby, o.Requirements);

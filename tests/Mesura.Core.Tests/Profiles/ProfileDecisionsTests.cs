@@ -122,7 +122,7 @@ public sealed class ProfileDecisionsTests
     }
 
     [Fact]
-    public void A_saved_setup_profile_that_names_the_two_levels_or_the_new_operations_still_loads_and_resolves()
+    public void A_saved_setup_profile_that_names_the_two_levels_or_the_new_operations_still_loads_and_resolves_for_this_pc()
     {
         // The Profiles page keeps files that name presets and operations by id; the ids of the levels did not change and the new operations are ordinary ids.
         const string json = """
@@ -132,14 +132,35 @@ public sealed class ProfileDecisionsTests
             """;
 
         var profile = Mesura.Core.Setup.SetupProfile.Parse(json, Mesura.Core.Apps.AppCatalog.Default, Catalog);
-        var resolved = profile.ResolveWindows(Catalog).Select(o => o.Id).ToList();
-
         Assert.Equal(["recommended-gaming", "maximum-performance"], profile.WindowsPresets);
-        Assert.Contains("gpu.amd-anti-lag-on", resolved);
-        Assert.Contains("network.preset-realtek-ethernet", resolved);          // from the Reference preset
-        Assert.Contains("gpu.hardware-scheduling-on", resolved);               // named on its own: applied, because the file asks for it by id
+
+        // 0.9 (owner, 2026-11-25; until then a preset's whole list was applied and a single operation always as named, decision O1 of 2026-11-03): on a Radeon
+        // desktop with a Realtek Ethernet card and no Wi-Fi adapter, the setup resolves to Maximum as planned for this PC.
+        var pc = Pc(Radeon(false), RealtekEthernet());
+        var hardware = Hardware(GpuMaker.Amd, new NetworkProfile("Ethernet", AdapterKind.Ethernet, "Realtek", true));
+        var resolution = profile.ResolveWindows(PlanningContext.Reading(Catalog, hardware, pc));
+        var resolved = resolution.Operations.Select(o => o.Id).ToList();
+
+        Assert.Equal(["recommended-gaming"], resolution.SetAside);                 // both levels named: Maximum, which holds all of Reference but its plan
+        Assert.Equal([MaximumId], resolution.Levels.Select(l => l.Profile.Id));
+        Assert.Contains("power.mesura-maximum-plan", resolved);
+        Assert.DoesNotContain("power.mesura-balanced-plan", resolved);            // never two plans in one run
+        Assert.Contains("network.preset-realtek-ethernet", resolved);             // planned: this PC has that adapter
+        Assert.DoesNotContain("network.preset-intel-ethernet", resolved);         // planned out: another maker's adapter
+        Assert.Contains("gpu.amd-anti-lag-on", resolved);                         // named on its own; its level condition (a Radeon) holds
+        Assert.Contains("gpu.hardware-scheduling-on", resolved);                  // named on its own (an optional entry the PC had ticked); its condition holds
+        Assert.DoesNotContain("network.preset-intel-wifi", resolved);             // named on its own, but the level keeps it for a Wi-Fi adapter, and this PC has none
+        var skipped = Assert.Single(resolution.Skipped);
+        Assert.Equal(("network.preset-intel-wifi", EntryState.Unsupported, "hardware.network.wifi"), (skipped.OperationId, skipped.State, skipped.Reason));
         Assert.Equal(resolved.Count, resolved.Distinct().Count());
+
+        // On an NVIDIA PC the named Anti-Lag entry is left out too, with its reason.
+        var nvidia = profile.ResolveWindows(PlanningContext.Reading(Catalog, Hardware(GpuMaker.Nvidia, new NetworkProfile("Ethernet", AdapterKind.Ethernet, "Realtek", true)), Pc(null, RealtekEthernet())));
+        Assert.DoesNotContain(nvidia.Operations, o => o.Id == "gpu.amd-anti-lag-on");
+        Assert.Contains(nvidia.Skipped, e => e.OperationId == "gpu.amd-anti-lag-on" && e.Reason == "hardware.gpu.amd");
     }
+
+    private const string MaximumId = "maximum-performance";
 
     // ---- the network presets are chosen by the adapter found -------------------------------------------------------------------------------------------------
 

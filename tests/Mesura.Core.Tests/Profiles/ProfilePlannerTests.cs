@@ -129,12 +129,17 @@ public sealed class ProfilePlannerTests
     [Fact]
     public void Windows_home_skips_every_machine_policy_with_the_edition_as_the_reason_including_telemetry()
     {
-        var plan = Plan(Maximum, Pc(pro: false), Hardware());
+        var pc = Pc(pro: false);
+        pc.Tasks[@"\Microsoft\Windows\Customer Experience Improvement Program\Consolidator"] = FeatureState.Enabled;
+        var plan = Plan(Maximum, pc, Hardware());
 
+        // Every machine policy of the telemetry group is skipped on Home with the edition as the reason. Since 0.9 Phase 4 (D058) the group also holds the CEIP
+        // tasks entry, which is no policy: Windows' task scheduler acts on every edition, so it still applies on Home.
         var telemetry = plan.Groups.Single(g => g.Id == "telemetry");
-        Assert.All(telemetry.Entries.Where(e => e.Entry.Role == EntryRole.Default), e => Assert.Equal((EntryState.Unsupported, PlanReason.Edition), (e.State, e.Reason)));
-        Assert.False(telemetry.Visible);
-        Assert.Equal(telemetry.Entries.Count, telemetry.NotHere);
+        Assert.All(telemetry.Entries.Where(e => e.Entry.Role == EntryRole.Default && e.OperationId != "tasks.ceip-off"),
+            e => Assert.Equal((EntryState.Unsupported, PlanReason.Edition), (e.State, e.Reason)));
+        Assert.True(plan.Entry("tasks.ceip-off")!.Included);
+        Assert.Equal(telemetry.Entries.Count - 1, telemetry.NotHere);
         // The per-user entries do not depend on the edition.
         Assert.True(plan.Entry("privacy.no-advertising-id")!.Included);
     }
@@ -161,7 +166,12 @@ public sealed class ProfilePlannerTests
         var nvme = plan.Entry("power.nvme-stay-active-ac")!;
         Assert.Equal((EntryState.CantTell, PlanReason.Unread), (nvme.State, nvme.Reason));
         Assert.False(nvme.Included);
-        Assert.True(plan.Entry("cpu.core-parking-off")!.Included);
+        Assert.True(plan.Entry("power.power-throttling-off")!.Included);
+        // 0.9 (D054 item 4): core parking and the Maximum plan are left out on a dual-CCD Ryzen X3D, so with the processor unread they are left alone too
+        // (before 0.9, core parking was applied here); neither Mesura plan is applied.
+        Assert.Equal(EntryState.CantTell, plan.Entry("cpu.core-parking-off")!.State);
+        Assert.DoesNotContain("power.mesura-maximum-plan", plan.OperationIds);
+        Assert.DoesNotContain("power.mesura-balanced-plan", plan.OperationIds);
     }
 
     [Fact]
@@ -277,13 +287,18 @@ public sealed class ProfilePlannerTests
     {
         var plan = Plan(Reference, Pc(), Hardware());
 
-        Assert.Equal(["telemetry", "privacy", "windows", "power", "gaming"], plan.Groups.Where(g => g.Visible).Select(g => g.Id));
+        // 0.9 Phase 4 (D058): Reference also has its bundled-apps group (the three promotional app groups, optional and unticked since D061).
+        Assert.Equal(["telemetry", "privacy", "apps", "windows", "power", "gaming"], plan.Groups.Where(g => g.Visible).Select(g => g.Id));
         Assert.Equal("power.mesura-balanced-plan", plan.OperationIds[0]);
         Assert.DoesNotContain("power.mesura-maximum-plan", plan.OperationIds);
-        // Two entries are already in Windows' default state on this PC (their values are Windows' own defaults), so they are applied already, not planned.
-        Assert.Equal(["repair.threaded-dpc", "gaming.game-mode-on"], plan.Entries.Where(e => e.State == EntryState.Applied).Select(e => e.OperationId));
-        // The five network adapter presets wait for the adapters to be read (this hardware lists none): left alone, with the reason.
-        Assert.Equal(Reference.DefaultIds.Count - 2 - 5, plan.OperationIds.Count);
+        // Already in place on this stand-in PC, so applied, not planned: two entries whose values are Windows' own defaults. The three app removals are
+        // unticked and none of the apps is installed here, so they read as in place too.
+        Assert.Equal(["apps.remove-promoted-games", "apps.remove-promoted-streaming", "apps.remove-promoted-social", "repair.threaded-dpc", "gaming.game-mode-on"],
+            plan.Entries.Where(e => e.State == EntryState.Applied).Select(e => e.OperationId));
+        // The five network adapter presets wait for the adapters to be read (this hardware lists none), and the four scheduled tasks don't exist on this
+        // stand-in: both left alone, with the reason.
+        // Defaults less the two already in place (the app removals are unticked, not defaults, since D061), the five presets and the two tasks.
+        Assert.Equal(Reference.DefaultIds.Count - 2 - 5 - 2, plan.OperationIds.Count);
         Assert.All(plan.Entries.Where(e => e.OperationId.StartsWith("network.preset-", StringComparison.Ordinal)), e => Assert.Equal(EntryState.CantTell, e.State));
     }
 

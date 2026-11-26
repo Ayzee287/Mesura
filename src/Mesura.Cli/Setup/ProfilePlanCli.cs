@@ -20,11 +20,11 @@ internal static class ProfilePlanCli
     /// The profile named by <c>--profile</c> (maximum-performance for <c>windows plan</c> when none is given) planned for this PC with the group and entry choices of the
     /// command line, exactly as the app plans it; <c>null</c> (with the reason in <paramref name="error"/>) when there is no such profile.
     /// </summary>
-    public static ProfilePlan? Build(string verb, WindowsCatalog catalog, SystemStateReader reader, Dictionary<string, List<string>> options, out HardwareProfile hardware, out string? error)
+    public static ProfilePlan? Build(string verb, WindowsCatalog catalog, SystemStateReader reader, Dictionary<string, List<string>> options, out HardwareProfile? hardware, out string? error)
     {
         var id = options.TryGetValue("--profile", out var chosen) && chosen.Count > 0 ? chosen[0] : "maximum-performance";
         var profile = OptimizationProfiles.Default.ById(id);
-        hardware = null!;
+        hardware = null;
         error = null;
         if (profile is null)
         {
@@ -43,10 +43,42 @@ internal static class ProfilePlanCli
             choices[on] = true;
         }
 
-        hardware = HardwareProfileReader.Read(reader, "cli");
-        var evaluations = catalog.Operations.ToDictionary(o => o.Id, o => WindowsEvaluator.Evaluate(o, reader), StringComparer.OrdinalIgnoreCase);
-        return ProfilePlanner.Plan(profile, catalog, hardware, reader, op => evaluations.GetValueOrDefault(op), null,
+        hardware = ReadHardware(reader);
+        return LevelPlanning.Plan(profile, PlanningContext.Reading(catalog, hardware, reader),
             new ProfileChoices(new HashSet<string>(options.GetValueOrDefault("--group-off") ?? [], StringComparer.OrdinalIgnoreCase), choices));
+    }
+
+    /// <summary>
+    /// This PC's hardware profile for planning a level, or <c>null</c> when it couldn't be read (the reason goes to the error stream): entries for some
+    /// hardware are then left alone, and say so, rather than applied on a guess.
+    /// </summary>
+    public static HardwareProfile? ReadHardware(SystemStateReader reader)
+    {
+        try
+        {
+            return HardwareProfileReader.Read(reader, "cli");
+        }
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or System.Runtime.InteropServices.COMException
+            or System.Management.ManagementException)
+        {
+            Console.Error.WriteLine($"The hardware profile couldn't be read ({e.Message}); settings that are only for some hardware are left alone.");
+            return null;
+        }
+    }
+
+    /// <summary>The entries a plan leaves out on this PC, each with its reason in English (the <c>windows plan</c> words), under a heading; nothing when there are none.</summary>
+    public static void WriteNotHere(IReadOnlyList<PlanEntry> notHere, string heading)
+    {
+        if (notHere.Count == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine(heading);
+        foreach (var entry in notHere)
+        {
+            Console.WriteLine($"  - {entry.OperationId,-42} {entry.State}  <- {entry.Reason}: {entry.Detail}");
+        }
     }
 
     public static int Run(WindowsCatalog catalog, SystemStateReader reader, Dictionary<string, List<string>> options)
@@ -75,7 +107,9 @@ internal static class ProfilePlanCli
             return 0;
         }
 
-        Console.WriteLine($"Profile '{profile.Id}' planned for this PC ({hardware.Form}, {hardware.Cpu?.Name ?? "processor unread"}); nothing was changed.");
+        Console.WriteLine(hardware is null
+            ? $"Profile '{profile.Id}' planned for this PC (hardware unread); nothing was changed."
+            : $"Profile '{profile.Id}' planned for this PC ({hardware.Form}, {hardware.Cpu?.Name ?? "processor unread"}); nothing was changed.");
         foreach (var group in plan.Groups)
         {
             Console.WriteLine();

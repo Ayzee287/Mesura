@@ -195,16 +195,54 @@ public sealed class WindowsConfigurator
     private static List<WindowsOperation> ActingHere(IEnumerable<WindowsOperation> operations, ISystemReader reader) =>
         [.. operations.Where(o => WindowsEvaluator.Evaluate(o, reader).State is OperationState.Applied or OperationState.NotApplied or OperationState.Partial)];
 
-    private static IEnumerable<(string Target, string Value)> Targets(WindowsOperation op) =>
-        op.Registry.Concat(op.RegistryEachSettings.Select(e => new RegistrySetting(e.Hive, e.PathPattern, e.Name, e.Kind, e.Value))).Select(r => ($@"{r.Hive}\{r.Path}\{r.Name}".ToUpperInvariant(), r.ClearBits != 0 ? $"clear {r.ClearBits}" : r.SetBits != 0 ? $"set {r.SetBits}" : r.Value))
-            .Concat(op.Services.Select(s => ($"SERVICE {s.Name}".ToUpperInvariant(), s.Start.ToString())))
-            .Concat(op.Features.Select(f => ($"FEATURE {f.Name}".ToUpperInvariant(), f.Enabled.ToString())))
-            .Concat(op.Tasks.Select(t => ($"TASK {t.Path}".ToUpperInvariant(), t.Enabled.ToString())))
-            .Concat(op.PowerSettings.Select(p => ($"POWER {p.Subgroup} {p.Setting}".ToUpperInvariant(), p.AcValue.ToString(System.Globalization.CultureInfo.InvariantCulture))))
-            .Concat(op.TcpSettings.Select(t => ($"TCP {t.Name}".ToUpperInvariant(), t.Value)))
-            .Concat(op.SystemSettings.Select(t => ($"SYSTEM {t.Kind} {t.Name}".ToUpperInvariant(), t.Value)))
-            .Concat(op.AppxSettings.Select(a => ($"APPX {a.Name}".ToUpperInvariant(), "removed")))
-            .Concat(op.PowerPlan is { } plan ? [("ACTIVE POWER SCHEME", plan.SchemeGuid)] : []);
+    /// <summary>
+    /// One write to a setting, as the conflict check compares it: a whole value, or (registry bit fields) only some bits set or cleared, every other bit
+    /// kept as found (<see cref="RegistrySetting.SetBits"/>, <see cref="RegistrySetting.ClearBits"/>).
+    /// </summary>
+    private sealed record Write(string Value, uint SetBits = 0, uint ClearBits = 0)
+    {
+        public bool Masked => SetBits != 0 || ClearBits != 0;
+    }
+
+    private static IEnumerable<(string Target, Write Write)> Targets(WindowsOperation op) =>
+        op.Registry.Concat(op.RegistryEachSettings.Select(e => new RegistrySetting(e.Hive, e.PathPattern, e.Name, e.Kind, e.Value)))
+            .Select(r => ($@"{r.Hive}\{r.Path}\{r.Name}".ToUpperInvariant(), new Write(r.Value, r.SetBits, r.ClearBits)))
+            .Concat(op.Services.Select(s => ($"SERVICE {s.Name}".ToUpperInvariant(), new Write(s.Start.ToString()))))
+            .Concat(op.Features.Select(f => ($"FEATURE {f.Name}".ToUpperInvariant(), new Write(f.Enabled.ToString()))))
+            .Concat(op.Tasks.Select(t => ($"TASK {t.Path}".ToUpperInvariant(), new Write(t.Enabled.ToString()))))
+            .Concat(op.PowerSettings.Select(p => ($"POWER {p.Subgroup} {p.Setting}".ToUpperInvariant(), new Write(p.AcValue.ToString(System.Globalization.CultureInfo.InvariantCulture)))))
+            .Concat(op.TcpSettings.Select(t => ($"TCP {t.Name}".ToUpperInvariant(), new Write(t.Value))))
+            .Concat(op.SystemSettings.Select(t => ($"SYSTEM {t.Kind} {t.Name}".ToUpperInvariant(), new Write(t.Value))))
+            .Concat(op.AppxSettings.Select(a => ($"APPX {a.Name}".ToUpperInvariant(), new Write("removed"))))
+            .Concat(op.PowerPlan is { } plan ? [("ACTIVE POWER SCHEME", new Write(plan.SchemeGuid))] : []);
+
+    /// <summary>
+    /// Whether two writes to one setting disagree (0.9 compares bit fields by their bits, not as text). Two whole values disagree when they differ. Two
+    /// masked writes disagree only when one sets a bit the other clears; setting or clearing different bits of one value, or the same bit the same way, is
+    /// no conflict. A whole value disagrees with a masked write when it doesn't have the bits the mask sets, or has bits it clears; a whole value that isn't
+    /// a number can't be compared by bits and counts as a conflict.
+    /// </summary>
+    private static bool Disagree(Write a, Write b)
+    {
+        if (!a.Masked && !b.Masked)
+        {
+            return !string.Equals(a.Value, b.Value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (a.Masked && b.Masked)
+        {
+            return (a.SetBits & b.ClearBits) != 0 || (a.ClearBits & b.SetBits) != 0;
+        }
+
+        var (whole, masked) = a.Masked ? (b, a) : (a, b);
+        return Number(whole.Value) is not { } value || (value & masked.SetBits) != masked.SetBits || (value & masked.ClearBits) != 0;
+    }
+
+    private static uint? Number(string value) =>
+        uint.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n
+        : value.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && uint.TryParse(value[2..], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var hex) ? hex
+        : int.TryParse(value, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var signed) ? unchecked((uint)signed)
+        : null;
 
     /// <summary>Each setting written differently by two or more of the operations: the setting and the operations.</summary>
     private static IEnumerable<IReadOnlyList<WindowsOperation>> ConflictingWrites(IReadOnlyList<WindowsOperation> operations) =>
@@ -212,10 +250,27 @@ public sealed class WindowsConfigurator
 
     private static IEnumerable<(string Target, IReadOnlyList<WindowsOperation> Operations)> ConflictingTargets(IReadOnlyList<WindowsOperation> operations)
     {
-        var writes = operations.SelectMany(op => Targets(op).Select(t => (Op: op, t.Target, t.Value))).ToList();
-        foreach (var group in writes.GroupBy(w => w.Target).Where(g => g.Select(w => w.Value).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1))
+        var writes = operations.SelectMany(op => Targets(op).Select(t => (Op: op, t.Target, t.Write))).ToList();
+        foreach (var group in writes.GroupBy(w => w.Target))
         {
-            yield return (group.Key, [.. group.Select(w => w.Op).DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)]);
+            var list = group.ToList();
+            var involved = new List<WindowsOperation>();
+            for (var i = 0; i < list.Count; i++)
+            {
+                for (var j = i + 1; j < list.Count; j++)
+                {
+                    if (!list[i].Op.Id.Equals(list[j].Op.Id, StringComparison.OrdinalIgnoreCase) && Disagree(list[i].Write, list[j].Write))
+                    {
+                        involved.Add(list[i].Op);
+                        involved.Add(list[j].Op);
+                    }
+                }
+            }
+
+            if (involved.Count > 0)
+            {
+                yield return (group.Key, [.. involved.DistinctBy(o => o.Id, StringComparer.OrdinalIgnoreCase)]);
+            }
         }
     }
 
@@ -383,7 +438,8 @@ public sealed class WindowsConfigurator
                     ?? throw new InvalidOperationException($"The installed apps couldn't be read, so {app.Name} has no before-image; left alone.");
                 foreach (var fullName in installed)
                 {
-                    done.Add(new RecordedChange(ChangeKind.Appx, app.Target, null, fullName, app.Name, null, "installed", "removed"));
+                    // The signed-in user it was removed for (0.9), so an undo for another user is refused rather than registering the app for them.
+                    done.Add(new RecordedChange(ChangeKind.Appx, app.Target, null, fullName, app.Name, null, "installed", "removed", UserSid: _reader.User.Sid));
                     _writer.RemoveAppx(fullName);
                     if (_reader.ReadAppxPackages(app.Name) is not { } after || after.Contains(fullName, StringComparer.OrdinalIgnoreCase))
                     {
@@ -803,6 +859,23 @@ public sealed class WindowsConfigurator
                 continue;
             }
 
+            // Built-in apps (0.9): Windows registers an app again for the account that asks, so the undo runs only as the signed-in user it was removed for.
+            // A record from before 0.9 names no user; it is still refused while Mesura runs as another account.
+            if (step.Changes.Any(c => c.Kind == ChangeKind.Appx)
+                && (!_reader.User.ProcessIsUser
+                    || step.Changes.Any(c => c.Kind == ChangeKind.Appx && c.UserSid is not null && !string.Equals(c.UserSid, _reader.User.Sid, StringComparison.OrdinalIgnoreCase))))
+            {
+                outcomes.Add(step with
+                {
+                    Status = WindowsOpStatus.Blocked,
+                    Detail = !_reader.User.ProcessIsUser
+                        ? WindowsEvaluator.OtherAccountReason(_reader.User) + " Nothing was put back."
+                        : "These apps were removed for another Windows user; put them back while that user is signed in and runs Mesura.",
+                    Changes = [],
+                });
+                continue;
+            }
+
             if (_trusted is not null && Undeclared(step) is { } undeclared)
             {
                 outcomes.Add(step with
@@ -899,6 +972,8 @@ public sealed class WindowsConfigurator
         ChangeKind.Registry => WindowsEvaluator.Matches(_reader.ReadRegistry(change.Hive!, change.Path!, change.Name!),
             change.RegistryKind ?? RegistryKind.DWord, change.Before),
         ChangeKind.Service => _reader.ReadService(change.Name!).Start?.ToString(System.Globalization.CultureInfo.InvariantCulture) == change.Before,
+        // 0.9: an optional feature (Virtual Machine Platform) still in its before-state after a crash is a change never made, not "something else".
+        ChangeKind.Feature => _reader.ReadFeature(change.Name!).ToString() == change.Before,
         ChangeKind.Task => _reader.ReadTask(change.Path!).ToString() == change.Before,
         ChangeKind.TcpGlobal => string.Equals(_reader.ReadTcpGlobal(change.Name!), change.Before, StringComparison.OrdinalIgnoreCase),
         ChangeKind.SystemSetting => string.Equals(_reader.ReadSystemSetting(change.Path!, change.Name!), change.Before, StringComparison.OrdinalIgnoreCase),

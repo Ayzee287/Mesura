@@ -22,7 +22,7 @@ $code = $LASTEXITCODE
 $cycle | Out-File 'C:\Host\out\cycle\2-cycle.txt' -Encoding utf8
 foreach ($l in @($cycle | Where-Object { $_ -match '^(FAIL)' })) { Say "      $l" }
 Check '[cycle] every judged step passed (exit code 0)' ($code -eq 0) "exit $code"
-foreach ($step in '[1 start]', '[2 undone] the revert run', '[2 undone] the original run', '[2 undone] the plan', '[3 applied again] the new run', '[3 applied again] nothing') {
+foreach ($step in '[1 start]', '[2 undone] the revert run', '[2 undone] the original run', '[2 undone] the plan', '[3 applied again] the new run', "[3 applied again] none of the run's operations") {   # the tester's wording since adcad38 (2026-11-04)
   Check "[cycle] the line '$step ...' is a PASS" (@($cycle | Where-Object { $_.StartsWith('PASS') -and $_.Contains($step) }).Count -gt 0)
 }
 Say "== profile-cycle done $(Get-Date -Format s)"

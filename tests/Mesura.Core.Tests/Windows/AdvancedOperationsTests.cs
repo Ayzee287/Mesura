@@ -4,8 +4,9 @@ using Mesura.Core.Windows;
 namespace Mesura.Core.Tests.Windows;
 
 /// <summary>
-/// The advanced settings of 0.7.0 (D052): the ones that give up protection or data sync and the 14 generic network adapter settings. They are individually selectable choices and nothing else:
-/// no profile applies or offers them, each states its cost, none claims a gain, and each can be put back. Nothing is applied to a real PC here.
+/// The advanced settings of 0.7.0 (D052): the ones that give up protection or data sync and the generic network adapter settings. They are individually selectable choices: a profile
+/// holds one only through the owner's allow-list (D054; today SmartScreen off, unticked in Maximum performance), each states its cost, none claims a gain, and each can be put back.
+/// Nothing is applied to a real PC here.
 /// </summary>
 public sealed class AdvancedOperationsTests
 {
@@ -30,21 +31,36 @@ public sealed class AdvancedOperationsTests
         Assert.All(new[] { "advanced-security", "advanced-background" }, id => Assert.Equal(PresetTier.Collection, Catalog.PresetById(id)!.Tier));
     }
 
+    /// <summary>
+    /// The owner's allow-list of Advanced settings in profiles (D052 as revised by D054 items 1 and 2): each by id, with its one profile and its role. Nothing
+    /// else Advanced is in a profile. 2026-11-26 (owner's review corrections, D059): DiagTrack joins, optional in Maximum; Print Spooler is not added; OneDrive sync
+    /// is not used (the owner wants the client removed, which is withheld).
+    /// </summary>
+    private static readonly (string Operation, string Profile, EntryRole Role)[] AllowList =
+        [("services.diagnostic-tracking-off", "maximum-performance", EntryRole.Optional), ("security.smartscreen-off", "maximum-performance", EntryRole.Optional)];
+
     [Fact]
-    public void No_profile_and_no_primary_preset_applies_or_offers_an_advanced_setting()
+    public void Advanced_settings_reach_a_profile_only_through_the_owners_allow_list()
     {
         var advanced = Advanced.Concat(Catalog.Operations.Where(o => o.AdapterSettings.Count > 0 && o.Id.StartsWith("network.adapter-", StringComparison.Ordinal)).Select(o => o.Id)).ToHashSet();
-        Assert.Equal(Security.Length + Background.Length + 14, advanced.Count); // 6 + 9 + the 14 generic adapter settings
+        Assert.Equal(Security.Length + Background.Length + 13, advanced.Count); // 6 + 9 + the 13 generic adapter settings (14 until 0.9 retired the IPv6 unbinding, D057)
 
-        foreach (var profile in OptimizationProfiles.Default.Profiles)
-        {
-            Assert.All(profile.Entries, e => Assert.DoesNotContain(e.OperationId, advanced)); // neither as default nor as an unticked optional entry
-        }
+        var found = OptimizationProfiles.Default.Profiles.SelectMany(p => p.Entries.Where(e => advanced.Contains(e.OperationId)).Select(e => (e.OperationId, p.Id, e.Role))).ToList();
+        Assert.Equal(AllowList, found);
 
+        // The primary presets mirror that: the allowed setting is offered unticked in Maximum performance and in no preset's applied list.
         foreach (var preset in Catalog.Presets.Where(p => p.Tier == PresetTier.Primary))
         {
-            Assert.All(preset.OperationIds.Concat(preset.OptionalIds), id => Assert.DoesNotContain(id, advanced));
+            Assert.All(preset.OperationIds, id => Assert.DoesNotContain(id, advanced));
+            Assert.All(preset.OptionalIds.Where(advanced.Contains), id => Assert.Contains(AllowList, a => a.Operation == id && a.Profile == preset.Id));
         }
+
+        // Never in Reference, never as a default: Defender, the firewall, memory integrity, VBS, CPU mitigations, the hypervisor and Mark-of-the-Web in no profile.
+        Assert.DoesNotContain(OptimizationProfiles.Default.ById("recommended-gaming")!.Entries, e => e.OperationId.StartsWith("security.", StringComparison.Ordinal));
+        Assert.All(new[] { "security.memory-integrity-off", "security.vbs-off", "security.cpu-mitigations-off", "security.hypervisor-off", "security.mark-of-the-web-off" },
+            id => Assert.DoesNotContain(OptimizationProfiles.Default.Profiles.SelectMany(p => p.Entries), e => e.OperationId == id));
+        Assert.DoesNotContain(OptimizationProfiles.Default.Profiles.SelectMany(p => p.Entries), e => e.OperationId.Contains("defender", StringComparison.OrdinalIgnoreCase)
+            || e.OperationId.Contains("firewall", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

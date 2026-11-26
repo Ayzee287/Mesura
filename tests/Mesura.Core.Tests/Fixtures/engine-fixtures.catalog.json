@@ -331,6 +331,28 @@
           "start": "disabled"
         }
       ]
+    },
+    // Retired from the product catalog in 0.9 (vault D054 item 6, D057), kept here exactly as the 0.8 catalog had them so the engine tests of a built-in plan
+    // switch, a plan installed from a template, battery and Modern Standby requirements and the "two plans" conflict keep running on real definitions.
+    {
+      "id": "power.high-performance", "name": "High performance power plan", "category": "Power",
+      "impact": "power", "summary": "High performance plan: full processor speed, more power and heat.",
+      "description": "Makes the built-in High performance plan active. On current Windows its defaults keep the processor at 100% minimum state with a maximum-performance energy preference and turn PCI Express link power saving off. No reputable measurement shows a frame-rate gain on current processors.",
+      "risk": "systemConfiguration", "valueBasis": "documented", "activation": "immediate",
+      "requires": [ "noBattery", "noModernStandby" ],
+      "limitations": "Desktops only: a plan also sets battery behaviour, so Mesura doesn't offer it on PCs with a battery, nor on Modern Standby PCs, where Windows offers only Balanced (use Settings > Power mode there). Higher idle power and heat. The Power mode slider disappears while it is active. Game Mode and vendor power profiles can still override parts of the processor policy.",
+      "source": "powercfg built-in scheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c; scheme defaults read from DefaultPowerSchemeValues on PC-000; Microsoft Learn 'Customize the Windows performance power slider'.",
+      "powerPlan": { "scheme": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", "name": "High performance", "createIfMissing": false }
+    },
+    {
+      "id": "power.ultimate-performance", "name": "Ultimate Performance power plan", "category": "Power",
+      "impact": "power", "summary": "Ultimate Performance plan, meant for workstations.",
+      "description": "Makes the Ultimate Performance plan active, installing it from Windows' template first if Windows doesn't list it. Meant for workstations; no measured gaming gain.",
+      "risk": "systemConfiguration", "activation": "immediate",
+      "requires": [ "noBattery", "noModernStandby" ],
+      "limitations": "Desktops only, as High performance, and with drives that never power down. The install keeps the template's GUID, which hasn't been tried on a stock desktop. Reverting reactivates the previous plan and removes the Ultimate Performance plan if this operation installed it.",
+      "source": "powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 (Windows' template; Microsoft Learn powercfg command-line options). No Microsoft Learn page describes the plan itself.",
+      "powerPlan": { "scheme": "e9a42b02-d5df-448d-aa00-03f14749eb61", "name": "Ultimate Performance", "createIfMissing": true }
     }
   ],
   "presets": []

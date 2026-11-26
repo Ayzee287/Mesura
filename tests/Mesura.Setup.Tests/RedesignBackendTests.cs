@@ -5,6 +5,7 @@ using Mesura.Core.Windows;
 using Mesura.Setup.Windows;
 using Mesura.Setup.Windows.Apps;
 using Mesura.Setup.Windows.Config;
+using Mesura.Setup.Windows.Profiles;
 
 namespace Mesura.Setup.Tests;
 
@@ -151,6 +152,17 @@ public sealed class RedesignBackendTests : IDisposable
 
     private static OperationEvaluation Eval(WindowsOperation op, OperationState state) => new(op, state, "", []);
 
+    /// <summary>
+    /// Whether a level is in place, judged as <see cref="ProfileRunner.Capture"/> judges it (0.9): on the level as planned for this hardware, from these
+    /// evaluations (a stand-in Windows answers only the planner's own questions).
+    /// </summary>
+    private static bool InPlace(WindowsPreset level, IEnumerable<OperationEvaluation> windows, Mesura.Core.Hardware.HardwareProfile? hardware)
+    {
+        var byId = windows.ToDictionary(w => w.Operation.Id, StringComparer.OrdinalIgnoreCase);
+        return Mesura.Core.Profiles.LevelPlanning.InPlace(level,
+            new Mesura.Core.Profiles.PlanningContext(WindowsCatalog.Default, hardware, new TestPlanning.EmptyWindows(), id => byId.GetValueOrDefault(id)));
+    }
+
     [Fact]
     public void A_saved_profile_records_the_chosen_outcome_when_it_is_in_place()
     {
@@ -160,17 +172,36 @@ public sealed class RedesignBackendTests : IDisposable
             op.Requirements.Contains(DeviceRequirement.NoBattery) ? OperationState.Inapplicable
             : maximum.OperationIds.Contains(op.Id) || op.Id == "explorer.show-extensions" ? OperationState.Applied
             : OperationState.NotApplied)).ToList();
+        var hardware = TestPlanning.Desktop();
 
-        Assert.True(SetupProfile.PresetSatisfied(maximum, laptop));
+        Assert.True(InPlace(maximum, laptop, hardware));
         var profile = SetupProfile.FromMachine("pc", "", [], laptop, null, [maximum]);
         Assert.Equal(["maximum-performance"], profile.WindowsPresets);
         Assert.Equal(["explorer.show-extensions"], profile.Windows); // the preset's own entries aren't listed again
 
         // One entry undone since: the outcome isn't in place any more, so the profile lists what is applied instead.
         var partly = laptop.Select(e => e.Operation.Id == "privacy.no-language-list" ? Eval(e.Operation, OperationState.NotApplied) : e).ToList();
-        Assert.False(SetupProfile.PresetSatisfied(maximum, partly));
+        Assert.False(InPlace(maximum, partly, hardware));
 
         // Nothing applied at all (everything inapplicable) isn't an outcome either.
-        Assert.False(SetupProfile.PresetSatisfied(maximum, catalog.Operations.Select(op => Eval(op, OperationState.Inapplicable))));
+        Assert.False(InPlace(maximum, catalog.Operations.Select(op => Eval(op, OperationState.Inapplicable)), hardware));
+    }
+
+    [Fact]
+    public void A_level_is_in_place_on_the_hardware_it_was_planned_for_and_not_while_that_hardware_is_unread()
+    {
+        // 0.9: the NVMe entry of Maximum is for a PC with an NVMe drive. On a PC without one it isn't applied, and the level still counts as in place
+        // (judged on the whole list, before 0.9, it never could).
+        var catalog = WindowsCatalog.Default;
+        var maximum = catalog.PresetById("maximum-performance")!;
+        var noNvme = catalog.Operations.Select(op => Eval(op,
+            op.Requirements.Contains(DeviceRequirement.NoBattery) ? OperationState.Inapplicable
+            : op.Id == "power.nvme-stay-active-ac" ? OperationState.NotApplied
+            : maximum.OperationIds.Contains(op.Id) ? OperationState.Applied
+            : OperationState.NotApplied)).ToList();
+
+        Assert.True(InPlace(maximum, noNvme, TestPlanning.Desktop(nvme: false)));
+        Assert.False(InPlace(maximum, noNvme, TestPlanning.Desktop(nvme: true)));   // with an NVMe drive the entry is still to apply
+        Assert.False(InPlace(maximum, noNvme, hardware: null));                     // hardware unread: its entries can't be told, so not claimed in place
     }
 }

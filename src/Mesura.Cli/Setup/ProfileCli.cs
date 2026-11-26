@@ -1,5 +1,6 @@
 using Mesura.Cli.Apps;
 using Mesura.Core.Apps;
+using Mesura.Core.Profiles;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 using Mesura.Platform.Windows;
@@ -31,9 +32,14 @@ internal static class ProfileCli
                          the app.
         profile run      Reads a setup profile and previews it: the apps it would install or skip, the
                          settings its config bundle would import and the Windows operations it would
-                         apply. With --apply it installs the apps, imports the settings (apps that are
-                         running are skipped), applies the Windows operations, and records the run.
-                         Re-running a profile is safe: done steps are skipped.
+                         apply. A level it names (Mesura Reference, Maximum performance; Maximum when
+                         it names both) is planned for this PC's hardware with the level's defaults,
+                         and its single operations obey the hardware conditions a level puts on them;
+                         what is left out here is listed with the reason. Operations this version
+                         retired are named and never applied. With --apply it installs the apps,
+                         imports the settings (apps that are running are skipped), applies the Windows
+                         operations, and records the run. Re-running a profile is safe: done steps are
+                         skipped.
         history list     Lists the recorded runs (installs, imports, Windows changes, profiles), newest
                          first. Read-only.
         history show     Shows one recorded run step by step. Read-only.
@@ -99,10 +105,14 @@ internal static class ProfileCli
         var reader = new SystemStateReader(new SystemTools());
         var installer = AppDetectors.Installer(reader.User, reader.IsElevated);
         var folder = Path.GetDirectoryName(Path.GetFullPath(path))!;
-        var plan = ProfileRunner.Plan(profile, folder, catalog, installer, windowsCatalog, new SetupStore());
+        // A level the profile names is planned for this PC's hardware (0.9), so the hardware is read when it names one or names single operations a level
+        // conditions; reading it costs a moment and changes nothing.
+        var hardware = profile.WindowsPresets.Count > 0 || profile.Windows.Count > 0 ? ProfilePlanCli.ReadHardware(reader) : null;
+        var plan = ProfileRunner.Plan(profile, folder, catalog, installer, PlanningContext.Reading(windowsCatalog, hardware, reader), new SetupStore());
         var configurator = new WindowsConfigurator(reader, new WindowsWriter(reader.User, reader.Tools as SystemTools));
 
         Console.WriteLine($"Profile: {profile.Name}{(profile.Description.Length > 0 ? $" - {profile.Description}" : "")}");
+        WriteResolution(plan);
         if (!ProcessUser.Is(reader.User, reader.IsElevated) && (plan.Bundle is not null || plan.BundleError is not null))
         {
             // App settings live in this process account's profile, which isn't the signed-in user's: leave them out.
@@ -210,8 +220,9 @@ internal static class ProfileCli
             Console.Error.WriteLine($"App settings aren't saved: Mesura runs as {ProcessUser.Account}, not as the signed-in user, so the settings it could read would be that account's.");
         }
 
+        // No outcome is named here, so no level is recorded and the hardware isn't needed to judge one.
         var capture = ProfileRunner.Capture(stem, bundleName, catalog, AppDetectors.Installer(reader.User, reader.IsElevated), windowsCatalog,
-            reader, SetupRun.Stamp(DateTimeOffset.UtcNow), includeSettings: sameUser);
+            reader, hardware: null, SetupRun.Stamp(DateTimeOffset.UtcNow), includeSettings: sameUser);
         if (!capture.Profile.SelectsAnything)
         {
             Console.Error.WriteLine("Nothing to save: no catalog app is installed, no Windows operation is applied and no app settings were found.");
@@ -289,6 +300,28 @@ internal static class ProfileCli
             default:
                 Console.Error.WriteLine(Usage);
                 return args.Length == 0 ? Ok : UsageCode;
+        }
+    }
+
+    /// <summary>
+    /// What the profile's Windows part leaves out on this PC (0.9): a level set aside for another, the entries of its level that aren't for this hardware
+    /// or couldn't be told, single operations a level's condition excludes, and operations this version retired.
+    /// </summary>
+    private static void WriteResolution(Mesura.Setup.Windows.Profiles.ProfilePlan plan)
+    {
+        if (plan.Resolution is { } resolution)
+        {
+            foreach (var id in resolution.SetAside)
+            {
+                Console.WriteLine($"Windows preset '{id}' is set aside: the profile names Maximum performance too, which holds everything it applies except its power plan.");
+            }
+
+            ProfilePlanCli.WriteNotHere(plan.NotHere, "Windows settings not applied on this PC (planned for its hardware):");
+        }
+
+        if (plan.Retired.Count > 0)
+        {
+            Console.WriteLine($"Retired in this version, never applied: {string.Join(", ", plan.Retired)} (what an earlier version applied with them can still be undone from history).");
         }
     }
 

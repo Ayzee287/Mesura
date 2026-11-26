@@ -133,15 +133,18 @@ public sealed class RevertTrustTests
     public void The_operations_0_4_retired_are_never_listed_and_none_is_also_in_the_catalog()
     {
         var retired = WindowsCatalog.Retired;
-        Assert.Equal(99, retired.Operations.Count);
+        // 99 through 0.8; 0.9 (D054 item 6, D057) retires Windows' High performance and Ultimate plans and the IPv6 unbinding.
+        Assert.Equal(102, retired.Operations.Count);
         Assert.Empty(retired.Presets);
         Assert.All(retired.Operations, op =>
         {
             Assert.Null(WindowsCatalog.Default.ById(op.Id));
+            Assert.Null(WindowsCatalog.Full.ById(op.Id));
             Assert.Equal("Retired", op.Category);
             Assert.True(op.Registry.Count + op.Services.Count + op.Features.Count + op.Tasks.Count + op.TcpSettings.Count + op.SystemSettings.Count + op.AppxSettings.Count
-                + op.PowerSettings.Count + op.RegistryEachSettings.Count > 0 || op.PowerPlan is not null, op.Id);
+                + op.PowerSettings.Count + op.RegistryEachSettings.Count + op.AdapterSettings.Count > 0 || op.PowerPlan is not null, op.Id);
         });
+        Assert.All(new[] { "power.high-performance", "power.ultimate-performance", "network.adapter-ipv6-binding-off" }, id => Assert.NotNull(retired.ById(id)));
     }
 
     [Fact]

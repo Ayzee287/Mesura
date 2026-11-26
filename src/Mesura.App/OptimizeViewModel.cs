@@ -1160,10 +1160,9 @@ public sealed class OptimizeViewModel : Observable, IPageState
 
     // ---- The profile as planned for this PC ----------------------------------------------------------------------------------------
 
+    /// <summary>The level planned for this PC with the user's choices, through the one planner every path uses (0.9, <see cref="LevelPlanning"/>).</summary>
     private ProfilePlan PlanFor(WindowsPreset preset, ProfileChoices choices)
     {
-        var profiles = OptimizationProfiles.Default;
-        var profile = profiles.ById(preset.Id) ?? profiles.FromPreset(preset);
         var waiting = new Dictionary<string, Activation>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in _state.Rows)
         {
@@ -1173,7 +1172,7 @@ public sealed class OptimizeViewModel : Observable, IPageState
             }
         }
 
-        return ProfilePlanner.Plan(profile, _state.Catalog!, _hardware, _services.Reader, id => _state.Row(id)?.Evaluation, waiting, choices);
+        return LevelPlanning.Plan(preset, new PlanningContext(_state.Catalog!, _hardware, _services.Reader, id => _state.Row(id)?.Evaluation) { Waiting = waiting }, choices);
     }
 
     private HashSet<string> GroupsOff() => new(_services.Settings.ProfileGroupsOff ?? [], StringComparer.OrdinalIgnoreCase);

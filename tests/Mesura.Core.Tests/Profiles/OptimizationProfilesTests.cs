@@ -109,8 +109,12 @@ public sealed class OptimizationProfilesTests
             Assert.Equal(entry.GroupId, maximum[id].GroupId);
         }
 
-        Assert.DoesNotContain("power.mesura-balanced-plan", maximum.Keys);
+        // 0.9 (D054 item 4): Maximum holds the Balanced Mesura plan too, only for a dual-CCD Ryzen X3D, where the owner's restriction leaves the Maximum plan
+        // out; everywhere else the Maximum plan is its plan. (Before 0.9 Maximum didn't hold the Balanced plan at all.)
+        var balancedPlan = maximum["power.mesura-balanced-plan"];
+        Assert.Equal(("power", EntryRole.Default, "x3d-dual-ccd"), (balancedPlan.GroupId, balancedPlan.Role, balancedPlan.When?.Cpu));
         Assert.Contains("power.mesura-maximum-plan", maximum.Keys);
+        Assert.Equal(["dual-ccd-x3d"], maximum["power.mesura-maximum-plan"].Restrictions.Select(r => r.Id));
         Assert.True(Maximum.DefaultIds.Count > Balanced.DefaultIds.Count + 20);
     }
 
@@ -129,8 +133,17 @@ public sealed class OptimizationProfilesTests
             Assert.True(byId[id].SideEffects, $"{id} has a cost that must be shown");
         }
 
-        // The entries held back are held back for the evidence of their stored value, never for being aggressive.
-        foreach (var optional in Maximum.Entries.Where(e => e.Role == EntryRole.Optional && !e.OperationId.StartsWith("telemetry.", StringComparison.Ordinal)))
+        // 0.9 (D054 item 3, replacing 2026-11-02's "optional = community-only stored value"): an entry may be optional for less-established evidence, an
+        // intentional trade-off, a feature removed, or applicability that calls for a choice. Every optional entry says why it is optional, and its operation
+        // says what is lost; the aggressive performance entries above stay default (never held back for being aggressive).
+        foreach (var optional in Profiles.Profiles.SelectMany(p => p.Entries).Where(e => e.Role == EntryRole.Optional))
+        {
+            Assert.Contains("ffered, not applied", optional.Why, StringComparison.Ordinal);
+            Assert.False(string.IsNullOrWhiteSpace(Catalog.ById(optional.OperationId)!.Limitations), $"{optional.OperationId} states no consequence");
+        }
+
+        // An optional entry whose only reason is its evidence is still community-only (the reason says so), so none is held back without one.
+        foreach (var optional in Maximum.Entries.Where(e => e.Role == EntryRole.Optional && e.Why.Contains("community sources only", StringComparison.Ordinal)))
         {
             Assert.Equal(ValueBasis.Community, Catalog.ById(optional.OperationId)!.Basis);
         }
@@ -147,12 +160,14 @@ public sealed class OptimizationProfilesTests
     }
 
     [Fact]
-    public void The_default_entries_of_each_profile_never_set_one_thing_two_ways_even_with_every_group_on()
+    public void The_entries_of_each_profile_never_set_one_thing_two_ways_on_one_pc_even_with_every_group_on_and_every_option_ticked()
     {
+        // 0.9: condition-aware. Two entries that conflict may both be in a profile only when their hardware conditions keep them apart (no PC meets both),
+        // so they never meet in one plan. Optional entries count too (the user can tick every one); before 0.9 this checked the default entries only and
+        // ignored conditions, which would have refused a pair such as the two Mesura plans under "x3d-dual-ccd" and "not-x3d-dual-ccd".
         foreach (var profile in Profiles.Profiles)
         {
-            var ops = profile.DefaultIds.Select(id => Catalog.ById(id)!).ToList();
-            Assert.Empty(WindowsConfigurator.Conflicts(ops));
+            Assert.Empty(LevelPlanning.ConditionAwareConflicts(profile, Catalog));
         }
     }
 

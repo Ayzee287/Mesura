@@ -241,3 +241,7 @@ M:Windows.Win32.Graphics_DXCore_IDXCoreAdapter_Extensions.SetState(Windows.Win32
 // exist only for the engine's tests (the test projects don't load this list).
 M:Mesura.Core.Windows.WindowsConfigurator.Apply(System.Collections.Generic.IEnumerable{Mesura.Core.Windows.WindowsOperation},System.Threading.CancellationToken);Production runs pass their journal: WindowsConfigurator.Apply(operations, cancellationToken, journal) (crash-safe runs, 0.8)
 M:Mesura.Core.Windows.WindowsConfigurator.Revert(System.Collections.Generic.IEnumerable{Mesura.Core.Windows.WindowsOpOutcome});Production undos pass their journal: WindowsConfigurator.Revert(recorded, journal) (crash-safe runs, 0.8)
+
+// Planner Everywhere (0.9, vault D054 and the owner's Phase 1 decisions of 2026-11-25): a preset's whole list is never taken by hand, because a preset that
+// is a level must be planned for the PC's hardware. LevelPlanning.Resolve is the one caller (it takes the list only for presets that are not levels).
+M:Mesura.Core.Windows.WindowsCatalog.Resolve(Mesura.Core.Windows.WindowsPreset);A level is planned for the PC: use LevelPlanning.Resolve or LevelPlanning.Plan (Planner Everywhere, 0.9)

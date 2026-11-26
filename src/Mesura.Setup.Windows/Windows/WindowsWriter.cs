@@ -23,16 +23,34 @@ public sealed partial class WindowsWriter : IWindowsWriter
     private const int DismRestartRequired = 3010;
     private readonly UserContext _user;
     private readonly SystemTools _tools;
+    private readonly Func<UserContext, bool> _processIsUser;
 
     /// <param name="user">The signed-in user whose per-user settings are written (from the state reader).</param>
     /// <param name="tools">The tool-backed settings (boot entry, hibernation, memory agent); the same instance the state reader reads through.</param>
-    public WindowsWriter(UserContext user, SystemTools? tools = null)
+    /// <param name="processIsUser">
+    /// Whether this process runs as <paramref name="user"/> now (0.9; <see cref="ProcessUser.Is(UserContext)"/> unless a test passes its own): checked again
+    /// before a built-in app is removed or put back, beside <see cref="UserContext.ProcessIsUser"/>, because Windows does both for the account that asks.
+    /// </param>
+    public WindowsWriter(UserContext user, SystemTools? tools = null, Func<UserContext, bool>? processIsUser = null)
     {
         _user = user ?? throw new ArgumentNullException(nameof(user));
         _tools = tools ?? new SystemTools();
+        _processIsUser = processIsUser ?? ProcessUser.Is;
     }
 
     public void SetSystemSetting(string kind, string name, string value) => _tools.Write(kind, name, value);
+
+    /// <summary>
+    /// Refuses an app removal or registration unless this process runs as the signed-in user (0.9): <c>Remove-AppxPackage</c> and <c>Add-AppxPackage</c> act
+    /// on the account that runs them, while Mesura reads and checks the signed-in user's apps. The engine blocks such operations first; this is the last check.
+    /// </summary>
+    private void RequireProcessIsUser()
+    {
+        if (!_user.ProcessIsUser || !_processIsUser(_user))
+        {
+            throw new InvalidOperationException(WindowsEvaluator.OtherAccountReason(_user));
+        }
+    }
 
     public void RemoveAppx(string packageFullName)
     {
@@ -41,6 +59,8 @@ public sealed partial class WindowsWriter : IWindowsWriter
         {
             throw new ArgumentException($"'{packageFullName}' isn't an app Mesura removes.", nameof(packageFullName));
         }
+
+        RequireProcessIsUser();
 
         // The name was checked against a plain pattern, so it is safe inside the quotes.
         var code = Run("WindowsPowerShell\\v1.0\\powershell.exe",
@@ -57,6 +77,8 @@ public sealed partial class WindowsWriter : IWindowsWriter
         {
             throw new ArgumentException($"'{packageFamilyName}' isn't a package family name.", nameof(packageFamilyName));
         }
+
+        RequireProcessIsUser();
 
         var code = Run("WindowsPowerShell\\v1.0\\powershell.exe",
             ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", $"Add-AppxPackage -RegisterByFamilyName -MainPackage '{packageFamilyName}' -ErrorAction Stop"]);

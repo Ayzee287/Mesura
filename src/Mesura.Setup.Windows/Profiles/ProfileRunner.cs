@@ -1,5 +1,6 @@
 using Mesura.Core.Apps;
 using Mesura.Core.Config;
+using Mesura.Core.Profiles;
 using Mesura.Core.Setup;
 using Mesura.Core.Windows;
 using Mesura.Setup.Windows.Config;
@@ -32,6 +33,18 @@ public sealed record ProfilePlan(
     /// <summary>The words for an app the plan won't install because an earlier run did.</summary>
     public const string EarlierDetail =
         "Installed by an earlier Mesura run on this PC; Mesura can't detect it, so its installer isn't run again (the Apps tab runs it again on request).";
+
+    /// <summary>
+    /// How the profile's Windows part was resolved for this PC (0.9): the plan of the level it names, the entries left out here with their reasons, the
+    /// single operations a level's hardware condition excludes, and a level set aside for another (Reference when Maximum is named too).
+    /// </summary>
+    public WindowsResolution? Resolution { get; init; }
+
+    /// <summary>Everything the Windows part leaves out on this PC, with the reason (empty when it names no level and nothing is excluded).</summary>
+    public IReadOnlyList<Mesura.Core.Profiles.PlanEntry> NotHere => Resolution?.NotHere ?? [];
+
+    /// <summary>Operations the file names that this version retired: never applied (<see cref="SetupProfile.RetiredWindows"/>).</summary>
+    public IReadOnlyList<string> Retired => Profile.RetiredWindows;
 }
 
 /// <summary>A profile read from this machine, the bundle to save beside it (or none), and what that bundle holds.</summary>
@@ -60,10 +73,14 @@ public static class ProfileRunner
     /// user: the settings it could read would be that account's, not the user's.
     /// </param>
     /// <param name="nvidia">The NVIDIA driver configuration to carry (D032); the default configuration when none is given.</param>
+    /// <param name="hardware">
+    /// This PC's hardware profile, or <c>null</c> when it couldn't be read (0.9): whether the chosen level is in place is judged on the level as planned for
+    /// this hardware (<see cref="LevelPlanning.InPlace"/>), so an entry for hardware the PC doesn't have doesn't keep it from counting.
+    /// </param>
     public static ProfileCapture Capture(
         string name, string bundleFileName, AppCatalog catalog, AppInstallService installer,
-        WindowsCatalog windowsCatalog, ISystemReader reader, string createdUtc, string? outcome = null, bool includeSettings = true,
-        Mesura.Core.Nvidia.NvidiaDriverConfig? nvidia = null)
+        WindowsCatalog windowsCatalog, ISystemReader reader, Mesura.Core.Hardware.HardwareProfile? hardware, string createdUtc, string? outcome = null,
+        bool includeSettings = true, Mesura.Core.Nvidia.NvidiaDriverConfig? nvidia = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(installer);
@@ -72,31 +89,39 @@ public static class ProfileRunner
 
         var apps = installer.BuildPlan(catalog.Packages);
         var windows = windowsCatalog.Operations.Select(op => WindowsEvaluator.Evaluate(op, reader)).ToList();
+        var evaluations = windows.GroupBy(w => w.Operation.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var planning = new PlanningContext(windowsCatalog, hardware, reader, id => evaluations.GetValueOrDefault(id));
         var export = ConfigService.Export(includeSettings ? ConfigCatalog.All : [], createdUtc);
         var settings = export.Apps.Where(a => a.Bundle.Values.Count > 0).ToList();
         var date = createdUtc.Length >= 10 ? createdUtc[..10] : createdUtc;
         var chosen = outcome is null ? null : windowsCatalog.PresetById(outcome);
         var profile = SetupProfile.FromMachine(name, $"Saved from a PC by Mesura on {date}.", apps, windows,
             settings.Count > 0 ? bundleFileName : null,
-            chosen is not null && SetupProfile.PresetSatisfied(chosen, windows) ? [chosen] : null,
+            chosen is not null && LevelPlanning.InPlace(chosen, planning) ? [chosen] : null,
             Mesura.Core.Nvidia.NvidiaDriverConfig.Normalize(nvidia));
         return new ProfileCapture(profile, settings.Count > 0 ? export.BundleJson : null, settings);
     }
 
+    /// <param name="windows">
+    /// What the Windows part is planned from on this PC (0.9): the catalog, the hardware profile (<c>null</c> when unread: entries for some hardware are then
+    /// left alone) and the reader. A level the profile names is planned with its defaults (<see cref="SetupProfile.ResolveWindows"/>), never its whole list.
+    /// </param>
     /// <param name="history">This PC's history, to find undetectable apps an earlier run installed (null: none known).</param>
     public static ProfilePlan Plan(
-        SetupProfile profile, string profileFolder, AppCatalog catalog, AppInstallService installer, WindowsCatalog? windowsCatalog = null,
+        SetupProfile profile, string profileFolder, AppCatalog catalog, AppInstallService installer, PlanningContext windows,
         SetupStore? history = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(installer);
+        ArgumentNullException.ThrowIfNull(windows);
 
         var apps = installer.BuildPlan(profile.ResolveApps(catalog));
-        var windows = profile.ResolveWindows(windowsCatalog ?? WindowsCatalog.Default);
+        var resolution = profile.ResolveWindows(windows);
+        var operations = resolution.Operations;
         var earlier = history is null ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) : InstalledEarlier(history, apps);
         if (profile.ConfigBundle is null)
         {
-            return new ProfilePlan(profile, apps, null, [], null, windows) { InstalledEarlier = earlier };
+            return new ProfilePlan(profile, apps, null, [], null, operations) { InstalledEarlier = earlier, Resolution = resolution };
         }
 
         var path = Path.GetFullPath(Path.Combine(profileFolder, profile.ConfigBundle));
@@ -104,13 +129,14 @@ public static class ProfileRunner
         {
             var bundle = ConfigBundleFile.Load(File.ReadAllText(path));
             var ports = profile.ResolveConfigPorts().Where(p => bundle.ForApp(p.Id) is not null).ToList();
-            return new ProfilePlan(profile, apps, bundle, ports, null, windows) { InstalledEarlier = earlier };
+            return new ProfilePlan(profile, apps, bundle, ports, null, operations) { InstalledEarlier = earlier, Resolution = resolution };
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or FormatException)
         {
-            return new ProfilePlan(profile, apps, null, [], $"Could not read the config bundle '{profile.ConfigBundle}': {e.Message}", windows)
+            return new ProfilePlan(profile, apps, null, [], $"Could not read the config bundle '{profile.ConfigBundle}': {e.Message}", operations)
             {
                 InstalledEarlier = earlier,
+                Resolution = resolution,
             };
         }
     }

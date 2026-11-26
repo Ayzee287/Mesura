@@ -1981,6 +1981,43 @@
       "impact": "Maintenance",
       "summary": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
       "description": "Taken out of the catalog in 0.5 until it is rebuilt on the adapter's own advanced properties (docs/reliability-0.5.md). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    // Retired in 0.9 (owner, vault D054 item 6; D057): Windows' High performance and Ultimate Performance plans, which duplicate the Mesura plans with less
+    // control, and the IPv6 unbinding, which Microsoft recommends against (KB 929852; "Prefer IPv4 over IPv6", network.prefer-ipv4, is the documented
+    // alternative). Their declarations are exactly the 0.8 catalog's, so a history record of them still undoes; a saved setup naming them opens and names
+    // them as retired, and they are never applied.
+    {
+      "id": "power.high-performance",
+      "name": "High performance power plan",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "powerPlan": { "scheme": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", "name": "High performance", "createIfMissing": false },
+      "category": "Retired",
+      "impact": "Power",
+      "summary": "Retired in 0.9 (the Mesura plans replace it). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.9 (the Mesura plans replace it). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "power.ultimate-performance",
+      "name": "Ultimate Performance power plan",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "powerPlan": { "scheme": "e9a42b02-d5df-448d-aa00-03f14749eb61", "name": "Ultimate Performance", "createIfMissing": true },
+      "category": "Retired",
+      "impact": "Power",
+      "summary": "Retired in 0.9 (the Mesura plans replace it). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.9 (the Mesura plans replace it). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
+    },
+    {
+      "id": "network.adapter-ipv6-binding-off",
+      "name": "Unbind Internet Protocol Version 6 (TCP/IPv6) on the adapter",
+      "risk": "systemConfiguration",
+      "activation": "immediate",
+      "adapter": [ { "binding": "ms_tcpip6", "enabled": false, "kinds": [ "ethernet", "wifi" ] } ],
+      "category": "Retired",
+      "impact": "Experimental",
+      "summary": "Retired in 0.9 (Microsoft recommends against unbinding IPv6; 'Prefer IPv4 over IPv6' is the documented alternative). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed.",
+      "description": "Retired in 0.9 (Microsoft recommends against unbinding IPv6; 'Prefer IPv4 over IPv6' is the documented alternative). Kept only so that an undo of a history record written by an earlier version still finds the settings this entry changed."
     }
   ]
 }

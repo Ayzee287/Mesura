@@ -18,7 +18,9 @@ public sealed class ReleaseWithholdingTests
         Assert.Equal(9, WindowsCatalog.Default.PresetById("network-adapter")!.OperationIds.Count);
         Assert.NotNull(WindowsCatalog.Default.ById("network.adapter-eee-off"));
         Assert.NotNull(WindowsCatalog.Default.ById("network.adapter-interrupt-moderation-off"));
-        Assert.Equal(19, WindowsCatalog.Default.Operations.Count(o => o.AdapterSettings.Count > 0)); // 14 generic + the 5 per-maker presets
+        // 13 generic (14 until 0.9 retired the IPv6 unbinding, D057) + the 5 per-maker presets.
+        Assert.Equal(18, WindowsCatalog.Default.Operations.Count(o => o.AdapterSettings.Count > 0));
+        Assert.Null(WindowsCatalog.Default.ById("network.adapter-ipv6-binding-off"));
     }
 
     [Fact]
@@ -44,7 +46,7 @@ public sealed class ReleaseWithholdingTests
     {
         var generic = WindowsCatalog.Default.Operations
             .Where(o => o.AdapterSettings.Count > 0 && !MakerPresets.Contains(o.Id)).Select(o => o.Id).ToHashSet();
-        Assert.Equal(14, generic.Count);
+        Assert.Equal(13, generic.Count); // 14 until 0.9 retired the IPv6 unbinding (D057)
         foreach (var profile in new[] { "recommended-gaming", "maximum-performance" })
         {
             Assert.All(WindowsCatalog.Default.PresetById(profile)!.OperationIds, id => Assert.DoesNotContain(id, generic));

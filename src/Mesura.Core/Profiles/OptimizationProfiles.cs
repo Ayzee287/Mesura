@@ -14,11 +14,18 @@ public sealed class OptimizationProfiles
 
     private static readonly Lazy<OptimizationProfiles> BuiltIn = new(() => Parse(ReadResource()));
 
-    private OptimizationProfiles(IReadOnlyList<ProfileGroup> groups, IReadOnlyList<OptimizationProfile> profiles)
+    private OptimizationProfiles(IReadOnlyList<ProfileGroup> groups, IReadOnlyList<OptimizationProfile> profiles, IReadOnlyList<HardwareRestriction> restrictions)
     {
         Groups = groups;
         Profiles = profiles;
+        Restrictions = restrictions;
     }
+
+    /// <summary>The owner's hardware restrictions over operations (0.9; the dual-CCD X3D policy), in file order.</summary>
+    public IReadOnlyList<HardwareRestriction> Restrictions { get; }
+
+    /// <summary>The restrictions that name an operation (none for most).</summary>
+    public IReadOnlyList<HardwareRestriction> RestrictionsFor(string operationId) => [.. Restrictions.Where(r => r.Covers(operationId))];
 
     public static OptimizationProfiles Default => BuiltIn.Value;
 
@@ -40,8 +47,9 @@ public sealed class OptimizationProfiles
     {
         ArgumentNullException.ThrowIfNull(preset);
         var group = Group("windows") ?? new ProfileGroup("windows", "Windows", "");
-        return new OptimizationProfile(preset.Id, [group], [.. preset.OperationIds.Select(id => new ProfileEntry(id, group.Id, EntryRole.Default, "", false, null))
-            .Concat(preset.OptionalIds.Select(id => new ProfileEntry(id, group.Id, EntryRole.Optional, "", false, null)))]);
+        // The hardware restrictions hold here too (0.9): an edited catalog's own level can't bring back what the policy leaves out.
+        return new OptimizationProfile(preset.Id, [group], [.. preset.OperationIds.Select(id => new ProfileEntry(id, group.Id, EntryRole.Default, "", false, null) { Restrictions = RestrictionsFor(id) })
+            .Concat(preset.OptionalIds.Select(id => new ProfileEntry(id, group.Id, EntryRole.Optional, "", false, null) { Restrictions = RestrictionsFor(id) }))]);
     }
 
     /// <exception cref="FormatException">The file is not a profile file this build can read, or is inconsistent.</exception>
@@ -87,6 +95,30 @@ public sealed class OptimizationProfiles
                 groups.Add(new ProfileGroup(id, Required(g, "name", $"group '{id}'"), Text(g, "summary") ?? ""));
             }
 
+            var restrictions = new List<HardwareRestriction>();
+            foreach (var r in Array(root, "restrictions"))
+            {
+                var id = Required(r, "id", "a restriction");
+                if (restrictions.Any(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new FormatException($"Restriction '{id}' appears more than once.");
+                }
+
+                var where = $"restriction '{id}'";
+                if (!r.TryGetProperty("when", out var when))
+                {
+                    throw new FormatException($"{where} has no 'when'.");
+                }
+
+                var ops = Array(r, "ops").Select(o => o.ValueKind == JsonValueKind.String ? o.GetString() ?? "" : "").ToList();
+                if (ops.Count == 0 || ops.Any(string.IsNullOrWhiteSpace))
+                {
+                    throw new FormatException($"{where} names no operations.");
+                }
+
+                restrictions.Add(new HardwareRestriction(id, Condition(where, when), ops, Required(r, "why", where)));
+            }
+
             var profiles = new List<OptimizationProfile>();
             foreach (var p in Array(root, "profiles"))
             {
@@ -99,7 +131,8 @@ public sealed class OptimizationProfiles
                 var entries = new List<ProfileEntry>();
                 foreach (var e in Array(p, "entries"))
                 {
-                    entries.Add(Entry(id, e, groups, why));
+                    var entry = Entry(id, e, groups, why);
+                    entries.Add(entry with { Restrictions = [.. restrictions.Where(x => x.Covers(entry.OperationId))] });
                 }
 
                 if (entries.GroupBy(x => x.OperationId, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1) is { } twice)
@@ -110,7 +143,7 @@ public sealed class OptimizationProfiles
                 profiles.Add(new OptimizationProfile(id, groups, entries));
             }
 
-            return new OptimizationProfiles(groups, profiles);
+            return new OptimizationProfiles(groups, profiles, restrictions);
         }
     }
 

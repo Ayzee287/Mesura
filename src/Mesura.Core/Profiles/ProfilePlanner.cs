@@ -75,6 +75,12 @@ public static class PlanReason
     };
     public const string Unread = "unread";
     public const string Blocked = "blocked";
+
+    /// <summary>
+    /// Built-in apps can't be removed or put back here: Mesura runs as another account than the signed-in user (0.9), and Windows removes and registers
+    /// apps for the account that asks (<see cref="WindowsEvaluator.OtherAccountCode"/>).
+    /// </summary>
+    public const string OtherAccount = WindowsEvaluator.OtherAccountCode;
     public const string Covered = "covered";
     public const string NotApplicable = "not-applicable";
 
@@ -182,8 +188,9 @@ public static class ProfilePlanner
             entries.Add(planned with { Included = planned.Selectable && groupOn && wanted });
         }
 
-        entries = Cover(entries, reader, e => !choices.GroupsOff.Contains(e.GroupId)
-            && (choices.Entries.TryGetValue(e.OperationId, out var chosen) ? chosen : e.Role == EntryRole.Default));
+        bool Wanted(ProfileEntry e) => !choices.GroupsOff.Contains(e.GroupId)
+            && (choices.Entries.TryGetValue(e.OperationId, out var chosen) ? chosen : e.Role == EntryRole.Default);
+        entries = Cover(Overridden(entries, reader, Wanted), reader, Wanted);
         return new ProfilePlan(profile, [.. profile.Groups.Select(g => new PlanGroup(g, [.. entries.Where(e => e.Entry.GroupId.Equals(g.Id, StringComparison.OrdinalIgnoreCase))], !choices.GroupsOff.Contains(g.Id)))]);
     }
 
@@ -202,19 +209,34 @@ public static class ProfilePlanner
             return Not(EntryState.Unsupported, PlanReason.NotApplicable, "Not a setting Mesura applies: it is a guide or an observation.");
         }
 
-        if (entry.When is { } when)
+        // The entry's own hardware condition and the owner's restrictions on its operation (0.9): one that fails leaves it out; one that can't be told leaves
+        // it alone. A failed condition wins over one that couldn't be told, so the stated reason is the certain one.
+        if (entry.Conditions.Count > 0)
         {
             if (hardware is null)
             {
                 return Not(EntryState.CantTell, PlanReason.Unread, "The hardware hasn't been read yet.");
             }
 
-            switch (when.Holds(hardware, out var failed))
+            PlanEntry? unknown = null;
+            foreach (var (when, from) in entry.Conditions)
             {
-                case false:
-                    return Not(EntryState.Unsupported, PlanReason.HardwarePrefix + failed, $"This PC doesn't have the hardware it is for ({failed}).");
-                case null:
-                    return Not(EntryState.CantTell, PlanReason.HardwarePrefix + failed, $"Couldn't tell whether this PC has the hardware it is for ({failed}), so it is left alone.");
+                switch (when.Holds(hardware, out var failed))
+                {
+                    case false:
+                        return Not(EntryState.Unsupported, PlanReason.HardwarePrefix + failed, from is { } restriction
+                            ? $"{restriction.Why} ({failed})"
+                            : $"This PC doesn't have the hardware it is for ({failed}).");
+                    case null:
+                        unknown ??= Not(EntryState.CantTell, PlanReason.HardwarePrefix + failed,
+                            $"Couldn't tell whether this PC has the hardware it is for ({failed}), so it is left alone.");
+                        break;
+                }
+            }
+
+            if (unknown is not null)
+            {
+                return unknown;
             }
         }
 
@@ -229,7 +251,7 @@ public static class ProfilePlanner
             case OperationState.Inapplicable:
                 return Not(EntryState.Unsupported, InapplicableCode(evaluation, reader), detail);
             case OperationState.Blocked:
-                return Not(EntryState.CantTell, PlanReason.Blocked, detail);
+                return Not(EntryState.CantTell, evaluation.ReasonCode ?? PlanReason.Blocked, detail);
             case OperationState.Unknown:
                 return Not(EntryState.CantTell, PlanReason.Unread, detail);
             case OperationState.Manual or OperationState.Observation:
@@ -296,6 +318,53 @@ public static class ProfilePlanner
                     Detail = $"Set in the power plan in use now, but the {plan.OperationId} plan this profile switches to doesn't keep it, so it is applied after the switch.",
                     Included = wanted(e.Entry),
                 }
+            : e)];
+    }
+
+    /// <summary>
+    /// A Mesura plan the profile already applied, whose only differences from its own values are settings the profile's own wanted power entries set on top
+    /// of it, is in place (0.9). On a dual-CCD X3D, Maximum's plan is Balanced Mesura (D054 item 4) and Maximum's drive and PCI Express entries then set two
+    /// of its values further; read value by value, the plan looks "partly applied", so every run would switch it back and every entry would follow again.
+    /// The plan counts as applied only when it is the active scheme, every value it writes that this PC registers is either its own or exactly the value one
+    /// of those entries (applied, and still wanted) writes, and no battery value differs.
+    /// </summary>
+    private static List<PlanEntry> Overridden(List<PlanEntry> entries, ISystemReader reader, Func<ProfileEntry, bool> wanted)
+    {
+        bool Explained(PlanEntry planEntry, PowerPlanSetting plan)
+        {
+            if (!string.Equals(reader.ReadPower().ActiveScheme, plan.SchemeGuid, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var differs = false;
+            foreach (var value in plan.PlanValues.Where(v => v.Needs.All(need => WindowsEvaluator.RequirementHolds(need, reader) == true)))
+            {
+                if (value.Dc is { } dc && reader.ReadPowerSettingDc(plan.SchemeGuid, value.Subgroup, value.Setting) is { } currentDc && currentDc != dc)
+                {
+                    return false;
+                }
+
+                if (value.Ac is not { } ac || reader.ReadPowerSetting(plan.SchemeGuid, value.Subgroup, value.Setting) is not { } current || current == ac)
+                {
+                    continue;
+                }
+
+                differs = true;
+                var setByEntry = entries.Any(e => !ReferenceEquals(e, planEntry) && e.State is EntryState.Applied or EntryState.Waiting && wanted(e.Entry)
+                    && e.Operation is { } op && OnlyPowerSettings(op)
+                    && op.PowerSettings.Any(s => s.Setting.Equals(value.Setting, StringComparison.OrdinalIgnoreCase) && s.AcValue == current));
+                if (!setByEntry)
+                {
+                    return false;
+                }
+            }
+
+            return differs;
+        }
+
+        return [.. entries.Select(e => e.State == EntryState.ToApply && e.Operation?.PowerPlan is { IsMesuraPlan: true } plan && Explained(e, plan)
+            ? e with { State = EntryState.Applied, Reason = null, Included = false, Detail = "In place: the profile's own power entries set some of its values further, on top of it." }
             : e)];
     }
 

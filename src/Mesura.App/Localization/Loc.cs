@@ -170,6 +170,11 @@ public sealed class Loc : INotifyPropertyChanged
         {
             var field = code[PlanReason.HardwarePrefix.Length..];
             var unread = entry.State == EntryState.CantTell;
+            // The dual-CCD X3D policy (0.9, D054) says what it is in its own words, not as "needs hardware this PC doesn't have".
+            if (field is "cpu.x3d-dual-ccd" or "cpu.not-x3d-dual-ccd")
+            {
+                return Get(unread ? "Plan.Reason.x3d-unread" : field == "cpu.x3d-dual-ccd" ? "Plan.Reason.x3d-only" : "Plan.Reason.x3d-excluded");
+            }
             if (field.StartsWith("form.", StringComparison.Ordinal))
             {
                 return Get(unread ? "Plan.Reason.form-unread" : "Plan.Reason.form");
@@ -194,6 +199,7 @@ public sealed class Loc : INotifyPropertyChanged
             PlanReason.EffectUnsupported => "Reason.Unsupported",
             PlanReason.Absent => "Reason.Absent",
             PlanReason.Blocked => "Reason.Blocked",
+            PlanReason.OtherAccount => "Reason.OtherAccount",
             _ => $"Plan.Reason.{code}",
         });
     }

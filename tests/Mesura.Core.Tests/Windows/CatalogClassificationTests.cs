@@ -44,7 +44,8 @@ public sealed class CatalogClassificationTests
         var recommended = Catalog.PresetById("recommended-gaming")!;
         var maximum = Catalog.PresetById("maximum-performance")!;
 
-        Assert.All(recommended.OperationIds.Where(id => id != "power.mesura-balanced-plan"), id => Assert.Contains(id, maximum.OperationIds)); // the plan is replaced by the Maximum one
+        // Every Recommended entry, its Balanced Mesura plan included: since 0.9 it is Maximum's plan on a dual-CCD Ryzen X3D (D054 item 4).
+        Assert.All(recommended.OperationIds, id => Assert.Contains(id, maximum.OperationIds));
         var added = Catalog.Resolve(maximum).Where(o => !recommended.OperationIds.Contains(o.Id)).ToList();
         Assert.NotEmpty(added);
         Assert.All(added, o =>
@@ -52,17 +53,25 @@ public sealed class CatalogClassificationTests
             // What Maximum adds is documented by Microsoft (not merely verified) or confirmed in effect by Windows after it is written, a power,
             // performance, gaming, memory or storage setting or a background reduction, never a service, task, feature removal or an undocumented knob.
             Assert.True(o.Basis == ValueBasis.Documented || o.Effect is not null, o.Id);
+            // 0.9 Phase 4 (D054 item 5, D058): Maximum's defaults may now remove bundled apps and turn off optional Windows components ("components").
             Assert.True(o.Impact is OperationImpact.Power or OperationImpact.Privacy or OperationImpact.Performance or OperationImpact.Gaming or OperationImpact.Convenience
-                or OperationImpact.Maintenance or OperationImpact.Experimental, o.Id);
+                or OperationImpact.Maintenance or OperationImpact.Experimental or OperationImpact.Components, o.Id);
             Assert.True(o.Risk is RiskClass.SystemConfiguration or RiskClass.UserPreference, o.Id);
-            Assert.True(o.Services.Count == 0 && o.Tasks.Count == 0 && o.Features.Count == 0, o.Id);
+            // Still no service by default (the search indexer is optional); scheduled tasks are only the CEIP and feedback-question ones.
+            Assert.True(o.Services.Count == 0, o.Id);
+            Assert.True(o.Tasks.Count == 0 || o.Id is "tasks.ceip-off" or "tasks.feedback-off", o.Id);
+            Assert.True(o.Features.Count == 0 || o.Id is "features.legacy-media-off" or "features.xps-off" or "features.powershell-v2-off", o.Id);
         });
 
         // Its power side is its own plan (0.5), which carries the USB, PCI Express and drive settings itself; Windows' High performance is not used.
         Assert.Contains("power.mesura-maximum-plan", maximum.OperationIds);
         Assert.DoesNotContain("power.high-performance", maximum.OperationIds);
         Assert.Contains("power.pcie-aspm-off", maximum.OperationIds); // the plan writes the same value; the profile planner shows it as covered rather than applying it twice
-        Assert.Empty(WindowsConfigurator.Conflicts(Catalog.Resolve(maximum)));
+        // Condition-aware (0.9): the preset's flat list sets the active plan two ways, Maximum and (on a dual-CCD X3D) Balanced Mesura, and nothing else; the
+        // profile's conditions keep the two apart, so no PC's plan has a conflict.
+        var flat = WindowsConfigurator.ConflictGroups(Catalog.Resolve(maximum));
+        Assert.Equal(["power.mesura-balanced-plan", "power.mesura-maximum-plan"], Assert.Single(flat).Select(o => o.Id).Order(StringComparer.Ordinal));
+        Assert.Empty(Mesura.Core.Profiles.LevelPlanning.ConditionAwareConflicts(Mesura.Core.Profiles.OptimizationProfiles.Default.ById("maximum-performance")!, Catalog));
     }
 
     [Fact]
@@ -88,7 +97,9 @@ public sealed class CatalogClassificationTests
         // 2026-11-02 (0.6, owner's decisions): Maximum performance is not limited on a laptop. Windows' own High performance plan switch changes the battery side
         // too, so it stays desktop-only; an entry that writes only the AC value of the active plan leaves the battery alone and applies; and the power-throttling
         // switch, which acts on battery as well, is applied on a laptop on purpose, with its cost stated.
-        var plan = Catalog.ById("power.high-performance")!;
+        // Retired from the catalog in 0.9 (D057); its definition stays in the engine fixtures, and a saved setup naming it never applies it.
+        Assert.Null(Catalog.ById("power.high-performance"));
+        var plan = EngineFixtures.Op("power.high-performance");
         Assert.Contains(DeviceRequirement.NoBattery, plan.Requirements);
         Assert.Contains(DeviceRequirement.NoModernStandby, plan.Requirements);
         var throttling = Catalog.ById("power.power-throttling-off")!;
